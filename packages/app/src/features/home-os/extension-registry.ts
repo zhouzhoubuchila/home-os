@@ -1,4 +1,5 @@
 import { HOME_OS_ROLES, type SemanticRole } from './core/semantic-roles';
+import { HOME_OS_COPY } from './i18n/home-os-copy';
 
 export type HomeOsExtensionId = 'alerts' | 'energy-cn' | 'family' | 'homelab' | 'lighting';
 
@@ -21,7 +22,7 @@ export interface ExtensionDefinition {
 export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   {
     id: 'family',
-    title: 'Family',
+    title: HOME_OS_COPY.family,
     capabilities: ['read', 'configure'],
     cards: ['home-os.household-status'],
     pages: [],
@@ -36,7 +37,7 @@ export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   },
   {
     id: 'lighting',
-    title: 'Whole-home lighting',
+    title: HOME_OS_COPY.wholeHomeLighting,
     capabilities: ['read', 'control', 'configure'],
     cards: ['home-os.whole-home-lighting'],
     pages: [],
@@ -51,7 +52,7 @@ export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   },
   {
     id: 'alerts',
-    title: 'Attention center',
+    title: HOME_OS_COPY.attentionCenter,
     capabilities: ['read', 'configure'],
     cards: ['home-os.attention-center'],
     pages: [],
@@ -63,7 +64,7 @@ export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   },
   {
     id: 'homelab',
-    title: 'Homelab',
+    title: HOME_OS_COPY.homelab,
     capabilities: ['read', 'history', 'configure'],
     cards: ['home-os.pve', 'home-os.home-assistant', 'home-os.router', 'home-os.internet'],
     pages: ['home-os.homelab'],
@@ -75,7 +76,7 @@ export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   },
   {
     id: 'energy-cn',
-    title: 'Energy and utilities',
+    title: HOME_OS_COPY.energyUtilities,
     capabilities: ['read', 'history', 'configure'],
     cards: ['home-os.energy', 'home-os.gas'],
     pages: ['home-os.energy-detail'],

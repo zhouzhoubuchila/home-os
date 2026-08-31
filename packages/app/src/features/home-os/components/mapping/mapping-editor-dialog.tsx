@@ -1,8 +1,10 @@
 import { Button, Input, ModalSurface, Select } from '@navet/app/components/primitives';
+import { useI18n } from '@navet/app/hooks';
 import type { NavetEntity } from '@navet/core/types';
 import { useEffect, useState } from 'react';
 import { HOME_OS_ROLES, type SemanticRole } from '../../core/semantic-roles';
 import type { ControlPolicy, DisplayMode, ManualEntityMapping } from '../../core/types';
+import { getHomeOsCopy } from '../../i18n/home-os-copy';
 
 const ROLE_OPTIONS = Object.values(HOME_OS_ROLES);
 
@@ -21,6 +23,8 @@ export function MappingEditorDialog({
   onClose,
   onSave,
 }: MappingEditorDialogProps) {
+  const { language } = useI18n();
+  const copy = getHomeOsCopy(language);
   const [role, setRole] = useState<SemanticRole>('');
   const [displayName, setDisplayName] = useState('');
   const [roomOverride, setRoomOverride] = useState('');
@@ -46,7 +50,7 @@ export function MappingEditorDialog({
     <ModalSurface
       isOpen
       onOpenChange={(open) => !open && onClose()}
-      title={`Map ${entity.name}`}
+      title={`${copy.mapEntity}: ${entity.name}`}
       description={entity.externalId}
       mobileCoverSheet
     >
@@ -78,9 +82,9 @@ export function MappingEditorDialog({
         }}
       >
         <label className={labelClassName} htmlFor="home-os-role">
-          Semantic role
+          {copy.semanticRole}
           <Select id="home-os-role" value={role} onChange={(event) => setRole(event.target.value)}>
-            <option value="">Unmapped</option>
+            <option value="">{copy.unmapped}</option>
             {role && !ROLE_OPTIONS.includes(role as (typeof ROLE_OPTIONS)[number]) ? (
               <option value={role}>{role}</option>
             ) : null}
@@ -93,7 +97,7 @@ export function MappingEditorDialog({
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClassName} htmlFor="home-os-display-name">
-            Display name
+            {copy.displayName}
             <Input
               id="home-os-display-name"
               value={displayName}
@@ -101,7 +105,7 @@ export function MappingEditorDialog({
             />
           </label>
           <label className={labelClassName} htmlFor="home-os-room">
-            Room override
+            {copy.roomOverride}
             <Input
               id="home-os-room"
               value={roomOverride}
@@ -109,7 +113,7 @@ export function MappingEditorDialog({
             />
           </label>
           <label className={labelClassName} htmlFor="home-os-physical-device">
-            Physical device ID
+            {copy.physicalDeviceId}
             <Input
               id="home-os-physical-device"
               value={physicalDeviceId}
@@ -117,7 +121,7 @@ export function MappingEditorDialog({
             />
           </label>
           <label className={labelClassName} htmlFor="home-os-family-person">
-            Family person ID
+            {copy.familyPersonId}
             <Input
               id="home-os-family-person"
               value={familyPersonId}
@@ -125,38 +129,38 @@ export function MappingEditorDialog({
             />
           </label>
           <label className={labelClassName} htmlFor="home-os-display-mode">
-            Display mode
+            {copy.displayMode}
             <Select
               id="home-os-display-mode"
               value={displayMode}
               onChange={(event) => setDisplayMode(event.target.value as DisplayMode)}
             >
-              <option value="primary">Primary</option>
-              <option value="detail">Detail</option>
-              <option value="diagnostic">Diagnostic</option>
-              <option value="hidden">Hidden</option>
+              <option value="primary">{copy.primary}</option>
+              <option value="detail">{copy.detail}</option>
+              <option value="diagnostic">{copy.diagnostic}</option>
+              <option value="hidden">{copy.hidden}</option>
             </Select>
           </label>
           <label className={labelClassName} htmlFor="home-os-control-policy">
-            Control policy
+            {copy.controlPolicy}
             <Select
               id="home-os-control-policy"
               value={controlPolicy}
               onChange={(event) => setControlPolicy(event.target.value as ControlPolicy)}
             >
-              <option value="direct">Direct</option>
-              <option value="confirm">Confirm</option>
-              <option value="dangerous">Dangerous</option>
-              <option value="readonly">Read only</option>
+              <option value="direct">{copy.direct}</option>
+              <option value="confirm">{copy.confirm}</option>
+              <option value="dangerous">{copy.dangerous}</option>
+              <option value="readonly">{copy.readOnly}</option>
             </Select>
           </label>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            {copy.cancel}
           </Button>
           <Button type="submit" loading={saving}>
-            Save mapping
+            {copy.saveMapping}
           </Button>
         </div>
       </form>

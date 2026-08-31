@@ -1,5 +1,6 @@
 import { useLocalHabitsFeature } from '@navet/app/features/habits';
 import { MappingSettingsPage } from '@navet/app/features/home-os/components/mapping/mapping-settings-page';
+import { HOME_OS_COPY } from '@navet/app/features/home-os/i18n/home-os-copy';
 import { useI18n, useMediaQuery, usePersistedState } from '@navet/app/hooks';
 import {
   Brain,
@@ -59,7 +60,7 @@ export function SettingsSection({
         { id: 'localization', label: t('settings.nav.localization'), icon: Languages },
         { id: 'interaction', label: t('settings.nav.interaction'), icon: Hand },
         { id: 'dashboard', label: t('settings.nav.dashboard'), icon: LayoutGrid },
-        { id: 'home-os', label: 'Home OS', icon: SlidersHorizontal },
+        { id: 'home-os', label: HOME_OS_COPY.homeOs, icon: SlidersHorizontal },
         ...(localHabitsEnabled
           ? [{ id: 'habits', label: t('settings.nav.habits'), icon: Brain }]
           : []),
@@ -118,7 +119,7 @@ export function SettingsSection({
     return [
       createGroup('personal', ['appearance', 'localization', 'interaction']),
       createGroup('dashboard', ['dashboard', 'habits', 'home-os'], t('settings.nav.dashboard')),
-      createGroup('navet', ['system', 'experimental', 'project'], 'Home OS'),
+      createGroup('navet', ['system', 'experimental', 'project'], HOME_OS_COPY.homeOs),
     ].filter((group) => group.items.length > 0);
   }, [navItems, t]);
   const searchItems = useMemo(

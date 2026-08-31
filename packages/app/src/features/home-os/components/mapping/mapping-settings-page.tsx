@@ -2,7 +2,7 @@ import { Button, Input, Select } from '@navet/app/components/primitives';
 import { cn } from '@navet/app/components/ui/utils';
 import { SettingsSectionShell } from '@navet/app/features/settings/components/settings-section-shell';
 import type { SettingsSectionController } from '@navet/app/features/settings/hooks/use-settings-section-controller';
-import { useIntegrationStore } from '@navet/app/hooks';
+import { useI18n, useIntegrationStore } from '@navet/app/hooks';
 import { integrationSelectors } from '@navet/app/stores/selectors';
 import type { NavetEntity } from '@navet/core/types';
 import { SlidersHorizontal } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-import';
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
+import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
@@ -34,6 +35,8 @@ const matchesFilter = (resolved: ResolvedSemanticEntity, filter: Filter) => {
 };
 
 export function MappingSettingsPage({ controller }: { controller: SettingsSectionController }) {
+  const { language } = useI18n();
+  const copy = getHomeOsCopy(language);
   const entitiesById = useIntegrationStore(
     useShallow(integrationSelectors.providerEntitiesByCanonicalId)
   );
@@ -102,7 +105,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       const imported = importHomeOsConfig(await file.text());
       await useHomeOsConfigStore.getState().save({ ...imported, revision: config.revision });
     } catch (cause) {
-      setTransferError(cause instanceof Error ? cause.message : 'Configuration import failed');
+      setTransferError(cause instanceof Error ? cause.message : copy.configurationImportFailed);
     }
   };
 
@@ -110,8 +113,8 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     <SettingsSectionShell
       id="home-os-mapping"
       icon={SlidersHorizontal}
-      title="Home OS entity mapping"
-      description="Review automatic roles, bind physical devices, and make durable manual overrides."
+      title={copy.mappingTitle}
+      description={copy.mappingDescription}
       styles={controller.styles}
     >
       <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_180px_auto] md:px-5">
@@ -119,28 +122,28 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search name, entity ID, or role"
-          aria-label="Search Home OS mappings"
+          placeholder={copy.searchMappings}
+          aria-label={copy.searchMappings}
         />
         <Select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
-          <option value="all">All entities</option>
-          <option value="review">Needs review</option>
-          <option value="manual">Manual</option>
-          <option value="ignored">Ignored</option>
-          <option value="lighting">Lighting</option>
-          <option value="family">Family</option>
-          <option value="homelab">Homelab</option>
-          <option value="energy">Energy</option>
+          <option value="all">{copy.allEntities}</option>
+          <option value="review">{copy.needsReview}</option>
+          <option value="manual">{copy.manual}</option>
+          <option value="ignored">{copy.ignored}</option>
+          <option value="lighting">{copy.lighting}</option>
+          <option value="family">{copy.family}</option>
+          <option value="homelab">{copy.homelab}</option>
+          <option value="energy">{copy.energy}</option>
         </Select>
         <Button variant="secondary" onClick={() => void load()} loading={loading}>
-          Refresh
+          {copy.refresh}
         </Button>
         <div className="flex flex-wrap gap-2 md:col-span-3">
           <Button size="small" variant="ghost" onClick={exportConfig}>
-            Export config
+            {copy.exportConfig}
           </Button>
           <Button size="small" variant="ghost" onClick={() => importInputRef.current?.click()}>
-            Import config
+            {copy.importConfig}
           </Button>
           <Button
             size="small"
@@ -154,7 +157,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
               void reset().finally(() => setConfirmReset(false));
             }}
           >
-            {confirmReset ? 'Confirm reset' : 'Reset Home OS'}
+            {confirmReset ? copy.confirmReset : copy.resetHomeOs}
           </Button>
           <input
             ref={importInputRef}
@@ -172,16 +175,15 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       {error ? <p className="px-5 py-3 text-sm text-red-500">{error}</p> : null}
       {transferError ? <p className="px-5 py-3 text-sm text-red-500">{transferError}</p> : null}
       {recovered ? (
-        <p className="px-5 py-3 text-sm text-amber-500">
-          The primary configuration was invalid; Home OS recovered its backup.
-        </p>
+        <p className="px-5 py-3 text-sm text-amber-500">{copy.recoveredBackup}</p>
       ) : null}
       <div className="flex items-center justify-between px-5 py-3 text-xs">
         <span className={controller.styles.subtleColor}>
-          {visible.length} of {resolved.length} entities · revision {config.revision}
+          {visible.length} / {resolved.length} {copy.mappingCount} · {copy.revision}{' '}
+          {config.revision}
         </span>
         <span className={cn(controller.styles.subtleColor, 'hidden sm:inline')}>
-          Manual changes override auto-classification.
+          {copy.manualWins}
         </span>
       </div>
       {visible.length ? (
@@ -198,7 +200,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         ))
       ) : (
         <p className={cn('px-5 py-10 text-center text-sm', controller.styles.subtleColor)}>
-          No matching entities.
+          {copy.noMatchingEntities}
         </p>
       )}
       <MappingEditorDialog

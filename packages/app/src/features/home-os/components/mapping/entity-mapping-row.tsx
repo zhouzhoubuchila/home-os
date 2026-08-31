@@ -1,7 +1,9 @@
 import { Button } from '@navet/app/components/primitives';
 import { cn } from '@navet/app/components/ui/utils';
 import type { SettingsSectionStyles } from '@navet/app/features/settings/hooks/settings-section-styles';
+import { useI18n } from '@navet/app/hooks';
 import type { ResolvedSemanticEntity } from '../../core/types';
+import { getHomeOsCopy } from '../../i18n/home-os-copy';
 
 interface EntityMappingRowProps {
   resolved: ResolvedSemanticEntity;
@@ -20,6 +22,8 @@ export function EntityMappingRow({
   onIgnore,
   onRestoreAuto,
 }: EntityMappingRowProps) {
+  const { language } = useI18n();
+  const copy = getHomeOsCopy(language);
   const autoRole = resolved.candidates[0]?.role ?? 'unmapped';
   const finalRole = resolved.ignored ? 'ignored' : (resolved.roles[0] ?? 'unmapped');
   return (
@@ -38,41 +42,41 @@ export function EntityMappingRow({
             resolved.needsReview ? 'text-amber-500' : styles.subtleColor
           )}
         >
-          {resolved.needsReview ? 'Needs review' : resolved.source}
+          {resolved.needsReview ? copy.needsReview : resolved.source}
         </span>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4 lg:grid-cols-6">
         <div>
-          <dt className={styles.subtleColor}>Domain</dt>
+          <dt className={styles.subtleColor}>{copy.domain}</dt>
           <dd className={styles.textColor}>{resolved.entity.externalId.split('.')[0]}</dd>
         </div>
         <div>
-          <dt className={styles.subtleColor}>Room</dt>
+          <dt className={styles.subtleColor}>{copy.room}</dt>
           <dd className={styles.textColor}>{resolved.room || '—'}</dd>
         </div>
         <div>
-          <dt className={styles.subtleColor}>Auto role</dt>
+          <dt className={styles.subtleColor}>{copy.autoRole}</dt>
           <dd className="truncate font-mono">{autoRole}</dd>
         </div>
         <div>
-          <dt className={styles.subtleColor}>Confidence</dt>
+          <dt className={styles.subtleColor}>{copy.confidence}</dt>
           <dd className={styles.textColor}>{Math.round(resolved.confidence * 100)}%</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className={styles.subtleColor}>Final role</dt>
+          <dt className={styles.subtleColor}>{copy.finalRole}</dt>
           <dd className="truncate font-mono">{finalRole}</dd>
         </div>
       </dl>
       <div className="flex flex-wrap gap-2">
         <Button size="small" variant="secondary" onClick={onEdit} disabled={saving}>
-          Edit
+          {copy.edit}
         </Button>
         <Button size="small" variant="ghost" onClick={onIgnore} disabled={saving}>
-          Ignore
+          {copy.ignore}
         </Button>
         {resolved.mapping ? (
           <Button size="small" variant="ghost" onClick={onRestoreAuto} disabled={saving}>
-            Restore auto
+            {copy.restoreAuto}
           </Button>
         ) : null}
       </div>

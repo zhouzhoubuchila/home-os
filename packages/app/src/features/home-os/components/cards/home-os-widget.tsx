@@ -29,6 +29,7 @@ import { DEFAULT_HOME_OS_ALERT_RULES } from '../../alerts/default-rules';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
+import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 
 export interface HomeOsWidgetData {
@@ -56,8 +57,16 @@ const freshnessText = (updatedAt: string | undefined) => {
   return `${Math.round(minutes / 60)}h ago · stale`;
 };
 
-function Metrics({ entities, size }: { entities: ResolvedSemanticEntity[]; size: CardSize }) {
-  if (!entities.length) return <p className="text-sm text-current/55">No mapped data</p>;
+function Metrics({
+  entities,
+  size,
+  empty,
+}: {
+  entities: ResolvedSemanticEntity[];
+  size: CardSize;
+  empty: string;
+}) {
+  if (!entities.length) return <p className="text-sm text-current/55">{empty}</p>;
   return (
     <div className="grid min-h-0 gap-2 overflow-hidden">
       {entities.slice(0, sizeLimit(size)).map((item) => (
@@ -75,17 +84,27 @@ function Metrics({ entities, size }: { entities: ResolvedSemanticEntity[]; size:
   );
 }
 
-function HouseholdCard({ size, entities }: { size: CardSize; entities: ResolvedSemanticEntity[] }) {
+function HouseholdCard({
+  size,
+  entities,
+  title,
+  status,
+}: {
+  size: CardSize;
+  entities: ResolvedSemanticEntity[];
+  title: string;
+  status: string;
+}) {
   const members = buildFamilyMembers(entities);
   const homeCount = members.filter((member) => member.state === 'home').length;
   return (
-    <BaseCard size={size} title="Household" headerLeading={<Users className="h-5 w-5" />}>
+    <BaseCard size={size} title={title} headerLeading={<Users className="h-5 w-5" />}>
       <div className="flex h-full flex-col justify-between gap-3">
         <div>
           <strong className="text-3xl tabular-nums">
             {homeCount}/{members.length}
           </strong>
-          <p className="text-sm text-current/55">people at home</p>
+          <p className="text-sm text-current/55">{status}</p>
         </div>
         <div className="grid gap-1 text-sm">
           {members.slice(0, sizeLimit(size)).map((member) => (
@@ -104,10 +123,12 @@ function LightingCard({
   size,
   entities,
   isEditMode,
+  copy,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   isEditMode: boolean;
+  copy: ReturnType<typeof getHomeOsCopy>;
 }) {
   const lights = buildHomeOsLights(entities);
   const on = lights.filter((light) => light.state === 'on');
@@ -131,7 +152,7 @@ function LightingCard({
       );
       if (results.some((result) => result.status === 'rejected')) throw new Error();
     } catch {
-      toast.error('Some lights could not be turned off');
+      toast.error(copy.lightsFailed);
     } finally {
       setBusy(false);
       setConfirming(false);
@@ -140,22 +161,24 @@ function LightingCard({
   return (
     <BaseCard
       size={size}
-      title="Whole-home lighting"
+      title={copy.wholeHomeLighting}
       headerLeading={<Lightbulb className="h-5 w-5" />}
     >
       <div className="flex h-full flex-col justify-between gap-3">
         <div>
           <strong className="text-3xl tabular-nums">{on.length}</strong>
-          <p className="text-sm text-current/55">of {lights.length} lights on</p>
+          <p className="text-sm text-current/55">
+            {lights.length} {copy.lightsOn}
+          </p>
         </div>
         {size !== 'small' ? (
           <p className="line-clamp-2 text-xs text-current/55">
-            {on.map(({ name }) => name).join(' · ') || 'All lights are off'}
+            {on.map(({ name }) => name).join(' · ') || copy.allLightsOff}
           </p>
         ) : null}
         {!isEditMode && controllable.length ? (
           <Button size="small" variant="secondary" onClick={() => void turnOff()} loading={busy}>
-            {confirming ? 'Confirm turn off' : 'Turn all off'}
+            {confirming ? copy.confirmTurnOff : copy.turnAllOff}
           </Button>
         ) : null}
       </div>
@@ -163,14 +186,22 @@ function LightingCard({
   );
 }
 
-function AlertsCard({ size, entities }: { size: CardSize; entities: ResolvedSemanticEntity[] }) {
+function AlertsCard({
+  size,
+  entities,
+  copy,
+}: {
+  size: CardSize;
+  entities: ResolvedSemanticEntity[];
+  copy: ReturnType<typeof getHomeOsCopy>;
+}) {
   const customRules = useHomeOsConfigStore((state) => state.config.alertRules);
   const rules = useMemo(() => [...DEFAULT_HOME_OS_ALERT_RULES, ...customRules], [customRules]);
   const alerts = evaluateAlerts(entities, rules);
   return (
     <BaseCard
       size={size}
-      title="Attention center"
+      title={copy.attentionCenter}
       headerLeading={
         alerts.length ? (
           <AlertTriangle className="h-5 w-5 text-amber-400" />
@@ -182,7 +213,7 @@ function AlertsCard({ size, entities }: { size: CardSize; entities: ResolvedSema
       <div className="flex h-full flex-col justify-between gap-3">
         <div>
           <strong className="text-3xl tabular-nums">{alerts.length}</strong>
-          <p className="text-sm text-current/55">active alerts</p>
+          <p className="text-sm text-current/55">{copy.activeAlerts}</p>
         </div>
         <div className="grid gap-1 text-xs">
           {alerts.slice(0, sizeLimit(size)).map((alert) => (
@@ -203,14 +234,16 @@ function ModesCard({
   size,
   entities,
   isEditMode,
+  copy,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   isEditMode: boolean;
+  copy: ReturnType<typeof getHomeOsCopy>;
 }) {
   const modes = entities.filter((entity) => !entity.ignored && entity.roles.includes('home.mode'));
   return (
-    <BaseCard size={size} title="Home modes" headerLeading={<Sparkles className="h-5 w-5" />}>
+    <BaseCard size={size} title={copy.homeModes} headerLeading={<Sparkles className="h-5 w-5" />}>
       <div className="grid h-full content-start gap-2">
         {modes.slice(0, sizeLimit(size)).map((mode) => (
           <Button
@@ -228,16 +261,16 @@ function ModesCard({
             {mode.displayName}
           </Button>
         ))}
-        {!modes.length ? <p className="text-sm text-current/55">No mapped home modes</p> : null}
+        {!modes.length ? <p className="text-sm text-current/55">{copy.noModes}</p> : null}
       </div>
     </BaseCard>
   );
 }
 
-function LunarCard({ size }: { size: CardSize }) {
+function LunarCard({ size, title }: { size: CardSize; title: string }) {
   const lunar = Solar.fromDate(new Date()).getLunar();
   return (
-    <BaseCard size={size} title="Lunar calendar" headerLeading={<Moon className="h-5 w-5" />}>
+    <BaseCard size={size} title={title} headerLeading={<Moon className="h-5 w-5" />}>
       <div className="flex h-full flex-col justify-between gap-2">
         <strong className="line-clamp-2 text-lg">{lunar.toString()}</strong>
         <p className="text-sm text-current/60">
@@ -279,6 +312,7 @@ const ICONS: Record<HomeOsCardKind, typeof Server> = {
 
 export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   const { language } = useI18n();
+  const copy = getHomeOsCopy(language);
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
@@ -286,17 +320,26 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   if (!definition) {
     return (
       <BaseCard size={size}>
-        <p className="text-sm text-current/55">Choose a Home OS card type.</p>
+        <p className="text-sm text-current/55">{copy.chooseCard}</p>
       </BaseCard>
     );
   }
-  if (definition.kind === 'household') return <HouseholdCard size={size} entities={entities} />;
+  if (definition.kind === 'household')
+    return (
+      <HouseholdCard
+        size={size}
+        entities={entities}
+        title={copy.household}
+        status={copy.peopleAtHome}
+      />
+    );
   if (definition.kind === 'lighting')
-    return <LightingCard size={size} entities={entities} isEditMode={isEditMode} />;
-  if (definition.kind === 'alerts') return <AlertsCard size={size} entities={entities} />;
+    return <LightingCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
+  if (definition.kind === 'alerts')
+    return <AlertsCard size={size} entities={entities} copy={copy} />;
   if (definition.kind === 'modes')
-    return <ModesCard size={size} entities={entities} isEditMode={isEditMode} />;
-  if (definition.kind === 'lunar') return <LunarCard size={size} />;
+    return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
+  if (definition.kind === 'lunar') return <LunarCard size={size} title={copy.lunarCalendar} />;
   const matched = entities.filter(
     (entity) =>
       !entity.ignored &&
@@ -325,12 +368,12 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
           <span className={surface.textSecondary}>
             {matched.length
               ? matched.every((item) => item.entity.availability !== 'available')
-                ? 'Unavailable'
-                : 'Live'
-              : 'Not configured'}
+                ? copy.unavailable
+                : copy.live
+              : copy.notConfigured}
           </span>
         </div>
-        <Metrics entities={matched} size={size} />
+        <Metrics entities={matched} size={size} empty={copy.noMappedData} />
       </div>
     </BaseCard>
   );

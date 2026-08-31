@@ -30,9 +30,10 @@ This table is updated as implementation lands.
 
 | Upstream file | Reason | Constraint |
 |---|---|---|
-| Dashboard Add Card composition | Read Home OS card definitions | One registry hook; no per-card imports |
-| Dashboard card renderer | Render registered Home OS card instances | One delegated renderer |
-| Settings composition | Expose Home OS mapping/configuration | One settings tab registration |
-| Optional section router | Resolve registered Home OS detail routes | One delegated route lookup |
-| Docker nginx config | Persist `/data` Home OS configuration | Same-origin authorization; no secret logging |
-
+| `features/dashboard/components/add-card-dialog/*` | Read Home OS card definitions | One registry map; no per-card router branches |
+| `features/dashboard/components/widget-card.tsx` | Render Home OS card instances | One lazy delegated renderer |
+| `features/dashboard/stores/custom-cards-store.ts` | Persist `home-os` card instances | One card type; kind stays in registry data |
+| `features/settings/components/settings-section.tsx` | Expose mapping/configuration | One Home OS settings tab |
+| `features/dashboard/components/dashboard-section-router.tsx` | Open Homelab detail | One detail branch; fixed Home strip and duplicate routes removed |
+| `components/layout/section-navigation.ts` | Expose Homelab detail | Native Navet destinations retained; only Homelab is added |
+| Docker/nginx runtime | Persist `/data/home-os/config.json` | Authenticated same-origin writes; no payload logging |

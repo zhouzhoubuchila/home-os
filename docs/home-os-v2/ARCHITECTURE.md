@@ -42,5 +42,4 @@ Home is the reference for dashboard rhythm and density. Existing Navet card prim
 
 ## Compatibility
 
-The legacy Home OS 1.0 model may remain temporarily under a deprecated compatibility seam while callers migrate. No new features may depend on it. Configuration migrations are forward-only and always preserve a pre-migration backup for rollback.
-
+The legacy Home OS 1.0 regex model and monolithic section module were removed after every active caller migrated. Configuration migrations are forward-only and the durable store preserves the previous valid document before every mutation for rollback.

@@ -1,5 +1,6 @@
 import type { HomeOsAlertRuleConfig } from '../config/schema';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
+import { HOME_OS_COPY } from '../i18n/home-os-copy';
 
 export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
   {
@@ -8,7 +9,7 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     semanticRole: HOME_OS_ROLES.securityWaterLeak,
     condition: { type: 'state', equals: 'on' },
     severity: 'critical',
-    message: 'Water leak detected',
+    message: HOME_OS_COPY.waterLeakDetected,
   },
   {
     id: 'smoke',
@@ -16,7 +17,7 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     semanticRole: HOME_OS_ROLES.securitySmoke,
     condition: { type: 'state', equals: 'on' },
     severity: 'critical',
-    message: 'Smoke detected',
+    message: HOME_OS_COPY.smokeDetected,
   },
   {
     id: 'door-open',
@@ -25,7 +26,7 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     condition: { type: 'state', equals: 'on' },
     durationMs: 10 * 60_000,
     severity: 'warning',
-    message: 'Door has been open for 10 minutes',
+    message: HOME_OS_COPY.doorOpen,
   },
   {
     id: 'battery-low',
@@ -33,7 +34,7 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     semanticRole: HOME_OS_ROLES.diagnosticBattery,
     condition: { type: 'numeric', operator: 'lt', value: 10 },
     severity: 'warning',
-    message: 'Battery is low',
+    message: HOME_OS_COPY.batteryLow,
   },
   {
     id: 'pve-temperature',
@@ -42,6 +43,6 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     condition: { type: 'numeric', operator: 'gt', value: 80 },
     durationMs: 5 * 60_000,
     severity: 'warning',
-    message: 'PVE temperature is high',
+    message: HOME_OS_COPY.pveTemperatureHigh,
   },
 ];
