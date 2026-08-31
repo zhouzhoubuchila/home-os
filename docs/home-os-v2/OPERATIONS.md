@@ -35,3 +35,5 @@ Home OS V2 does not modify Home Assistant configuration, entities, credentials, 
 ## Runtime verification
 
 The container health endpoint remains `/`. Release images are built for `linux/amd64` and `linux/arm64` by `.github/workflows/home-os-image.yml`. Build metadata is injected by the image workflow and displayed in Settings → About so stale PWA assets can be distinguished from a newly deployed image.
+
+The executable Compose example and the exact first-deploy, upgrade, log, health-check, and rollback commands are maintained in `deploy/README.zh-CN.md`. `HOME_OS_IMAGE` selects an immutable release for rollback while the named `/data` volume remains attached.
