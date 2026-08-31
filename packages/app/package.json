@@ -1,0 +1,20 @@
+{
+  "name": "@navet/app",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*",
+    "./commands": "./src/commands.ts",
+    "./internal/compat": "./src/internal/compat.ts",
+    "./integration-session-runtime": "./src/integration-session-runtime.ts",
+    "./provider-contract": "./src/provider-contract.ts",
+    "./provider-contract-registry": "./src/provider-contract-registry.ts",
+    "./provider-registration-types": "./src/provider-registration-types.ts",
+    "./provider-runtime-registry": "./src/provider-runtime-registry.ts",
+    "./provider-runtime-types": "./src/provider-runtime-types.ts",
+    "./session-runtime-registry": "./src/session-runtime-registry.ts",
+    "./session-runtime-types": "./src/session-runtime-types.ts",
+    "./types/provider": "./src/types/provider.ts"
+  }
+}

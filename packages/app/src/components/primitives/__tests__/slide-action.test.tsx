@@ -1,0 +1,145 @@
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SlideAction } from '../slide-action';
+
+describe('SlideAction', () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+      configurable: true,
+      value: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('moves the thumb as the pointer moves before completion', () => {
+    render(
+      <SlideAction
+        actionLabel="Slide to unlock"
+        ariaLabel="Slide to unlock"
+        onComplete={vi.fn()}
+        size="small"
+        theme="glass"
+      />
+    );
+
+    const button = screen.getByRole('button', { name: 'Slide to unlock' });
+    Object.defineProperty(button, 'clientWidth', {
+      configurable: true,
+      value: 238,
+    });
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({
+      bottom: 42,
+      height: 42,
+      left: 0,
+      right: 238,
+      toJSON: () => ({}),
+      top: 0,
+      width: 238,
+      x: 0,
+      y: 0,
+    });
+
+    fireEvent.pointerDown(button, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerMove(button, { clientX: 96, pointerId: 1 });
+
+    expect(button.style.getPropertyValue('--slide-knob-offset')).toBe('96px');
+    expect(button.style.getPropertyValue('--slide-fill-width')).toBe('130px');
+    expect(button).toHaveClass('h-[42px]');
+    expect(button.style.getPropertyValue('--slide-motion-duration')).toBe('0ms');
+  });
+
+  it('holds the completed position before slowly returning', () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+
+    render(
+      <SlideAction
+        actionLabel="Slide to unlock"
+        ariaLabel="Slide to unlock"
+        onComplete={onComplete}
+        size="small"
+        theme="glass"
+      />
+    );
+
+    const button = screen.getByRole('button', { name: 'Slide to unlock' });
+    Object.defineProperty(button, 'clientWidth', {
+      configurable: true,
+      value: 238,
+    });
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({
+      bottom: 42,
+      height: 42,
+      left: 0,
+      right: 238,
+      toJSON: () => ({}),
+      top: 0,
+      width: 238,
+      x: 0,
+      y: 0,
+    });
+
+    fireEvent.pointerDown(button, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerMove(button, { clientX: 192, pointerId: 1 });
+    fireEvent.pointerUp(button, { clientX: 192, pointerId: 1 });
+
+    expect(button.style.getPropertyValue('--slide-knob-offset')).toBe('196px');
+
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(button.style.getPropertyValue('--slide-knob-offset')).toBe('196px');
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(16);
+    });
+
+    expect(button.style.getPropertyValue('--slide-knob-offset')).toBe('0px');
+    expect(button.style.getPropertyValue('--slide-motion-duration')).toBe('620ms');
+  });
+
+  it('renders custom track and fill classes when provided', () => {
+    render(
+      <SlideAction
+        actionLabel="Slide to unlock"
+        ariaLabel="Slide to unlock"
+        onComplete={vi.fn()}
+        progressFillClassName="bg-emerald-100"
+        size="small"
+        theme="light"
+        trackClassName="border-slate-300 bg-slate-100"
+      />
+    );
+
+    const button = screen.getByRole('button', { name: 'Slide to unlock' });
+    expect(button.className).toContain('bg-slate-100');
+    expect(button.firstElementChild?.className).toContain('bg-emerald-100');
+  });
+
+  it('applies custom track and fill styles when provided', () => {
+    render(
+      <SlideAction
+        actionLabel="Slide to unlock"
+        ariaLabel="Slide to unlock"
+        onComplete={vi.fn()}
+        progressFillStyle={{ background: 'linear-gradient(90deg, red 0%, pink 100%)' }}
+        size="small"
+        theme="dark"
+        trackStyle={{ borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239, 68, 68, 0.12)' }}
+      />
+    );
+
+    const button = screen.getByRole('button', { name: 'Slide to unlock' });
+    const fill = button.firstElementChild as HTMLElement | null;
+
+    expect(button.style.borderColor).toBe('rgb(239, 68, 68)');
+    expect(button.style.backgroundColor).toBe('rgba(239, 68, 68, 0.12)');
+    expect(fill?.style.background).toBe('linear-gradient(90deg, red 0%, pink 100%)');
+  });
+});

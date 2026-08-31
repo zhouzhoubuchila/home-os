@@ -1,0 +1,216 @@
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import { ENERGY_WIDGET_ROOM, HOME_WIDGET_ROOM, isAllRooms } from '@navet/app/constants/rooms';
+import type { TranslateFn } from '@navet/app/hooks';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
+import type { CardTemplate, CardType } from '../components/add-card-dialog';
+import type { CustomCard } from '../stores/custom-cards-store';
+
+interface UseDashboardCardActionsParams {
+  activeRoom: string;
+  activeSection: string;
+  isEditMode: boolean;
+  addCard: (
+    type: CardType,
+    size: CardSize,
+    room: string,
+    data?: Record<string, unknown>
+  ) => CustomCard;
+  removeCard: (cardId: string) => void;
+  updateCard: (cardId: string, updates: Partial<Omit<CustomCard, 'id' | 'createdAt'>>) => void;
+  hideAutoEntity: (entityId: string) => void;
+  showAutoEntity: (entityId: string) => void;
+  t: TranslateFn;
+  addCardTargetSectionId: string | null;
+  homeLayoutMode: 'flow' | 'sectioned';
+  homeLayoutSections: Array<{ id: string }>;
+  addHomeLayoutCard: (cardId: string, sectionId?: string) => void;
+  removeHomeLayoutCard: (cardId: string) => void;
+  addHomeLayoutSection: () => string;
+}
+
+export function useDashboardCardActions({
+  activeRoom,
+  activeSection,
+  isEditMode,
+  addCard,
+  removeCard,
+  updateCard,
+  hideAutoEntity,
+  showAutoEntity,
+  t,
+  addCardTargetSectionId,
+  homeLayoutMode,
+  homeLayoutSections,
+  addHomeLayoutCard,
+  removeHomeLayoutCard,
+  addHomeLayoutSection,
+}: UseDashboardCardActionsParams) {
+  const handleAddCard = useCallback(
+    (template: CardTemplate, size: CardSize) => {
+      const isHomeCanvasTarget = activeSection === 'home' && isAllRooms(activeRoom) && isEditMode;
+      const isEnergyDashboardTarget = activeSection === 'energy';
+      const targetRoom = isHomeCanvasTarget
+        ? HOME_WIDGET_ROOM
+        : isEnergyDashboardTarget
+          ? ENERGY_WIDGET_ROOM
+          : activeRoom;
+      const newCard = addCard(template.cardType, size, targetRoom, template.initialData);
+      const targetRoomLabel = isHomeCanvasTarget
+        ? t('dashboard.roomNav.all')
+        : isEnergyDashboardTarget
+          ? t('sidebar.energy')
+          : activeRoom;
+
+      if (isHomeCanvasTarget) {
+        if (homeLayoutMode !== 'sectioned') {
+          addHomeLayoutCard(newCard.id);
+        } else {
+          const targetSectionId =
+            (addCardTargetSectionId &&
+              homeLayoutSections.some((section) => section.id === addCardTargetSectionId) &&
+              addCardTargetSectionId) ||
+            homeLayoutSections[0]?.id ||
+            addHomeLayoutSection();
+
+          addHomeLayoutCard(newCard.id, targetSectionId);
+        }
+      }
+
+      toast.success(
+        t('dashboard.feedback.widgetAdded', {
+          type: t(template.nameKey),
+          room: targetRoomLabel,
+        })
+      );
+    },
+    [
+      activeRoom,
+      activeSection,
+      addCard,
+      addCardTargetSectionId,
+      addHomeLayoutCard,
+      addHomeLayoutSection,
+      homeLayoutMode,
+      homeLayoutSections,
+      isEditMode,
+      t,
+    ]
+  );
+
+  const handleDeleteCard = useCallback(
+    (cardId: string) => {
+      removeCard(cardId);
+      removeHomeLayoutCard(cardId);
+      toast.success(t('dashboard.feedback.widgetDeleted'));
+    },
+    [removeCard, removeHomeLayoutCard, t]
+  );
+
+  const handleAddLibraryCard = useCallback(
+    (cardId: string) => {
+      const isHomeCanvasTarget = activeSection === 'home' && isAllRooms(activeRoom) && isEditMode;
+      if (!isHomeCanvasTarget) {
+        return;
+      }
+
+      if (homeLayoutMode !== 'sectioned') {
+        addHomeLayoutCard(cardId);
+      } else {
+        const targetSectionId =
+          (addCardTargetSectionId &&
+            homeLayoutSections.some((section) => section.id === addCardTargetSectionId) &&
+            addCardTargetSectionId) ||
+          homeLayoutSections[0]?.id ||
+          addHomeLayoutSection();
+
+        addHomeLayoutCard(cardId, targetSectionId);
+      }
+
+      toast.success(t('dashboard.feedback.cardAddedToHome'));
+    },
+    [
+      activeRoom,
+      activeSection,
+      addCardTargetSectionId,
+      addHomeLayoutCard,
+      addHomeLayoutSection,
+      homeLayoutMode,
+      homeLayoutSections,
+      isEditMode,
+      t,
+    ]
+  );
+
+  const handleAddEntity = useCallback(
+    (entityId: string) => {
+      showAutoEntity(entityId);
+      toast.success(t('dashboard.feedback.entityAdded'));
+    },
+    [showAutoEntity, t]
+  );
+
+  const handleAddGenericEntityCard = useCallback(
+    (entityId: string) => {
+      const isHomeCanvasTarget = activeSection === 'home' && isAllRooms(activeRoom) && isEditMode;
+      const targetRoom = isHomeCanvasTarget ? HOME_WIDGET_ROOM : activeRoom;
+      const newCard = addCard('entity', 'small', targetRoom, { entityId });
+
+      if (isHomeCanvasTarget) {
+        if (homeLayoutMode !== 'sectioned') {
+          addHomeLayoutCard(newCard.id);
+        } else {
+          const targetSectionId =
+            (addCardTargetSectionId &&
+              homeLayoutSections.some((section) => section.id === addCardTargetSectionId) &&
+              addCardTargetSectionId) ||
+            homeLayoutSections[0]?.id ||
+            addHomeLayoutSection();
+
+          addHomeLayoutCard(newCard.id, targetSectionId);
+        }
+      }
+
+      toast.success(t('dashboard.feedback.entityAdded'));
+    },
+    [
+      activeRoom,
+      activeSection,
+      addCard,
+      addCardTargetSectionId,
+      addHomeLayoutCard,
+      addHomeLayoutSection,
+      homeLayoutMode,
+      homeLayoutSections,
+      isEditMode,
+      t,
+    ]
+  );
+
+  const handleRemoveEntity = useCallback(
+    (entityId: string) => {
+      hideAutoEntity(entityId);
+      toast.success(t('dashboard.feedback.entityRemoved'), {
+        id: 'dashboard-entity-removed',
+      });
+    },
+    [hideAutoEntity, t]
+  );
+
+  const handleUpdateCard = useCallback(
+    (cardId: string, updates: Partial<Omit<CustomCard, 'id' | 'createdAt'>>) => {
+      updateCard(cardId, updates);
+    },
+    [updateCard]
+  );
+
+  return {
+    handleAddCard,
+    handleAddLibraryCard,
+    handleAddGenericEntityCard,
+    handleDeleteCard,
+    handleAddEntity,
+    handleRemoveEntity,
+    handleUpdateCard,
+  };
+}

@@ -1,0 +1,3 @@
+pnpm typecheck &&
+  pnpm test:tier1 &&
+  pnpm test:tier2

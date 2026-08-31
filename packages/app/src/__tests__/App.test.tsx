@@ -1,0 +1,1198 @@
+import { resetRuntimeContextForTests } from '@navet/app/infrastructure/home-assistant/runtime/runtime-detector';
+import { homeyService } from '@navet/app/services/homey.service';
+import { homeAssistantStore } from '@navet/app/stores/home-assistant-store';
+import { integrationStore } from '@navet/app/stores/integration-store';
+import { useSettingsStore } from '@navet/app/stores/settings-store';
+import { resetAppStores } from '@navet/app/test/store-reset';
+import { getOpenHABSnapshot } from '@navet/provider-openhab';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import App from '../App';
+import { useAuthSession } from '../auth/AuthProvider';
+import { useLogout } from '../hooks/use-logout';
+
+const CONNECTION_TIMEOUT_MESSAGE =
+  'Cannot connect to Home Assistant. Check the saved URL and update it if your Home Assistant address changed.';
+const AUTH_SESSION_LOAD_TIMEOUT_MS = 3_000;
+
+type StubListenerMap = {
+  entities: Set<(payload: Record<string, unknown> | null) => void>;
+  config: Set<(payload: Record<string, unknown> | null) => void>;
+  registries: Set<(payload: unknown) => void>;
+  connection: Set<
+    (payload: { connected: boolean; connection: unknown; reconnecting: boolean }) => void
+  >;
+  error: Set<(payload: { message: string }) => void>;
+};
+type StubHomeAssistantService = {
+  listeners: StubListenerMap;
+  connected: boolean;
+  config: Record<string, unknown> | null;
+  entities: Record<string, unknown> | null;
+  user: unknown;
+  connection: unknown;
+  areas: Array<{ area_id: string; name: string }>;
+  deviceRegistry: Array<{ id: string; area_id?: string | null }>;
+  entityRegistry: Array<{ entity_id: string; area_id?: string | null }>;
+  setPanelHass: ReturnType<typeof vi.fn>;
+};
+
+const { getAuthAppMock, homeAssistantServiceStub } = vi.hoisted(() => ({
+  getAuthAppMock: vi.fn(),
+  homeAssistantServiceStub: {
+    listeners: {
+      entities: new Set<(payload: Record<string, unknown> | null) => void>(),
+      config: new Set<(payload: Record<string, unknown> | null) => void>(),
+      registries: new Set<(payload: unknown) => void>(),
+      connection: new Set<
+        (payload: { connected: boolean; connection: unknown; reconnecting: boolean }) => void
+      >(),
+      error: new Set<(payload: { message: string }) => void>(),
+    },
+    connected: false,
+    config: null as Record<string, unknown> | null,
+    entities: null as Record<string, unknown> | null,
+    user: null as unknown,
+    connection: null as unknown,
+    areas: [] as Array<{ area_id: string; name: string }>,
+    deviceRegistry: [] as Array<{ id: string; area_id?: string | null }>,
+    entityRegistry: [] as Array<{ entity_id: string; area_id?: string | null }>,
+    addListener: vi.fn(function (
+      this: StubHomeAssistantService,
+      type: keyof StubListenerMap,
+      listener: StubListenerMap[keyof StubListenerMap] extends Set<infer Listener>
+        ? Listener
+        : never
+    ) {
+      const listeners = this.listeners[type] as Set<typeof listener>;
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }),
+    authenticate: vi.fn(async function (this: StubHomeAssistantService) {
+      this.connected = true;
+    }),
+    disconnect: vi.fn(function (this: StubHomeAssistantService) {
+      this.connected = false;
+      this.connection = null;
+    }),
+    isConnected: vi.fn(function (this: StubHomeAssistantService) {
+      return this.connected;
+    }),
+    getConfig: vi.fn(function (this: StubHomeAssistantService) {
+      return this.config;
+    }),
+    getEntities: vi.fn(function (this: StubHomeAssistantService) {
+      return this.entities;
+    }),
+    getUser: vi.fn(function (this: StubHomeAssistantService) {
+      return this.user;
+    }),
+    getAreas: vi.fn(function (this: StubHomeAssistantService) {
+      return this.areas;
+    }),
+    getDeviceRegistry: vi.fn(function (this: StubHomeAssistantService) {
+      return this.deviceRegistry;
+    }),
+    getEntityRegistry: vi.fn(function (this: StubHomeAssistantService) {
+      return this.entityRegistry;
+    }),
+    getConnection: vi.fn(function (this: StubHomeAssistantService) {
+      return this.connection;
+    }),
+    setPanelHass: vi.fn(function (
+      this: StubHomeAssistantService,
+      hass: {
+        states: Record<string, unknown>;
+        config: Record<string, unknown>;
+        user?: unknown;
+        connection?: unknown;
+      }
+    ) {
+      this.connected = true;
+      this.config = hass.config;
+      this.entities = hass.states;
+      this.user = hass.user ?? null;
+      this.connection = hass.connection ?? { id: 'panel-connection' };
+    }),
+    loadRegistries: vi.fn(async () => {}),
+  },
+}));
+
+vi.mock('../services/home-assistant.service', () => ({
+  homeAssistantService: homeAssistantServiceStub,
+}));
+
+vi.mock('../features/dashboard/page', () => ({
+  DashboardPage: () => {
+    const connecting = useStoreWithEqualityFn(homeAssistantStore, (state) => state.connecting);
+    const logout = useLogout();
+    const { setActiveProvider } = useAuthSession();
+    return (
+      <main>
+        {connecting ? 'Connecting to Home Assistant...' : 'dashboard'}
+        <button type="button" onClick={logout}>
+          Logout
+        </button>
+        <button type="button" onClick={() => setActiveProvider('homey')}>
+          Use Homey
+        </button>
+      </main>
+    );
+  },
+}));
+
+vi.mock('../features/auth/login-page', () => ({
+  LoginPage: () => <main>login</main>,
+}));
+
+vi.mock('../components/shared/pwa-update-prompt', () => ({
+  PwaUpdatePrompt: () => null,
+}));
+
+vi.mock('home-assistant-js-websocket', () => ({
+  ERR_INVALID_AUTH: 2,
+  getAuth: getAuthAppMock,
+  callService: vi.fn(),
+}));
+
+describe('App Home Assistant connection recovery', () => {
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    await resetAppStores();
+    homeyService.setClient(null);
+    homeyService.resetSnapshot();
+    homeAssistantServiceStub.connected = false;
+    homeAssistantServiceStub.config = { location_name: 'Home' };
+    homeAssistantServiceStub.entities = {};
+    homeAssistantServiceStub.user = { name: 'Test User' };
+    homeAssistantServiceStub.connection = { id: 'conn-1' };
+    homeAssistantServiceStub.areas = [];
+    homeAssistantServiceStub.deviceRegistry = [];
+    homeAssistantServiceStub.entityRegistry = [];
+    Object.values(homeAssistantServiceStub.listeners).forEach((listeners) => {
+      listeners.clear();
+    });
+    homeAssistantServiceStub.addListener.mockClear();
+    homeAssistantServiceStub.disconnect.mockClear();
+    homeAssistantServiceStub.authenticate.mockReset();
+    homeAssistantServiceStub.authenticate.mockImplementation(async function (
+      this: StubHomeAssistantService
+    ) {
+      this.connected = true;
+    });
+    homeAssistantServiceStub.setPanelHass.mockClear();
+    getAuthAppMock.mockReset();
+    getAuthAppMock.mockResolvedValue({
+      data: {
+        hassUrl: 'http://192.168.68.71:8123',
+        clientId: 'http://localhost/',
+        expires: Date.now() + 3_600_000,
+        refresh_token: 'refresh-token',
+        access_token: 'access-token',
+        expires_in: 3600,
+      },
+      wsUrl: 'ws://192.168.68.71:8123/api/websocket',
+      accessToken: 'access-token',
+      expired: false,
+      refreshAccessToken: vi.fn(),
+      revoke: vi.fn(),
+    });
+    window.history.replaceState({}, '', '/');
+    window.__NAVET_PANEL__ = undefined;
+    window.__NAVET_CONFIG__ = undefined;
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: window,
+    });
+    resetRuntimeContextForTests();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    window.__NAVET_PANEL__ = undefined;
+    window.__NAVET_CONFIG__ = undefined;
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: window,
+    });
+    resetRuntimeContextForTests();
+  });
+
+  it('applies low-power effects before authentication and keeps them on the login surface', async () => {
+    vi.useRealTimers();
+    setNoStoredSession();
+    useSettingsStore.setState({
+      disableAnimations: false,
+      effectsQuality: 'low',
+      effectsQualityUserOverride: true,
+      lowPowerMode: false,
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(await screen.findByText('login')).toBeInTheDocument();
+    expect(document.documentElement.dataset.effectsQuality).toBe('low');
+    expect(document.documentElement.dataset.lowPower).toBe('true');
+    expect(document.documentElement.dataset.noAnimation).toBe('true');
+  });
+
+  it('starts a connection attempt for a saved authenticated session', async () => {
+    vi.useRealTimers();
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() =>
+      expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerId: 'home_assistant',
+          runtime: 'standalone-oauth',
+          authMode: 'oauth',
+          haBaseUrl: 'http://192.168.68.71:8123',
+          hassUrl: 'http://192.168.68.71:8123',
+          auth: expect.any(Object),
+          expiresAt: expect.any(Number),
+        })
+      )
+    );
+  });
+
+  it('hydrates a saved Homey session without opening a Home Assistant connection', async () => {
+    vi.useRealTimers();
+    setStoredHomeySession();
+    homeyService.setClient({
+      setCapabilityValue: vi.fn(),
+      loadSnapshot: vi.fn(async () => ({
+        connected: true,
+        devices: {
+          light_1: {
+            id: 'light_1',
+            name: 'Sofa Lamp',
+            class: 'light',
+            zone: 'living_room',
+            capabilitiesObj: {
+              onoff: { value: true },
+              dim: { value: 0.4 },
+            },
+          },
+        },
+        zones: {
+          living_room: { id: 'living_room', name: 'Living Room' },
+        },
+      })),
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(screen.getByText('dashboard')).toBeInTheDocument());
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+    expect(homeyService.getSnapshot()).toMatchObject({
+      connected: true,
+      devices: {
+        light_1: expect.objectContaining({
+          name: 'Sofa Lamp',
+        }),
+      },
+    });
+  });
+
+  it('hydrates a saved openHAB session without opening a Home Assistant connection', async () => {
+    vi.useRealTimers();
+    setStoredOpenHABSession();
+    const webSocketStub = class {
+      static readonly OPEN = 1;
+      readyState = 0;
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
+
+      send() {}
+      close() {}
+    };
+    vi.stubGlobal('WebSocket', webSocketStub);
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(screen.getByText('dashboard')).toBeInTheDocument());
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+    expect(getOpenHABSnapshot()).toMatchObject({
+      connected: true,
+      items: {
+        LivingRoomLamp: expect.objectContaining({
+          name: 'LivingRoomLamp',
+          state: 'ON',
+        }),
+      },
+    });
+    expect(integrationStore.getState().selectedProviderIds).toContain('openhab');
+  });
+
+  it('bootstraps Home Assistant and Homey together when both stored sessions exist', async () => {
+    vi.useRealTimers();
+    setStoredMultiProviderSessions();
+    homeyService.setClient({
+      setCapabilityValue: vi.fn(),
+      loadSnapshot: vi.fn(async () => ({
+        connected: true,
+        devices: {
+          switch_1: {
+            id: 'switch_1',
+            name: 'Coffee Machine',
+            class: 'socket',
+            zone: 'living_room',
+            capabilitiesObj: {
+              onoff: { value: true },
+            },
+          },
+        },
+        zones: {
+          living_room: { id: 'living_room', name: 'Living Room' },
+        },
+      })),
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(screen.getByText('dashboard')).toBeInTheDocument());
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'home_assistant',
+        runtime: 'standalone-oauth',
+        authMode: 'oauth',
+        haBaseUrl: 'http://192.168.68.71:8123',
+        hassUrl: 'http://192.168.68.71:8123',
+        auth: expect.any(Object),
+        expiresAt: expect.any(Number),
+      })
+    );
+    expect(homeyService.getSnapshot()).toMatchObject({
+      connected: true,
+      devices: {
+        switch_1: expect.objectContaining({
+          name: 'Coffee Machine',
+        }),
+      },
+    });
+  });
+
+  it('keeps startup pending and preserves the browser session when auth bootstrap stalls', async () => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(screen.getByText('Starting your dashboard...')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back to login' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTH_SESSION_LOAD_TIMEOUT_MS * 2);
+    });
+
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
+    expect(screen.getByText('Starting your dashboard...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to login' })).toBeInTheDocument();
+  });
+
+  it('returns to login when a saved Home Assistant session cannot be restored', async () => {
+    vi.useRealTimers();
+    let sessionCleared = false;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/__navet_auth__/session/credentials')) {
+        return new Response(null, { status: 500 });
+      }
+      if (url.includes('/__navet_auth__/session')) {
+        if (init?.method === 'DELETE') {
+          sessionCleared = true;
+          return new Response(null, { status: 204 });
+        }
+        return sessionCleared ? new Response(null, { status: 204 }) : authMetadataResponse(true);
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(
+      await screen.findByText('Unable to restore the Home Assistant session')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry connection/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to login' }));
+
+    await waitFor(() => expect(screen.getByText('login')).toBeInTheDocument());
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true);
+  });
+
+  it('completes OAuth callback startup without returning to the URL login form', async () => {
+    vi.useRealTimers();
+    setAuthenticatedSession();
+    window.history.replaceState({}, '', '/?navet_oauth_callback=1');
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(screen.queryByText('login')).not.toBeInTheDocument());
+    expect(screen.getByText('dashboard')).toBeInTheDocument();
+    expect(getAuthAppMock).toHaveBeenCalledWith({
+      hassUrl: `${window.location.origin}/__navet_ha_proxy__`,
+      loadTokens: expect.any(Function),
+      saveTokens: expect.any(Function),
+      limitHassInstance: true,
+    });
+    expect(window.location.search).toBe('');
+  });
+
+  it('keeps OAuth callback startup ahead of a stale persisted standalone session', async () => {
+    vi.useRealTimers();
+    const clientId = `${window.location.origin}/`;
+    window.history.replaceState({}, '', '/?navet_oauth_callback=1');
+    setAuthenticatedSession({
+      hassUrl: 'http://192.168.68.99:8123',
+      clientId,
+      expires: Date.now() + 3_600_000,
+      refresh_token: 'fresh-refresh-token',
+      access_token: 'fresh-access-token',
+      expires_in: 3600,
+    });
+    getAuthAppMock.mockResolvedValueOnce({
+      data: {
+        hassUrl: 'http://192.168.68.99:8123',
+        clientId,
+        expires: Date.now() + 3_600_000,
+        refresh_token: 'fresh-refresh-token',
+        access_token: 'fresh-access-token',
+        expires_in: 3600,
+      },
+      wsUrl: 'ws://192.168.68.99:8123/api/websocket',
+      accessToken: 'fresh-access-token',
+      expired: false,
+      refreshAccessToken: vi.fn(),
+      revoke: vi.fn(),
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(screen.queryByText('login')).not.toBeInTheDocument());
+    expect(screen.getByText('dashboard')).toBeInTheDocument();
+    expect(getAuthAppMock).toHaveBeenCalledWith({
+      hassUrl: `${window.location.origin}/__navet_ha_proxy__`,
+      loadTokens: expect.any(Function),
+      saveTokens: expect.any(Function),
+      limitHassInstance: true,
+    });
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'home_assistant',
+        runtime: 'standalone-oauth',
+        authMode: 'oauth',
+        haBaseUrl: 'http://192.168.68.99:8123',
+        hassUrl: 'http://192.168.68.99:8123',
+        auth: expect.any(Object),
+        expiresAt: expect.any(Number),
+      })
+    );
+  });
+
+  it('shows recovery when the saved Home Assistant URL does not connect within the grace period', async () => {
+    homeAssistantServiceStub.authenticate.mockImplementationOnce(() => new Promise(() => {}));
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(screen.getByText('Connecting to Home Assistant...')).toBeInTheDocument();
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.getByText(CONNECTION_TIMEOUT_MESSAGE)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to login/i })).toBeInTheDocument();
+    expect(homeAssistantServiceStub.disconnect).toHaveBeenCalled();
+  });
+
+  it('refreshes and reconnects instead of logging out when a standalone socket rejects a stale token', async () => {
+    vi.useRealTimers();
+    let authRevision = 1;
+    const authData = {
+      ...DEFAULT_APP_AUTH_DATA,
+      expires: Date.now() + 3_600_000,
+    };
+    const refreshedAuthData = {
+      ...authData,
+      expires: Date.now() + 7_200_000,
+      access_token: 'refreshed-access-token',
+    };
+    const auth = {
+      data: authData,
+      wsUrl: 'ws://192.168.68.71:8123/api/websocket',
+      accessToken: authData.access_token,
+      expired: false,
+      refreshAccessToken: vi.fn(async () => {
+        auth.data = refreshedAuthData;
+        auth.accessToken = refreshedAuthData.access_token;
+      }),
+      revoke: vi.fn(),
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/__navet_auth__/session/credentials')) {
+        return authCredentialsResponse(authData);
+      }
+      if (url.includes('/__navet_auth__/session')) {
+        if (init?.method === 'PUT') {
+          authRevision += 1;
+          return authMetadataResponse(true, refreshedAuthData, authRevision);
+        }
+        if (init?.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
+        return authMetadataResponse(true, authData, authRevision);
+      }
+      return new Response(null, { status: 204 });
+    });
+    getAuthAppMock.mockResolvedValueOnce(auth);
+    homeAssistantServiceStub.authenticate.mockRejectedValueOnce(
+      new Error('Invalid Home Assistant authentication. Sign in again to refresh the session.')
+    );
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(auth.refreshAccessToken).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('dashboard')).toBeInTheDocument();
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Home Assistant authentication/i)).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+  });
+
+  it('recovers a retained Home Assistant session while Homey stays active', async () => {
+    vi.useRealTimers();
+    setStoredMultiProviderSessions();
+    homeyService.setClient({
+      setCapabilityValue: vi.fn(),
+      loadSnapshot: vi.fn(async () => ({
+        connected: true,
+        devices: {},
+        zones: {},
+      })),
+    });
+    let rejectInitialConnection: ((reason: unknown) => void) | undefined;
+    homeAssistantServiceStub.authenticate.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectInitialConnection = reject;
+        })
+    );
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Use Homey' }));
+    await act(async () => {
+      rejectInitialConnection?.(
+        new Error('Invalid Home Assistant authentication. Sign in again to refresh the session.')
+      );
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('dashboard')).toBeInTheDocument();
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
+    expect(integrationStore.getState().currentProviderId).toBe('homey');
+  });
+
+  it('keeps the persisted standalone OAuth session when scheduled token refresh fails transiently', async () => {
+    let authRevision = 1;
+    const authData = {
+      hassUrl: 'http://192.168.68.71:8123',
+      clientId: 'http://localhost/',
+      expires: Date.now() + 30_000,
+      refresh_token: 'refresh-token',
+      access_token: 'access-token',
+      expires_in: 3600,
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/__navet_auth__/session/credentials')) {
+        return authCredentialsResponse(authData);
+      }
+      if (url.includes('/__navet_auth__/session')) {
+        if (init?.method === 'PUT') {
+          authRevision += 1;
+          return authMetadataResponse(true, authData, authRevision);
+        }
+        return authMetadataResponse(true, authData, authRevision);
+      }
+      return new Response(null, { status: 204 });
+    });
+    const refreshAccessTokenMock = vi.fn().mockRejectedValueOnce(new Error('refresh failed'));
+    getAuthAppMock.mockResolvedValueOnce({
+      data: {
+        hassUrl: 'http://192.168.68.71:8123',
+        clientId: 'http://localhost/',
+        expires: Date.now() + 30_000,
+        refresh_token: 'refresh-token',
+        access_token: 'access-token',
+        expires_in: 3600,
+      },
+      wsUrl: 'ws://192.168.68.71:8123/api/websocket',
+      accessToken: 'access-token',
+      expired: false,
+      refreshAccessToken: refreshAccessTokenMock,
+      revoke: vi.fn(),
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+      await Promise.resolve();
+    });
+
+    expect(refreshAccessTokenMock).toHaveBeenCalled();
+    expect(screen.queryByText('login')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+  });
+
+  it('keeps the recovery screen hidden when Home Assistant connects before the grace period expires', async () => {
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.queryByText(/Cannot connect to Home Assistant/)).not.toBeInTheDocument();
+  });
+
+  it('retries the saved connection after the grace period recovery appears', async () => {
+    homeAssistantServiceStub.authenticate.mockImplementation(() => new Promise(() => {}));
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    const retry = screen.getByRole('button', { name: /retry/i });
+
+    fireEvent.click(retry);
+
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenCalledTimes(2);
+    expect(homeAssistantServiceStub.authenticate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        providerId: 'home_assistant',
+        runtime: 'standalone-oauth',
+        authMode: 'oauth',
+        haBaseUrl: 'http://192.168.68.71:8123',
+        hassUrl: 'http://192.168.68.71:8123',
+        auth: expect.any(Object),
+        expiresAt: expect.any(Number),
+      })
+    );
+  });
+
+  it('waits for the parent Home Assistant bridge in add-on ingress instead of opening a new websocket', async () => {
+    homeAssistantServiceStub.authenticate.mockImplementationOnce(() => new Promise(() => {}));
+    window.history.replaceState({}, '', '/api/hassio_ingress/navet/');
+    resetRuntimeContextForTests();
+    setNoStoredSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+    expect(screen.queryByText(CONNECTION_TIMEOUT_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /back to login/i })).not.toBeInTheDocument();
+  });
+
+  it('reuses the parent Home Assistant frontend connection in ingress before opening a new websocket', async () => {
+    vi.useRealTimers();
+    setNoStoredSession();
+    window.history.replaceState({}, '', '/api/hassio_ingress/navet/');
+    resetRuntimeContextForTests();
+
+    const parentDocument = document.implementation.createHTMLDocument('ha-parent');
+    const homeAssistantRoot = parentDocument.createElement('home-assistant') as HTMLElement & {
+      hass?: Record<string, unknown>;
+    };
+    homeAssistantRoot.hass = {
+      states: { 'light.kitchen': { entity_id: 'light.kitchen', state: 'on' } },
+      config: { location_name: 'Parent Home' },
+      user: { name: 'Parent User' },
+      connection: {
+        sendMessagePromise: vi.fn(async () => ({ ok: true })),
+        subscribeMessage: vi.fn(async () => vi.fn()),
+      },
+      callService: vi.fn(async () => undefined),
+      callWS: vi.fn(async () => ({ ok: true })),
+    };
+    parentDocument.body.append(homeAssistantRoot);
+
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: {
+        document: parentDocument,
+      },
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(homeAssistantServiceStub.setPanelHass).toHaveBeenCalled());
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+    expect(screen.getByText('dashboard')).toBeInTheDocument();
+  });
+
+  it('does not bootstrap a standalone Home Assistant connection in ingress even when frontend tokens exist', async () => {
+    vi.useRealTimers();
+    localStorage.setItem(
+      'hassTokens',
+      JSON.stringify({
+        data: {
+          hassUrl: 'http://192.168.68.71:8123',
+          clientId: `${window.location.origin}/`,
+          expires: Date.now() + 3_600_000,
+          refresh_token: 'refresh-token',
+          access_token: 'access-token',
+          expires_in: 3600,
+        },
+      })
+    );
+    window.history.replaceState({}, '', '/api/hassio_ingress/navet/');
+    resetRuntimeContextForTests();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(getAuthAppMock).not.toHaveBeenCalled();
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Invalid Home Assistant authentication/i)).not.toBeInTheDocument();
+  });
+
+  it('falls back to polling the parent Home Assistant bridge in ingress when websocket subscriptions are unavailable', async () => {
+    vi.useRealTimers();
+    setNoStoredSession();
+    window.history.replaceState({}, '', '/api/hassio_ingress/navet/');
+    resetRuntimeContextForTests();
+
+    const parentDocument = document.implementation.createHTMLDocument('parent');
+    const homeAssistantRoot = parentDocument.createElement('home-assistant') as HTMLElement & {
+      hass?: Record<string, unknown>;
+    };
+    homeAssistantRoot.hass = {
+      states: {
+        'alarm_control_panel.home': { entity_id: 'alarm_control_panel.home', state: 'disarmed' },
+      },
+      config: { location_name: 'Parent Home' },
+      user: { name: 'Parent User' },
+      connection: {
+        sendMessagePromise: vi.fn(async () => ({ ok: true })),
+      },
+      callService: vi.fn(async () => undefined),
+      callWS: vi.fn(async () => ({ ok: true })),
+    };
+    parentDocument.body.append(homeAssistantRoot);
+
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: {
+        document: parentDocument,
+      },
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() =>
+      expect(homeAssistantServiceStub.setPanelHass.mock.calls.length).toBeGreaterThan(0)
+    );
+
+    const initialSyncCount = homeAssistantServiceStub.setPanelHass.mock.calls.length;
+
+    await new Promise((resolve) => window.setTimeout(resolve, 1_100));
+
+    expect(homeAssistantServiceStub.setPanelHass.mock.calls.length).toBeGreaterThan(
+      initialSyncCount
+    );
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+  });
+
+  it('subscribes to parent Home Assistant state changes in ingress before falling back to polling', async () => {
+    vi.useRealTimers();
+    setNoStoredSession();
+    window.history.replaceState({}, '', '/api/hassio_ingress/navet/');
+    resetRuntimeContextForTests();
+
+    const stateChangeListeners: Array<() => void> = [];
+    const subscribeMessage = vi.fn(async (callback: () => void) => {
+      stateChangeListeners.push(callback);
+      return () => undefined;
+    });
+
+    const parentDocument = document.implementation.createHTMLDocument('parent');
+    const homeAssistantRoot = parentDocument.createElement('home-assistant') as HTMLElement & {
+      hass?: Record<string, unknown>;
+    };
+    homeAssistantRoot.hass = {
+      states: {
+        'alarm_control_panel.home': { entity_id: 'alarm_control_panel.home', state: 'disarmed' },
+      },
+      config: { location_name: 'Parent Home' },
+      user: { name: 'Parent User' },
+      connection: {
+        sendMessagePromise: vi.fn(async () => ({ ok: true })),
+        subscribeMessage,
+      },
+      callService: vi.fn(async () => undefined),
+      callWS: vi.fn(async () => ({ ok: true })),
+    };
+    parentDocument.body.append(homeAssistantRoot);
+
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: {
+        document: parentDocument,
+      },
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    await waitFor(() => expect(subscribeMessage).toHaveBeenCalled());
+    expect(subscribeMessage).toHaveBeenCalledWith(expect.any(Function), {
+      type: 'subscribe_events',
+      event_type: 'state_changed',
+    });
+
+    const initialSyncCount = homeAssistantServiceStub.setPanelHass.mock.calls.length;
+    stateChangeListeners[0]?.();
+
+    expect(homeAssistantServiceStub.setPanelHass.mock.calls.length).toBeGreaterThan(
+      initialSyncCount
+    );
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+  });
+
+  it('keeps Home Assistant local storage when returning to login from recovery', async () => {
+    homeAssistantServiceStub.authenticate.mockImplementationOnce(() => new Promise(() => {}));
+    localStorage.setItem('hassTokens', '{"data":"home-assistant-session"}');
+    localStorage.setItem('ha_auth_config', '{"url":"http://old.local:8123","token":"token"}');
+    localStorage.setItem('ha-dashboard-config', '{"url":"http://old.local:8123","token":"token"}');
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    vi.useRealTimers();
+    fireEvent.click(screen.getByRole('button', { name: /back to login/i }));
+
+    await waitFor(() => expect(screen.getByText('login')).toBeInTheDocument());
+    expect(localStorage.getItem('hassTokens')).toBe('{"data":"home-assistant-session"}');
+    expect(localStorage.getItem('ha_auth_config')).toBeNull();
+    expect(localStorage.getItem('ha-dashboard-config')).toBeNull();
+  });
+
+  it('keeps stale Home Assistant auth errors hidden after logout', async () => {
+    vi.useRealTimers();
+    setAuthenticatedSession();
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    const staleErrorListeners = [...homeAssistantServiceStub.listeners.error];
+
+    fireEvent.click(screen.getByRole('button', { name: /^logout$/i }));
+
+    await waitFor(() => expect(screen.getByText('login')).toBeInTheDocument());
+
+    act(() => {
+      staleErrorListeners.forEach((listener) => {
+        listener({
+          message: 'Invalid Home Assistant authentication. Sign in again to refresh the session.',
+        });
+      });
+    });
+
+    expect(screen.getByText('login')).toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Home Assistant authentication/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a Homey chooser when OAuth session has multiple Homeys but none selected', async () => {
+    vi.useRealTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/__navet_auth__/session')) {
+        return new Response(null, { status: 204 });
+      }
+
+      return new Response(
+        JSON.stringify({
+          userId: 'user-1',
+          homeys: [
+            { id: 'homey-1', name: 'Living Room Homey' },
+            { id: 'homey-2', name: 'Cabin Homey' },
+          ],
+          selectedHomeyId: null,
+          homeyBaseUrl: null,
+          hasActiveHomeySession: false,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(await screen.findByText('Choose a Homey')).toBeInTheDocument();
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+  });
+
+  it('shows a Homey chooser when a stored Homey selection has no active Homey session yet', async () => {
+    vi.useRealTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/__navet_auth__/session')) {
+        return new Response(null, { status: 204 });
+      }
+
+      return new Response(
+        JSON.stringify({
+          userId: 'user-1',
+          homeys: [{ id: 'homey-1', name: 'Living Room Homey' }],
+          selectedHomeyId: 'homey-1',
+          homeyBaseUrl: 'https://homey.example.com',
+          hasActiveHomeySession: false,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    });
+
+    await act(async () => {
+      render(<App />);
+    });
+
+    expect(await screen.findByText('Choose a Homey')).toBeInTheDocument();
+    expect(homeAssistantServiceStub.authenticate).not.toHaveBeenCalled();
+  });
+});
+
+const APP_AUTH_SESSION_ID = `nas_${'b'.repeat(32)}`;
+const DEFAULT_APP_AUTH_DATA = {
+  hassUrl: 'http://192.168.68.71:8123',
+  clientId: 'http://localhost/',
+  expires: Date.now() + 3_600_000,
+  refresh_token: 'refresh-token',
+  access_token: 'access-token',
+  expires_in: 3600,
+};
+
+function authMetadataResponse(
+  authenticated: boolean,
+  authData = DEFAULT_APP_AUTH_DATA,
+  authRevision = 1
+) {
+  return new Response(
+    JSON.stringify({
+      authenticated,
+      providerId: 'home_assistant',
+      sessionId: APP_AUTH_SESSION_ID,
+      authRevision,
+      hassUrl: authenticated ? authData.hassUrl : null,
+      clientId: authenticated ? authData.clientId : null,
+      expiresAt: authenticated ? authData.expires : null,
+      expiresIn: authenticated ? authData.expires_in : null,
+      userId: null,
+      userName: null,
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+function authCredentialsResponse(authData = DEFAULT_APP_AUTH_DATA) {
+  return new Response(JSON.stringify(authData), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function setAuthenticatedSession(authData = DEFAULT_APP_AUTH_DATA) {
+  let authRevision = 1;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.includes('/__navet_auth__/session/credentials')) {
+      return authCredentialsResponse(authData);
+    }
+    if (url.includes('/__navet_auth__/session')) {
+      if (init?.method === 'PUT') {
+        authRevision += 1;
+        return authMetadataResponse(true, authData, authRevision);
+      }
+      if (init?.method === 'DELETE') {
+        return new Response(null, { status: 204 });
+      }
+      return authMetadataResponse(true, authData, authRevision);
+    }
+    return new Response(null, { status: 204 });
+  });
+}
+
+function setNoStoredSession() {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/__navet_auth__/session')) {
+      return authMetadataResponse(false);
+    }
+    return new Response(null, { status: 204 });
+  });
+}
+
+function setStoredHomeySession() {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/__navet_auth__/session')) {
+      return authMetadataResponse(false);
+    }
+
+    return new Response(
+      JSON.stringify({
+        userId: 'user-1',
+        homeys: [{ id: 'homey-1', name: 'Living Room Homey' }],
+        selectedHomeyId: 'homey-1',
+        homeyBaseUrl: 'https://homey.example.com',
+        hasActiveHomeySession: true,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  });
+}
+
+function setStoredOpenHABSession() {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes('/__navet_auth__/session')) {
+      return authMetadataResponse(false);
+    }
+
+    if (url.includes('/__navet_openhab__/session')) {
+      return new Response(
+        JSON.stringify({
+          authenticated: true,
+          hassUrl: 'http://192.168.68.82:8080',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (url.includes('/__navet_openhab_proxy__/rest/items?recursive=false')) {
+      return new Response(
+        JSON.stringify([
+          {
+            name: 'LivingRoomLamp',
+            type: 'Switch',
+            label: 'Living Room Lamp',
+            state: 'ON',
+            category: 'light',
+            tags: ['Light'],
+            groupNames: ['LivingRoom'],
+          },
+        ]),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(null, { status: 204 });
+  });
+}
+
+function setStoredMultiProviderSessions() {
+  let authRevision = 1;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url.includes('/__navet_auth__/session/credentials')) {
+      return authCredentialsResponse();
+    }
+    if (url.includes('/__navet_auth__/session')) {
+      if (init?.method === 'PUT') {
+        authRevision += 1;
+        return authMetadataResponse(true, DEFAULT_APP_AUTH_DATA, authRevision);
+      }
+      if (init?.method === 'DELETE') {
+        return new Response(null, { status: 204 });
+      }
+      return authMetadataResponse(true, DEFAULT_APP_AUTH_DATA, authRevision);
+    }
+
+    return new Response(
+      JSON.stringify({
+        userId: 'user-1',
+        homeys: [{ id: 'homey-1', name: 'Living Room Homey' }],
+        selectedHomeyId: 'homey-1',
+        homeyBaseUrl: 'https://homey.example.com',
+        hasActiveHomeySession: true,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  });
+}

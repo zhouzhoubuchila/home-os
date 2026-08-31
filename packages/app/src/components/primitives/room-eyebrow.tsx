@@ -1,0 +1,81 @@
+import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
+import { useTheme } from '@navet/app/hooks';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import type { CSSProperties } from 'react';
+
+interface RoomEyebrowProps {
+  room: string;
+  variant?: 'pill' | 'plain';
+  onClick?: () => void;
+  isLoading?: boolean;
+  /** Force white-muted text for dialogs that always have a dark background regardless of app theme */
+  forceDark?: boolean;
+  /** Render as a non-interactive div with aria-hidden — use when a select overlay handles interaction */
+  visualOnly?: boolean;
+  /** Mirror focus state from an overlay element onto the visual ring */
+  focused?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}
+
+export function RoomEyebrow({
+  room,
+  variant = 'pill',
+  onClick,
+  isLoading = false,
+  forceDark = false,
+  visualOnly = false,
+  focused = false,
+  className = '',
+  style,
+}: RoomEyebrowProps) {
+  const { theme } = useTheme();
+  const surface = getThemeSurfaceTokens(theme);
+  const textClassName = forceDark ? 'text-white/82' : surface.textPrimary;
+  const shellClassName = forceDark
+    ? 'border border-white/12 bg-white/8'
+    : `${surface.border} ${surface.subtleBg}`;
+  const sharedClassName =
+    variant === 'plain'
+      ? `inline-flex items-center gap-1 text-xs font-medium capitalize tracking-normal ${textClassName} ${className}`
+      : `inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium capitalize tracking-normal ${textClassName} ${shellClassName} ${className}`;
+  const content = (
+    <>
+      {room}
+      {isLoading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ChevronDown className="h-3.5 w-3.5" />
+      )}
+    </>
+  );
+
+  if (visualOnly) {
+    const focusRingClassName = focused
+      ? theme === 'light'
+        ? 'ring-2 ring-offset-2 ring-gray-400 ring-offset-white'
+        : 'ring-2 ring-offset-2 ring-white/30 ring-offset-transparent'
+      : '';
+
+    return (
+      <div
+        aria-hidden="true"
+        style={style}
+        className={`pointer-events-none ${variant === 'pill' ? 'rounded-full' : 'rounded-sm'} ${focusRingClassName} ${sharedClassName}`}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={style}
+      className={`transition-opacity hover:opacity-80 ${sharedClassName}`}
+    >
+      {content}
+    </button>
+  );
+}

@@ -1,0 +1,1 @@
+import '@navet/app/main';

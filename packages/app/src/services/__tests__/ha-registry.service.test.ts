@@ -1,0 +1,122 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import HARegistryService from '../ha-registry.service';
+
+describe('HARegistryService', () => {
+  const sendMessagePromise = vi.fn();
+
+  beforeEach(() => {
+    sendMessagePromise.mockReset();
+    sendMessagePromise.mockImplementation((message: { type: string }) => {
+      if (message.type === 'config/area_registry/list') {
+        return Promise.resolve([]);
+      }
+      if (message.type === 'config/device_registry/list') {
+        return Promise.resolve([]);
+      }
+      if (message.type === 'config/entity_registry/list') {
+        return Promise.resolve([]);
+      }
+      if (message.type === 'config/category_registry/list') {
+        return Promise.resolve([]);
+      }
+
+      return Promise.resolve({});
+    });
+  });
+
+  it('loads automation categories from the scoped Home Assistant category registry', async () => {
+    sendMessagePromise.mockImplementation((message: { type: string; scope?: string }) => {
+      if (message.type === 'config/category_registry/list' && message.scope === 'automation') {
+        return Promise.resolve([{ category_id: 'morning-id', name: 'Morning' }]);
+      }
+      return Promise.resolve([]);
+    });
+    const service = new HARegistryService(
+      () =>
+        ({
+          sendMessagePromise,
+        }) as never
+    );
+
+    await service.loadRegistries();
+
+    expect(service.getAutomationCategories()).toEqual([
+      { category_id: 'morning-id', name: 'Morning' },
+    ]);
+    expect(sendMessagePromise).toHaveBeenCalledWith({
+      type: 'config/category_registry/list',
+      scope: 'automation',
+    });
+  });
+
+  it('updates an entity name through the Home Assistant entity registry', async () => {
+    const service = new HARegistryService(
+      () =>
+        ({
+          sendMessagePromise,
+        }) as never
+    );
+
+    await service.updateEntityName('light.kitchen', 'Kitchen island');
+
+    expect(sendMessagePromise).toHaveBeenCalledWith({
+      type: 'config/entity_registry/update',
+      entity_id: 'light.kitchen',
+      name: 'Kitchen island',
+    });
+  });
+
+  it('rejects empty entity names before calling Home Assistant', async () => {
+    const service = new HARegistryService(
+      () =>
+        ({
+          sendMessagePromise,
+        }) as never
+    );
+
+    await expect(service.updateEntityName('light.kitchen', '   ')).rejects.toThrow(
+      'Entity name is required'
+    );
+    expect(sendMessagePromise).not.toHaveBeenCalled();
+  });
+
+  it('renames an area through Home Assistant area registry update', async () => {
+    sendMessagePromise.mockImplementation((message: { type: string }) => {
+      if (message.type === 'config/area_registry/update') {
+        return Promise.resolve({
+          area_id: 'kitchen',
+          name: 'Kitchen and dining',
+        });
+      }
+      return Promise.resolve([]);
+    });
+    const service = new HARegistryService(
+      () =>
+        ({
+          sendMessagePromise,
+        }) as never
+    );
+
+    await expect(service.updateAreaName('kitchen', ' Kitchen and dining ')).resolves.toEqual({
+      area_id: 'kitchen',
+      name: 'Kitchen and dining',
+    });
+    expect(sendMessagePromise).toHaveBeenCalledWith({
+      type: 'config/area_registry/update',
+      area_id: 'kitchen',
+      name: 'Kitchen and dining',
+    });
+  });
+
+  it('rejects empty room names before calling Home Assistant', async () => {
+    const service = new HARegistryService(
+      () =>
+        ({
+          sendMessagePromise,
+        }) as never
+    );
+
+    await expect(service.updateAreaName('kitchen', '   ')).rejects.toThrow('Room name is required');
+    expect(sendMessagePromise).not.toHaveBeenCalled();
+  });
+});

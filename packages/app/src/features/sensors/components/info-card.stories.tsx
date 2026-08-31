@@ -1,0 +1,342 @@
+import { InfoCard } from '@navet/app/features/sensors';
+import { getStoryDocsDescription } from '@navet/app/storybook/story-docs';
+import { EntityCardStoryFrame, noopCardSizeChange } from '@navet/app/storybook/story-frames';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentProps } from 'react';
+import { expect } from 'storybook/test';
+
+function InfoCardStory(args: Omit<ComponentProps<typeof InfoCard>, 'onSizeChange'>) {
+  return (
+    <EntityCardStoryFrame size={args.size ?? 'medium'}>
+      <InfoCard {...args} onSizeChange={noopCardSizeChange} />
+    </EntityCardStoryFrame>
+  );
+}
+
+const meta = {
+  title: 'Cards/Entity/Info',
+  component: InfoCardStory,
+  tags: ['autodocs'],
+  argTypes: {
+    size: {
+      control: 'inline-radio',
+      options: ['extra-small', 'small', 'medium', 'large'],
+    },
+    icon: {
+      control: 'inline-radio',
+      options: [
+        'gauge',
+        'trend-up',
+        'trend-down',
+        'thermometer',
+        'droplets',
+        'wind',
+        'motion',
+        'window',
+        'alert',
+      ],
+    },
+  },
+  args: {
+    id: 'sensor.air_quality',
+    name: 'Air Quality',
+    room: 'Bedroom',
+    value: '412',
+    unit: 'ppm',
+    icon: 'trend-down',
+    subtitle: 'CO2',
+    deviceClass: 'carbon_dioxide',
+    securitySeverity: 'normal',
+    size: 'medium',
+    isEditMode: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Normal read-only entity card for Home Assistant sensor and binary_sensor values. Use this for compact numeric readings, timestamps, and passive status sensors such as motion, leak, and window state.',
+      },
+    },
+  },
+} satisfies Meta<typeof InfoCardStory>;
+
+const richComponentDocsDescription = getStoryDocsDescription(meta.title);
+
+meta.parameters = {
+  ...meta.parameters,
+  docs: {
+    ...meta.parameters?.docs,
+    description: {
+      ...meta.parameters?.docs?.description,
+      component: richComponentDocsDescription,
+    },
+  },
+};
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Playground: Story = {};
+
+export const Temperature: Story = {
+  args: {
+    id: 'sensor.living_room_temperature',
+    name: 'Temperature',
+    room: 'Living Room',
+    value: '21.8',
+    unit: '°C',
+    icon: 'thermometer',
+    subtitle: 'temperature',
+    deviceClass: 'temperature',
+    size: 'small',
+    sparklineData: [
+      { value: 20.5, timestampMs: 1, endTimestampMs: 2, minValue: 20.2, maxValue: 20.7 },
+      { value: 21.1, timestampMs: 2, endTimestampMs: 3, minValue: 20.8, maxValue: 21.3 },
+      { value: 20.8, timestampMs: 3, endTimestampMs: 4, minValue: 20.6, maxValue: 21 },
+      { value: 21.6, timestampMs: 4, endTimestampMs: 5, minValue: 21.2, maxValue: 21.8 },
+      { value: 21.2, timestampMs: 5, endTimestampMs: 6, minValue: 21, maxValue: 21.4 },
+      { value: 21.8, timestampMs: 6, endTimestampMs: 7, minValue: 21.5, maxValue: 22 },
+    ],
+  },
+  play: async ({ canvas, canvasElement }) => {
+    expect(canvas.getByTestId('sensor-history-sparkline')).toBeInTheDocument();
+    expect(
+      canvasElement
+        .querySelector('[data-testid="sensor-history-sparkline"] svg')
+        ?.getBoundingClientRect().height
+    ).toBeGreaterThan(0);
+    expect(canvasElement.querySelectorAll('[data-chart-reference-line="true"]')).toHaveLength(2);
+
+    const header = canvasElement.querySelector<HTMLElement>('.navet-entity-card-header');
+    const metric = header?.nextElementSibling as HTMLElement | undefined;
+    const card = header?.closest<HTMLElement>('[data-effective-effects-quality]');
+    expect(metric?.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card?.getBoundingClientRect().right ?? 0
+    );
+    expect(canvas.getByText('C')).not.toHaveClass('block');
+    expect(canvas.getByText('C')).not.toHaveTextContent('°');
+  },
+};
+
+export const Humidity: Story = {
+  args: {
+    id: 'sensor.living_room_humidity',
+    name: 'Humidity',
+    room: 'Living Room',
+    value: '48',
+    unit: '%',
+    icon: 'droplets',
+    subtitle: 'humidity',
+    deviceClass: 'humidity',
+    size: 'small',
+  },
+  play: async ({ canvas, canvasElement }) => {
+    expect(canvas.getByRole('meter', { name: 'Humidity: 48 %' })).toBeInTheDocument();
+    expect(
+      canvasElement.querySelector<HTMLElement>('[data-quality-bar-fill]')?.getBoundingClientRect()
+        .height
+    ).toBeGreaterThan(0);
+  },
+};
+
+export const AirQuality: Story = {
+  args: {
+    id: 'sensor.bedroom_co2',
+    name: 'Air Quality',
+    room: 'Bedroom',
+    value: '1420',
+    unit: 'ppm',
+    icon: 'wind',
+    subtitle: 'carbon dioxide',
+    deviceClass: 'carbon_dioxide',
+    securitySeverity: 'critical',
+    size: 'small',
+  },
+  play: async ({ canvas, canvasElement }) => {
+    expect(canvas.getByRole('meter', { name: 'Air Quality: 1420 ppm' })).toBeInTheDocument();
+    expect(
+      canvasElement.querySelector<HTMLElement>('[data-quality-bar-fill]')?.getBoundingClientRect()
+        .width
+    ).toBeGreaterThan(0);
+  },
+};
+
+export const Pressure: Story = {
+  args: {
+    id: 'sensor.outdoor_pressure',
+    name: 'Outdoor Pressure',
+    room: 'Outdoor',
+    value: '1009',
+    unit: 'hPa',
+    icon: 'gauge',
+    subtitle: 'pressure',
+    deviceClass: 'pressure',
+    size: 'small',
+  },
+};
+
+export const Timestamp: Story = {
+  args: {
+    id: 'sensor.sun_next_setting',
+    name: 'Sun Next setting',
+    room: 'Unassigned',
+    value: '19:29',
+    unit: '',
+    icon: 'gauge',
+    subtitle: 'timestamp',
+    deviceClass: 'timestamp',
+    size: 'small',
+  },
+};
+
+export const Motion: Story = {
+  args: {
+    id: 'binary_sensor.hall_motion',
+    name: 'Motion Sensor',
+    room: 'Hallway',
+    value: 'Clear',
+    unit: '',
+    icon: 'motion',
+    subtitle: 'motion',
+    deviceClass: 'motion',
+    status: 'clear',
+    size: 'small',
+  },
+};
+
+export const WaterLeak: Story = {
+  args: {
+    id: 'binary_sensor.bathroom_leak',
+    name: 'Water Leak',
+    room: 'Bathroom',
+    value: 'Clear',
+    unit: '',
+    icon: 'droplets',
+    subtitle: 'moisture',
+    deviceClass: 'moisture',
+    status: 'clear',
+    size: 'small',
+  },
+};
+
+export const WindowSensor: Story = {
+  args: {
+    id: 'binary_sensor.bedroom_window',
+    name: 'Window Sensor',
+    room: 'Bedroom',
+    value: 'Closed',
+    unit: '',
+    icon: 'window',
+    subtitle: 'window',
+    deviceClass: 'window',
+    status: 'clear',
+    size: 'small',
+  },
+};
+
+export const Unavailable: Story = {
+  args: {
+    id: 'sensor.garage_temperature',
+    name: 'Garage Temperature',
+    room: 'Garage',
+    value: 'unavailable',
+    unit: '',
+    icon: 'thermometer',
+    subtitle: 'temperature',
+    deviceClass: 'temperature',
+    status: 'unavailable',
+    size: 'small',
+  },
+};
+
+export const WithSparkline: Story = {
+  args: {
+    id: 'sensor.living_room_temperature',
+    name: 'Living Room Temperature',
+    room: 'Living Room',
+    value: '21.4',
+    unit: '°C',
+    icon: 'thermometer',
+    subtitle: 'temperature',
+    deviceClass: 'temperature',
+    size: 'medium',
+    sparklineData: [
+      { value: 20.4, timestampMs: 1, endTimestampMs: 2, minValue: 20.1, maxValue: 20.7 },
+      { value: 20.8, timestampMs: 2, endTimestampMs: 3, minValue: 20.6, maxValue: 21 },
+      { value: 21.1, timestampMs: 3, endTimestampMs: 4, minValue: 20.9, maxValue: 21.3 },
+      { value: 21.4, timestampMs: 4, endTimestampMs: 5, minValue: 21.2, maxValue: 21.6 },
+    ],
+  },
+};
+
+export const WithNoHistory: Story = {
+  args: {
+    id: 'sensor.garage_temperature',
+    name: 'Garage Temperature',
+    room: 'Garage',
+    value: '21.4',
+    unit: '°C',
+    icon: 'thermometer',
+    subtitle: 'temperature',
+    deviceClass: 'temperature',
+    size: 'medium',
+    sparklineData: [],
+  },
+};
+
+export const PrepaidCreditRemaining: Story = {
+  args: {
+    id: 'sensor.remaining_electricity',
+    name: 'Remaining Electricity',
+    room: 'Utility',
+    value: '199.28',
+    unit: 'kWh',
+    icon: 'zap',
+    subtitle: 'energy',
+    deviceClass: 'energy',
+    size: 'medium',
+    sparklineData: [
+      { value: 211.8, timestampMs: 1, endTimestampMs: 2, minValue: 211.2, maxValue: 212.1 },
+      { value: 210.9, timestampMs: 2, endTimestampMs: 3, minValue: 210.6, maxValue: 211.1 },
+      { value: 206.8, timestampMs: 3, endTimestampMs: 4, minValue: 206.4, maxValue: 207.1 },
+      { value: 205.9, timestampMs: 4, endTimestampMs: 5, minValue: 205.5, maxValue: 206.2 },
+      { value: 202.4, timestampMs: 5, endTimestampMs: 6, minValue: 202.1, maxValue: 202.8 },
+      { value: 199.3, timestampMs: 6, endTimestampMs: 7, minValue: 199.1, maxValue: 199.6 },
+    ],
+  },
+};
+
+export const PrepaidCreditNoHistory: Story = {
+  args: {
+    id: 'sensor.remaining_electricity',
+    name: 'Remaining Electricity',
+    room: 'Utility',
+    value: '199.28',
+    unit: 'kWh',
+    icon: 'zap',
+    subtitle: 'energy',
+    deviceClass: 'energy',
+    size: 'medium',
+    sparklineData: [],
+  },
+};
+
+export const LongName: Story = {
+  args: {
+    id: 'sensor.utility_room_heat_pump_total_energy_today',
+    name: 'Utility Room Heat Pump Total Energy Today',
+    room: 'Utility Room',
+    value: '12.4',
+    unit: 'kWh',
+    icon: 'zap',
+    subtitle: 'energy',
+    deviceClass: 'energy',
+    size: 'small',
+  },
+};
+
+export const Docs: Story = {
+  parameters: {
+    docsOnly: true,
+  },
+};

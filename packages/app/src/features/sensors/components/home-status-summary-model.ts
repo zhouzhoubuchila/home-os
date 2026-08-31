@@ -1,0 +1,549 @@
+import { getClimateDashboardGroup } from '@navet/app/features/climate/utils/climate-dashboard-group';
+import {
+  isTvMediaDevice,
+  normalizeMediaPlaybackState,
+} from '@navet/app/features/media/media-state';
+import { getSecurityAlertCount } from '@navet/app/features/security/utils/security-alert-count';
+import { defaultTranslate, type TranslateFn } from '@navet/app/i18n';
+import type { Section } from '@navet/app/navigation/sections';
+import type { DeviceWithType } from '@navet/app/types/device.types';
+import type { OperationalPriority, OperationalTone } from '@navet/app/types/operational-signal';
+import { getCustomExtensionIcon } from '@navet/app/utils/custom-extension-icons';
+import type { CustomSummaryPill } from '@navet/app/utils/custom-extensions';
+import { getDeviceRoomLabel } from '@navet/app/utils/device-location';
+import {
+  convertTemperatureUnitValue,
+  formatDisplayTemperature,
+  normalizeTemperatureUnit,
+  type TemperatureUnit,
+} from '@navet/app/utils/temperature';
+import type { LucideIcon } from 'lucide-react';
+import { ClipboardCheck, Fan, Lightbulb, Shield, Speaker, Zap } from 'lucide-react';
+
+export interface HomeStatusSummaryItem {
+  id: string;
+  title: string;
+  value: string;
+  icon: LucideIcon;
+  iconColor: string;
+  priority?: OperationalPriority;
+  tone?: OperationalTone;
+  targetSection?: Section;
+  targetUrl?: string;
+  onSelect?: () => void;
+}
+
+export interface StatusSummaryOptions {
+  climateEntityIds?: ReadonlySet<string>;
+  gridImportTodayKWh?: number;
+  routineCount?: number;
+  securityAlertCount?: number;
+  pendingChoreCount?: number;
+  overdueChoreCount?: number;
+  temperatureUnit?: TemperatureUnit;
+  customSummaryPills?: CustomSummaryPill[];
+}
+
+const NON_AMBIENT_CLIMATE_SENSOR_PATTERN =
+  /\b(boiler|water_heater|water heater|hot water|tank|cylinder|supply|return|flow temp|outside|outdoor|exterior|weather|processor|cpu|system monitor|system_monitor|device temperature|internal)\b/;
+const AMBIENT_FAHRENHEIT_INFERENCE_THRESHOLD = 45;
+
+function getNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function formatPowerValue(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    const kilowatts = value / 1000;
+    return `${kilowatts.toFixed(kilowatts >= 10 ? 0 : 1)} kW`;
+  }
+
+  return `${Math.round(value)} W`;
+}
+
+function formatEnergyKWh(value: number): string {
+  return `${value.toFixed(1)} kWh`;
+}
+
+function getEnergySummary(
+  devices: DeviceWithType[],
+  options: StatusSummaryOptions,
+  t: TranslateFn
+): HomeStatusSummaryItem | null {
+  if (
+    typeof options.gridImportTodayKWh === 'number' &&
+    Number.isFinite(options.gridImportTodayKWh)
+  ) {
+    return {
+      id: 'energy',
+      title: t('homeSummary.energy'),
+      value: formatEnergyKWh(options.gridImportTodayKWh),
+      icon: Zap,
+      iconColor: '#f59e0b',
+      targetSection: 'energy',
+    };
+  }
+
+  const powerValues = devices
+    .map((device) => {
+      if (device.type === 'switches') {
+        return getNumber(device.power);
+      }
+
+      if (device.type !== 'sensors') {
+        return null;
+      }
+
+      const deviceClass = String(device.deviceClass ?? '').toLowerCase();
+      const unit = String(device.unit ?? '').toLowerCase();
+      if (deviceClass === 'power' || unit === 'w' || unit === 'kw') {
+        const value = getNumber(device.value);
+        return unit === 'kw' && value !== null ? value * 1000 : value;
+      }
+
+      return null;
+    })
+    .filter((value): value is number => value !== null);
+  const energySources = devices.filter((device) => {
+    if (device.type === 'switches') {
+      return getNumber(device.power) !== null || getNumber(device.energy) !== null;
+    }
+
+    if (device.type !== 'sensors') {
+      return false;
+    }
+
+    const deviceClass = String(device.deviceClass ?? '').toLowerCase();
+    return deviceClass === 'power' || deviceClass === 'energy';
+  });
+
+  if (powerValues.length === 0 && energySources.length === 0) {
+    return null;
+  }
+
+  const totalPower = powerValues.reduce((sum, value) => sum + value, 0);
+
+  return {
+    id: 'energy',
+    title: t('homeSummary.energy'),
+    value:
+      powerValues.length > 0
+        ? formatPowerValue(totalPower)
+        : energySources.length === 1
+          ? t('homeSummary.source', { count: 1 })
+          : t('homeSummary.sources', { count: energySources.length }),
+    icon: Zap,
+    iconColor: '#f59e0b',
+    targetSection: 'energy',
+  };
+}
+
+function getLightSummary(devices: DeviceWithType[], t: TranslateFn): HomeStatusSummaryItem | null {
+  const lights = devices.filter((device) => device.type === 'lights');
+  if (lights.length === 0) {
+    return null;
+  }
+
+  const onCount = lights.filter((device) => device.state === true).length;
+
+  return {
+    id: 'lights',
+    title: t('homeSummary.lights'),
+    value: t('homeSummary.on', { count: onCount }),
+    icon: Lightbulb,
+    iconColor: '#facc15',
+    targetSection: 'lights',
+  };
+}
+
+function getSecuritySummary(
+  devices: DeviceWithType[],
+  t: TranslateFn
+): HomeStatusSummaryItem | null {
+  const alertCount = getSecurityAlertCount(devices);
+  const hasSecurityCandidates = devices.some(
+    (device) =>
+      Boolean(device.securityKind) ||
+      device.type === 'locks' ||
+      device.type === 'covers' ||
+      device.type === 'cameras' ||
+      (device.type === 'sensors' &&
+        [
+          'door',
+          'garage_door',
+          'gas',
+          'moisture',
+          'motion',
+          'occupancy',
+          'opening',
+          'presence',
+          'problem',
+          'safety',
+          'smoke',
+          'tamper',
+          'window',
+        ].includes(String(device.deviceClass ?? '').toLowerCase()))
+  );
+  if (!hasSecurityCandidates) {
+    return null;
+  }
+
+  return {
+    id: 'security',
+    title: t('homeSummary.security'),
+    value:
+      alertCount === 0
+        ? t('homeSummary.noAlerts')
+        : t(alertCount === 1 ? 'homeSummary.alert' : 'homeSummary.alerts', {
+            count: alertCount,
+          }),
+    icon: Shield,
+    iconColor: alertCount === 0 ? '#22c55e' : '#f87171',
+    priority: alertCount > 0 ? 'attention' : 'current',
+    tone: alertCount > 0 ? 'danger' : undefined,
+    targetSection: 'security',
+  };
+}
+
+function getMediaSummary(devices: DeviceWithType[], t: TranslateFn): HomeStatusSummaryItem | null {
+  const media = devices.filter((device) => device.type === 'media');
+  if (media.length === 0) {
+    return null;
+  }
+
+  const playingCount = media.filter(
+    (device) => normalizeMediaPlaybackState(device.state, device.deviceClass) === 'playing'
+  ).length;
+  const activeCount = media.filter((device) => {
+    const state = normalizeMediaPlaybackState(device.state, device.deviceClass);
+    return state === 'playing' || (isTvMediaDevice(device.deviceClass) && state !== 'off');
+  }).length;
+  const value =
+    activeCount === 0
+      ? t('homeSummary.nonePlaying')
+      : activeCount === playingCount
+        ? playingCount === 1
+          ? t('homeSummary.playing', { count: 1 })
+          : t('homeSummary.playing', { count: playingCount })
+        : activeCount === 1
+          ? t('homeSummary.active', { count: 1 })
+          : t('homeSummary.active', { count: activeCount });
+
+  return {
+    id: 'media',
+    title: t('homeSummary.media'),
+    value,
+    icon: Speaker,
+    iconColor: activeCount > 0 ? '#60a5fa' : '#cbd5e1',
+    targetSection: 'media',
+  };
+}
+
+function getChoreSummary(
+  pendingChoreCount: number | undefined,
+  overdueChoreCount: number | undefined,
+  t: TranslateFn
+): HomeStatusSummaryItem | null {
+  if (pendingChoreCount === undefined) {
+    return null;
+  }
+
+  return {
+    id: 'chores',
+    title: t('household.tabs.chores'),
+    value:
+      (overdueChoreCount ?? 0) > 0
+        ? `${t('household.today.overdue')} · ${t('household.rooms.remaining', { count: pendingChoreCount })}`
+        : pendingChoreCount === 0
+          ? t('household.rooms.allDone')
+          : t('household.rooms.remaining', { count: pendingChoreCount }),
+    icon: ClipboardCheck,
+    iconColor:
+      (overdueChoreCount ?? 0) > 0 ? '#f87171' : pendingChoreCount === 0 ? '#22c55e' : '#fb923c',
+    priority: (overdueChoreCount ?? 0) > 0 ? 'attention' : 'current',
+    tone: (overdueChoreCount ?? 0) > 0 ? 'danger' : undefined,
+    targetSection: 'tasks',
+  };
+}
+
+function formatCustomSummaryDeviceValue(
+  device: DeviceWithType | undefined,
+  t: TranslateFn
+): string | null {
+  if (!device) {
+    return null;
+  }
+
+  switch (device.type) {
+    case 'sensors': {
+      const value = String(device.value ?? '').trim();
+      const unit = String(device.unit ?? '').trim();
+      if (!value) {
+        return null;
+      }
+      return unit ? `${value} ${unit}` : value;
+    }
+    case 'lights':
+    case 'switches':
+    case 'locks':
+      return device.state ? t('common.on') : t('common.off');
+    case 'media':
+      return device.state === 'playing'
+        ? t('media.status.playing')
+        : device.state === 'paused'
+          ? t('media.status.paused')
+          : t('media.status.idle');
+    case 'climate':
+    case 'hvac':
+      return `${formatDisplayTemperature(Math.round(device.currentTemperature ?? device.temperature))}°`;
+    case 'weather':
+      return `${formatDisplayTemperature(Math.round(device.temperature))}°`;
+    default:
+      return null;
+  }
+}
+
+function buildCustomSummaryItems(
+  deviceMap: Map<string, DeviceWithType>,
+  customSummaryPills: CustomSummaryPill[] = [],
+  t: TranslateFn
+): HomeStatusSummaryItem[] {
+  return customSummaryPills.flatMap((item) => {
+    const value =
+      item.valueSourceType === 'static'
+        ? (item.staticValue ?? '')
+        : item.entityId
+          ? formatCustomSummaryDeviceValue(deviceMap.get(item.entityId), t)
+          : null;
+
+    if (!value && item.visibility === 'when_value_available') {
+      return [];
+    }
+
+    if (!value) {
+      return [];
+    }
+
+    return [
+      {
+        id: item.id,
+        title: item.label,
+        value,
+        icon: getCustomExtensionIcon(item.icon),
+        iconColor: '#a78bfa',
+        targetSection: item.actionType === 'section' ? item.actionSection : undefined,
+        targetUrl: item.actionType === 'url' ? item.actionUrl : undefined,
+      },
+    ];
+  });
+}
+
+function isAmbientTemperatureSensor(
+  device: DeviceWithType
+): device is DeviceWithType & { type: 'sensors' } {
+  if (device.type !== 'sensors') {
+    return false;
+  }
+
+  if (String(device.deviceClass ?? '').toLowerCase() !== 'temperature') {
+    return false;
+  }
+
+  const searchText = `${device.id} ${device.name} ${device.room}`.toLowerCase();
+
+  return !NON_AMBIENT_CLIMATE_SENSOR_PATTERN.test(searchText);
+}
+
+function isSummaryEligibleClimateDevice(
+  device: DeviceWithType,
+  allowedClimateEntityIds: ReadonlySet<string> | undefined
+): device is (DeviceWithType & { type: 'climate' }) | (DeviceWithType & { type: 'hvac' }) {
+  if (allowedClimateEntityIds && !allowedClimateEntityIds.has(device.id)) {
+    return false;
+  }
+
+  if (!isClimateLikeDevice(device)) {
+    return false;
+  }
+
+  return (
+    getClimateDashboardGroup(device) !== null &&
+    (device.type === 'hvac' || device.serviceDomain !== 'water_heater')
+  );
+}
+
+function isSummaryEligibleClimateSensor(
+  device: DeviceWithType,
+  allowedClimateEntityIds: ReadonlySet<string> | undefined
+): device is DeviceWithType & { type: 'sensors' } {
+  if (allowedClimateEntityIds && !allowedClimateEntityIds.has(device.id)) {
+    return false;
+  }
+
+  return getClimateDashboardGroup(device) === 'temperature' && isAmbientTemperatureSensor(device);
+}
+
+function isClimateLikeDevice(
+  device: DeviceWithType
+): device is (DeviceWithType & { type: 'climate' }) | (DeviceWithType & { type: 'hvac' }) {
+  return device.type === 'climate' || device.type === 'hvac';
+}
+
+function isLegacyClimateDevice(
+  device: DeviceWithType
+): device is DeviceWithType & { type: 'hvac' } {
+  return device.type === 'hvac';
+}
+
+function formatClimateSummaryValue(values: number[]): string {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  if (min === max) {
+    return `${formatDisplayTemperature(Math.round(min))}°`;
+  }
+
+  return `${formatDisplayTemperature(min).replace('.', ',')}–${formatDisplayTemperature(max).replace('.', ',')}°`;
+}
+
+function resolveAmbientTemperatureSourceUnit(
+  value: number,
+  sourceUnit: TemperatureUnit | undefined
+): TemperatureUnit {
+  if (sourceUnit) {
+    return sourceUnit;
+  }
+
+  return value > AMBIENT_FAHRENHEIT_INFERENCE_THRESHOLD ? 'fahrenheit' : 'celsius';
+}
+
+function getClimateSummary(
+  devices: DeviceWithType[],
+  options: StatusSummaryOptions,
+  t: TranslateFn
+): HomeStatusSummaryItem | null {
+  const allowedClimateEntityIds = options.climateEntityIds;
+  const climateDevices = devices.filter((device) =>
+    isSummaryEligibleClimateDevice(device, allowedClimateEntityIds)
+  );
+  const temperatureSensors = devices.filter((device) =>
+    isSummaryEligibleClimateSensor(device, allowedClimateEntityIds)
+  );
+  const values = [
+    ...climateDevices.map((device) => {
+      let value: number | null;
+      if (device.type === 'climate' || isLegacyClimateDevice(device)) {
+        value =
+          device.hasCurrentTemperature === false ? null : getNumber(device.currentTemperature);
+      } else {
+        value = null;
+      }
+      if (value === null) {
+        return null;
+      }
+
+      const sourceUnit = resolveAmbientTemperatureSourceUnit(
+        value,
+        device.type === 'climate' ? normalizeTemperatureUnit(device.temperatureUnit) : undefined
+      );
+      return convertTemperatureUnitValue(value, sourceUnit, options.temperatureUnit ?? 'celsius');
+    }),
+    ...temperatureSensors.map((device) => {
+      const value = getNumber(device.value);
+      if (value === null) {
+        return null;
+      }
+
+      return convertTemperatureUnitValue(
+        value,
+        resolveAmbientTemperatureSourceUnit(value, normalizeTemperatureUnit(device.unit)),
+        options.temperatureUnit ?? 'celsius'
+      );
+    }),
+  ].filter((value): value is number => value !== null);
+
+  if (climateDevices.length === 0 && values.length === 0) {
+    return null;
+  }
+
+  const value =
+    values.length === 0
+      ? t('homeSummary.active', { count: climateDevices.length })
+      : formatClimateSummaryValue(values);
+
+  return {
+    id: 'climate',
+    title: t('homeSummary.climate'),
+    value,
+    icon: Fan,
+    iconColor: '#22d3ee',
+    targetSection: 'climate',
+  };
+}
+
+function buildStatusSummaryItems(
+  deviceMap: Map<string, DeviceWithType>,
+  options: StatusSummaryOptions,
+  t: TranslateFn
+): HomeStatusSummaryItem[] {
+  const devices = Array.from(deviceMap.values());
+  const securitySummary =
+    options.securityAlertCount !== undefined
+      ? {
+          id: 'security',
+          title: t('homeSummary.security'),
+          value:
+            options.securityAlertCount === 0
+              ? t('homeSummary.noAlerts')
+              : t(options.securityAlertCount === 1 ? 'homeSummary.alert' : 'homeSummary.alerts', {
+                  count: options.securityAlertCount,
+                }),
+          icon: Shield,
+          iconColor: options.securityAlertCount === 0 ? '#22c55e' : '#f87171',
+          priority: options.securityAlertCount > 0 ? ('attention' as const) : ('current' as const),
+          tone: options.securityAlertCount > 0 ? ('danger' as const) : undefined,
+          targetSection: 'security' as const,
+        }
+      : getSecuritySummary(devices, t);
+
+  return [
+    getEnergySummary(devices, options, t),
+    getClimateSummary(devices, options, t),
+    securitySummary,
+    getLightSummary(devices, t),
+    getMediaSummary(devices, t),
+    getChoreSummary(options.pendingChoreCount, options.overdueChoreCount, t),
+    ...buildCustomSummaryItems(deviceMap, options.customSummaryPills, t),
+  ].filter((item): item is HomeStatusSummaryItem => item !== null);
+}
+
+export function buildHomeStatusSummaryItems(
+  deviceMap: Map<string, DeviceWithType>,
+  options: StatusSummaryOptions = {},
+  t: TranslateFn = defaultTranslate
+): HomeStatusSummaryItem[] {
+  return buildStatusSummaryItems(deviceMap, options, t);
+}
+
+export function buildRoomStatusSummaryItems(
+  deviceMap: Map<string, DeviceWithType>,
+  room: string,
+  options: StatusSummaryOptions = {},
+  t: TranslateFn = defaultTranslate
+): HomeStatusSummaryItem[] {
+  const roomDevices = Array.from(deviceMap.values()).filter(
+    (device) => getDeviceRoomLabel(device) === room
+  );
+  return buildStatusSummaryItems(
+    new Map(roomDevices.map((device) => [device.id, device] as const)),
+    options,
+    t
+  );
+}

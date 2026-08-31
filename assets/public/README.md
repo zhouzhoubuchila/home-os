@@ -1,0 +1,145 @@
+# Navet Public Assets
+
+This folder contains Navet's public logos, install icons, social-preview asset, web manifest, and
+small runtime bootstrap/fallback files. Brand guidance applies to the logo and social assets;
+`config.js`, `boot-i18n.js`, `offline.html`, and `site.webmanifest` are application runtime files.
+
+## Files
+
+### Logos
+
+- **logo.svg** (120x120) - Square logo for general use
+- **logo-horizontal.svg** (200x60) - Horizontal logo with text (dark text)
+- **logo-horizontal-light.svg** (200x60) - Horizontal logo with text (white text)
+
+### Favicons
+
+- **favicon.svg** (32x32) - Modern SVG favicon for web browsers
+- **favicon-32x32.svg** (32x32) - Alternative 32px favicon
+- **apple-touch-icon.svg** (180x180) - Rounded compatibility preview of the install icon
+- **apple-touch-icon.png** (180x180) - Rasterized iOS home screen icon
+- **pwa-192.png** - PWA install icon referenced by the web manifest as 192x192
+- **pwa-512.png** - Large PWA install icon referenced by the web manifest as 512x512
+- **pwa-maskable-192.png** / **pwa-maskable-512.png** - Full-bleed maskable install icons
+
+### Social Preview
+
+- **navet-social-card.jpg** - Open Graph and social-link preview image
+
+### Runtime Files
+
+- **config.js** - deployment/runtime configuration bootstrap
+- **boot-i18n.js** - localized boot and loading messages
+- **boot-i18n.d.ts** and **boot-i18n.test.ts** - type surface and regression coverage for the boot
+  catalog
+- **offline.html** - PWA offline fallback
+- **site.webmanifest** - canonical install metadata consumed by the standalone PWA build
+
+## Logo Concept
+
+The Navet logo represents **"the hub"** - a central node with 8 radiating connections:
+
+- **Center circle** → Your smart home (Navet as the hub)
+- **8 connections** → Your connected devices and systems
+- **Network pattern** → Interconnected, unified control
+- **Orange gradient** → Warm, welcoming, and energetic (#f97316 to #ea580c)
+
+## Usage Guidelines
+
+### When to Use Each Logo
+
+**logo.svg**
+- App icons
+- Social media avatars
+- Square placements
+- Mobile app icons
+
+**logo-horizontal.svg**
+- Website headers (light backgrounds)
+- Documentation
+- Presentations
+- Email signatures
+
+**logo-horizontal-light.svg**
+- Website headers (dark backgrounds)
+- Dark mode interfaces
+- Slides with dark backgrounds
+
+**favicon.svg**
+- Browser tab icons
+- PWA icons
+- Bookmark icons
+
+**apple-touch-icon.svg**
+- Rounded compatibility preview and Home Assistant add-on icon source
+- Do not use it to regenerate the opaque Apple PNG; that output comes from the full-bleed source
+  declared in the brand asset manifest
+
+**apple-touch-icon.png**
+- iOS home screen icon
+- iOS shortcuts
+
+**pwa-192.png / pwa-512.png**
+- Android install prompt
+- PWA manifest icons
+- Desktop install surfaces
+
+**pwa-maskable-192.png / pwa-maskable-512.png**
+- Cropped Android and PWA install surfaces
+- Use only with the manifest `maskable` purpose
+
+### Design Principles
+
+✅ **Do:**
+- Use on clean, neutral backgrounds
+- Maintain aspect ratio
+- Keep minimum clear space (10% of logo size)
+- Use SVG format when possible
+
+❌ **Don't:**
+- Change colors or gradient
+- Rotate or distort
+- Add effects or shadows
+- Use on busy backgrounds
+
+## Brand Colors
+
+**Primary Orange Gradient:**
+- Start: `#f97316` (orange-500)
+- End: `#ea580c` (orange-600)
+
+**Supporting Colors:**
+- White: `#ffffff` (logo elements)
+- Transparent backgrounds supported
+
+## Generation and validation
+
+Do not edit raster outputs by hand. From the repository root:
+
+```bash
+pnpm brand:generate
+pnpm check:brand
+```
+
+The source/output contract is in [`../brand/source/asset-manifest.json`](../brand/source/asset-manifest.json).
+
+## Technical Specs
+
+- **Format:** SVG for vector logos and PNG for raster install icons
+- **Color Space:** sRGB
+- **Minimum Size:** 32px (favicon), 60px (full logo)
+- **Recommended Clear Space:** 10% of logo width/height
+
+## License
+
+These logo files are **not** covered by the repository code license.
+
+They are governed by Navet brand usage rules:
+
+- [../../docs/branding/README.md](../../docs/branding/README.md)
+- [../../docs/branding/ASSET_SYSTEM.md](../../docs/branding/ASSET_SYSTEM.md)
+- [../../docs/branding/TRADEMARK_POLICY.md](../../docs/branding/TRADEMARK_POLICY.md)
+
+---
+
+**Last Updated:** July 22, 2026

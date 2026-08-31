@@ -1,0 +1,99 @@
+import { lightEntityFactory } from '@navet/app/test/fixtures/home-assistant/entities/light';
+import { renderHookWithProviders } from '@navet/app/test/render';
+import { act } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { LIGHT_EFFECT_NONE } from '../light-card-effect-utils';
+import { useLightEffectSync } from '../use-light-effect-sync';
+
+function makeEntity(effectList?: unknown, effect?: unknown) {
+  const entity = lightEntityFactory({
+    effect_list: effectList,
+    effect,
+  });
+  entity.entity_id = 'light.wled';
+  entity.state = 'on';
+  return entity as never;
+}
+
+describe('useLightEffectSync', () => {
+  it('exposes normalized options and the current effect', () => {
+    const syncLight = vi.fn().mockResolvedValue(undefined);
+    const setIsOn = vi.fn();
+
+    const { result } = renderHookWithProviders(() =>
+      useLightEffectSync({
+        supportsAdvancedLightControls: true,
+        isOn: true,
+        liveEntity: makeEntity(['Rainbow', 'Fire'], 'Rainbow'),
+        setIsOn,
+        syncLight,
+      })
+    );
+
+    expect(result.current.supportsEffects).toBe(true);
+    expect(result.current.currentEffect).toBe('Rainbow');
+    expect(result.current.effectOptions.map((option) => option.label)).toEqual([
+      'No effect',
+      'Rainbow',
+      'Fire',
+    ]);
+  });
+
+  it('maps the synthetic no-effect option to off and reverts on failure', async () => {
+    const syncLight = vi.fn().mockRejectedValue(new Error('boom'));
+    const setIsOn = vi.fn();
+
+    const { result } = renderHookWithProviders(() =>
+      useLightEffectSync({
+        supportsAdvancedLightControls: true,
+        isOn: true,
+        liveEntity: makeEntity(['Rainbow'], 'Rainbow'),
+        setIsOn,
+        syncLight,
+      })
+    );
+
+    act(() => {
+      result.current.onEffectSelect(LIGHT_EFFECT_NONE);
+    });
+
+    expect(syncLight).toHaveBeenCalledWith({ state: 'on', effect: 'off' });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.currentEffect).toBe('Rainbow');
+  });
+
+  it('clears the active effect immediately when off or a manual light control takes over', () => {
+    const syncLight = vi.fn().mockResolvedValue(undefined);
+    const setIsOn = vi.fn();
+
+    const { result } = renderHookWithProviders(() =>
+      useLightEffectSync({
+        supportsAdvancedLightControls: true,
+        isOn: true,
+        liveEntity: makeEntity(['Rainbow', 'off'], 'Rainbow'),
+        setIsOn,
+        syncLight,
+      })
+    );
+
+    act(() => {
+      result.current.onEffectSelect(LIGHT_EFFECT_NONE);
+    });
+    expect(result.current.currentEffect).toBeNull();
+    expect(syncLight).toHaveBeenCalledWith({ state: 'on', effect: 'off' });
+
+    act(() => {
+      result.current.onEffectSelect('Rainbow');
+    });
+    expect(result.current.currentEffect).toBe('Rainbow');
+
+    act(() => {
+      result.current.clearCurrentEffect();
+    });
+    expect(result.current.currentEffect).toBeNull();
+  });
+});

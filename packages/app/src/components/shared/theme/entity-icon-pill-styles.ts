@@ -1,0 +1,158 @@
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import {
+  type CardTextTone,
+  getCardReadableTextTokens,
+  resolveCardToneBaseColor,
+} from '@navet/app/components/shared/theme/card-readable-text-tokens';
+import { withTintAlpha } from '@navet/app/components/shared/theme/custom-card-tint-surface';
+import { resolvePrimaryColorToken } from '@navet/app/components/shared/theme/theme-colors';
+import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
+import type { PrimaryColor, ThemeType } from '@navet/app/hooks/use-theme';
+import type { CSSProperties } from 'react';
+
+type EntityIconPillStyles = {
+  badgeClassName: string;
+  badgeStyle?: CSSProperties;
+  iconClassName: string;
+  iconStyle?: CSSProperties;
+};
+
+function getBadgeSizeClass() {
+  return 'navet-card-header-control';
+}
+
+function getIconSizeClass() {
+  return 'h-4 w-4';
+}
+
+export function getEntityIconPillStyles({
+  isActive,
+  isInteractive,
+  primaryColor,
+  accentColor,
+  baseColor,
+  theme,
+  tone,
+  inverseSurface = false,
+}: {
+  isActive: boolean;
+  isInteractive: boolean;
+  primaryColor: PrimaryColor;
+  accentColor?: string | null;
+  baseColor?: string | null;
+  size: CardSize;
+  theme: ThemeType;
+  tone?: CardTextTone;
+  inverseSurface?: boolean;
+}): EntityIconPillStyles {
+  const surface = getThemeSurfaceTokens(theme);
+  const resolvedTone =
+    tone ??
+    (isActive
+      ? primaryColor === 'custom'
+        ? 'primary'
+        : resolvePrimaryColorToken(primaryColor)
+      : 'neutral');
+  const resolvedBaseColor = resolveCardToneBaseColor({
+    tone: resolvedTone,
+    accentColor,
+    baseColor,
+  });
+  const textTokens = getCardReadableTextTokens({
+    theme,
+    tone: resolvedTone,
+    accentColor,
+    baseColor: resolvedBaseColor,
+    backgroundColor:
+      theme === 'light'
+        ? '#ffffff'
+        : theme === 'glass'
+          ? '#0f172a'
+          : theme === 'black'
+            ? '#000000'
+            : '#09090b',
+  });
+  const badgeSizeClass = getBadgeSizeClass();
+  const iconSizeClass = getIconSizeClass();
+  const interactiveClass = isInteractive
+    ? 'cursor-pointer hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2'
+    : '';
+  const focusRingClass =
+    theme === 'light'
+      ? 'focus-visible:ring-gray-900/25 focus-visible:ring-offset-white'
+      : 'focus-visible:ring-white/35 focus-visible:ring-offset-gray-950';
+
+  const inactiveBadgeClass = (() => {
+    if (theme === 'light') {
+      return 'bg-gray-200 border border-gray-300/80';
+    }
+
+    if (theme === 'glass') {
+      return 'bg-white/12 border border-white/16';
+    }
+
+    return 'bg-white/10 border border-white/14';
+  })();
+
+  if (isActive && inverseSurface) {
+    return {
+      badgeClassName: `${badgeSizeClass} rounded-full flex shrink-0 items-center justify-center transition-[color,background-color,border-color,box-shadow,opacity,transform,filter] duration-500 ${interactiveClass} ${focusRingClass} border`,
+      badgeStyle: {
+        backgroundColor: '#ffffff',
+        borderColor: '#ffffff',
+        boxShadow: '0 10px 24px -18px rgba(0,0,0,0.28)',
+      },
+      iconClassName: iconSizeClass,
+      iconStyle: {
+        color: resolvedBaseColor,
+      },
+    };
+  }
+
+  const badgeStyle = isActive
+    ? {
+        backgroundColor:
+          theme === 'light'
+            ? withTintAlpha(resolvedBaseColor, 0.12)
+            : theme === 'glass'
+              ? `${resolvedBaseColor}24`
+              : theme === 'black'
+                ? `${resolvedBaseColor}26`
+                : `${resolvedBaseColor}2e`,
+        borderColor:
+          theme === 'light'
+            ? withTintAlpha(resolvedBaseColor, 0.22)
+            : theme === 'glass'
+              ? `${resolvedBaseColor}54`
+              : theme === 'black'
+                ? `${resolvedBaseColor}66`
+                : `${resolvedBaseColor}66`,
+        boxShadow:
+          theme === 'light'
+            ? `0 10px 24px -18px ${withTintAlpha(resolvedBaseColor, 0.18)}, inset 0 1px 0 rgba(255,255,255,0.48)`
+            : theme === 'glass'
+              ? `inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 30px -20px ${resolvedBaseColor}52`
+              : theme === 'black'
+                ? 'none'
+                : `0 0 0 1px ${resolvedBaseColor}18, 0 12px 30px ${resolvedBaseColor}22`,
+      }
+    : undefined;
+
+  const iconStyle = isActive
+    ? {
+        color: theme === 'light' ? resolvedBaseColor : textTokens.titleColor,
+        filter: theme === 'light' ? undefined : 'drop-shadow(0 1px 4px rgba(0, 0, 0, 0.18))',
+      }
+    : undefined;
+
+  return {
+    badgeClassName: `${badgeSizeClass} rounded-full flex shrink-0 items-center justify-center transition-[color,background-color,border-color,box-shadow,opacity,transform,filter] duration-500 ${interactiveClass} ${focusRingClass} ${
+      isActive ? 'border' : inactiveBadgeClass
+    }`,
+    badgeStyle,
+    iconClassName: `${iconSizeClass} transition-colors duration-500 ${
+      !isActive && theme === 'light' ? 'text-gray-700' : !isActive ? surface.textSecondary : ''
+    }`,
+    iconStyle,
+  };
+}

@@ -1,0 +1,233 @@
+import { CardSettingsActionButton } from '@navet/app/components/shared/card-settings-action-button';
+import {
+  type CardSize,
+  isExtraSmallCardSize,
+} from '@navet/app/components/shared/card-size-selector';
+import { BrightnessSlider, KelvinSlider } from '@navet/app/components/shared/device-editor';
+import { useTheme } from '@navet/app/hooks';
+import type { LucideIcon } from 'lucide-react';
+import { memo } from 'react';
+import { LightCardActionRow } from './light-card-action-row';
+import { LightCardHeader } from './light-card-header';
+import type {
+  HeaderIconButtonProps,
+  LightBrightnessPreset,
+  LightEffectOption,
+} from './light-card-types';
+
+interface LightCardSmallProps {
+  name: string;
+  room: string;
+  size: CardSize;
+  brightness: number;
+  currentColor: string;
+  colorSwatchColor: string;
+  colorTemp: number;
+  currentTempColor: string;
+  minColorTemp: number;
+  maxColorTemp: number;
+  brightnessPresets: LightBrightnessPreset[];
+  effectOptions: LightEffectOption[];
+  isOn: boolean;
+  isKelvinMode: boolean;
+  isColorMode: boolean;
+  currentEffect: string | null;
+  activeColor?: string | null;
+  IconComponent?: LucideIcon | null;
+  iconText?: string | null;
+  supportsBrightness: boolean;
+  supportsEffects: boolean;
+  supportsColorControl: boolean;
+  supportsColorTemperature: boolean;
+  onKelvinToggle: () => void;
+  onColorActivate: () => void;
+  onBrightnessChange: (value: number) => void;
+  onBrightnessCommit: (value: number) => void;
+  onColorChange: (color: string) => void;
+  onEffectSelect: (effect: string) => void;
+  onTempChange: (temp: number) => void;
+  onTempCommit: (temp: number) => void;
+  iconButtonProps: HeaderIconButtonProps;
+  settingsButtonProps: HeaderIconButtonProps;
+  showSettingsButton: boolean;
+}
+
+// Three 36px controls plus compact gaps fit the narrow two-column mobile card.
+const SMALL_ACTION_SLOT_COUNT = 3;
+
+interface SmallLightActionLayoutParams {
+  brightnessPresetCount: number;
+  inlineControlCount: number;
+  showSettingsButton: boolean;
+}
+
+export function getSmallLightActionLayout({
+  brightnessPresetCount,
+  inlineControlCount,
+  showSettingsButton,
+}: SmallLightActionLayoutParams): {
+  presetMaxVisible: number;
+  presetOverflow: 'menu' | 'hide';
+} {
+  const availablePresetSlots = Math.max(
+    0,
+    SMALL_ACTION_SLOT_COUNT - inlineControlCount - (showSettingsButton ? 1 : 0)
+  );
+  const needsPresetOverflow = brightnessPresetCount > availablePresetSlots;
+
+  if (!needsPresetOverflow) {
+    return {
+      presetMaxVisible: availablePresetSlots,
+      presetOverflow: 'hide',
+    };
+  }
+
+  if (availablePresetSlots === 0) {
+    return {
+      presetMaxVisible: 0,
+      presetOverflow: 'hide',
+    };
+  }
+
+  return {
+    presetMaxVisible: availablePresetSlots - 1,
+    presetOverflow: 'menu',
+  };
+}
+
+export const LightCardSmall = memo(function LightCardSmall({
+  name,
+  size,
+  brightness,
+  currentColor,
+  colorSwatchColor,
+  colorTemp,
+  currentTempColor,
+  minColorTemp,
+  maxColorTemp,
+  brightnessPresets,
+  effectOptions,
+  isOn,
+  isKelvinMode,
+  isColorMode,
+  currentEffect,
+  activeColor,
+  IconComponent,
+  iconText,
+  supportsBrightness,
+  supportsEffects,
+  supportsColorControl,
+  supportsColorTemperature,
+  onKelvinToggle,
+  onColorActivate,
+  onBrightnessChange,
+  onBrightnessCommit,
+  onColorChange,
+  onEffectSelect,
+  onTempChange,
+  onTempCommit,
+  iconButtonProps,
+  settingsButtonProps,
+  showSettingsButton,
+}: LightCardSmallProps) {
+  const { theme } = useTheme();
+  const effectiveTheme = theme === 'light' && isOn ? 'dark' : theme;
+  const isExtraSmall = isExtraSmallCardSize(size);
+  const inlineControlCount =
+    (supportsColorTemperature ? 1 : 0) +
+    (supportsColorControl ? 1 : 0) +
+    (supportsEffects && effectOptions.length > 0 ? 1 : 0);
+  const { presetMaxVisible, presetOverflow } = getSmallLightActionLayout({
+    brightnessPresetCount: supportsBrightness ? brightnessPresets.length : 0,
+    inlineControlCount,
+    showSettingsButton,
+  });
+
+  return (
+    <>
+      <LightCardHeader
+        name={name}
+        isOn={isOn}
+        IconComponent={IconComponent}
+        iconText={iconText}
+        currentEffect={currentEffect}
+        size={size}
+        activeColor={activeColor}
+        iconAriaLabel={iconButtonProps['aria-label']}
+        onIconClick={iconButtonProps.onClick}
+        onIconPointerDown={iconButtonProps.onPointerDown}
+        trailing={
+          isExtraSmall && showSettingsButton ? (
+            <CardSettingsActionButton
+              {...settingsButtonProps}
+              theme={effectiveTheme}
+              size="extra-small"
+              tone={isOn ? 'default' : 'muted'}
+              variant="soft"
+              accentColor={activeColor ?? undefined}
+            />
+          ) : undefined
+        }
+      />
+
+      <div
+        className={`flex-1 flex flex-col ${isExtraSmall ? 'justify-end gap-2' : 'justify-end gap-4'}`}
+      >
+        {!isExtraSmall && isKelvinMode && supportsColorTemperature ? (
+          <KelvinSlider
+            value={colorTemp}
+            currentTempColor={currentTempColor}
+            onChange={onTempChange}
+            onCommit={onTempCommit}
+            isOn={isOn}
+            min={minColorTemp}
+            max={maxColorTemp}
+            size="small"
+            showLabel
+            activeColor={activeColor}
+          />
+        ) : !isExtraSmall && supportsBrightness ? (
+          <BrightnessSlider
+            value={brightness}
+            onChange={onBrightnessChange}
+            onCommit={onBrightnessCommit}
+            isOn={isOn}
+            size="small"
+            showLabel
+            activeColor={activeColor}
+          />
+        ) : null}
+
+        {!isExtraSmall && (
+          <LightCardActionRow
+            size="small"
+            isOn={isOn}
+            currentColor={currentColor}
+            colorSwatchColor={colorSwatchColor}
+            currentTempColor={currentTempColor}
+            activeColor={activeColor}
+            isKelvinMode={isKelvinMode}
+            isColorMode={isColorMode}
+            supportsBrightness={supportsBrightness}
+            supportsColorTemperature={supportsColorTemperature}
+            supportsColorControl={supportsColorControl}
+            supportsEffects={supportsEffects}
+            brightnessPresets={brightnessPresets}
+            effectOptions={effectOptions}
+            brightness={brightness}
+            currentEffect={currentEffect}
+            onKelvinToggle={onKelvinToggle}
+            onColorActivate={onColorActivate}
+            onColorChange={onColorChange}
+            onEffectSelect={onEffectSelect}
+            onBrightnessCommit={onBrightnessCommit}
+            showSettingsButton={showSettingsButton}
+            settingsButtonProps={settingsButtonProps}
+            presetMaxVisible={presetMaxVisible}
+            presetOverflow={presetOverflow}
+          />
+        )}
+      </div>
+    </>
+  );
+});

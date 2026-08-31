@@ -1,0 +1,461 @@
+import type { Connection, HassConfig, HassEntities } from 'home-assistant-js-websocket';
+import { createStore } from 'zustand/vanilla';
+import {
+  type HomeAssistantAreaRegistryEntry,
+  type HomeAssistantCategoryRegistryEntry,
+  type HomeAssistantConfiguration,
+  type HomeAssistantDeviceRegistryEntry,
+  type HomeAssistantEntityRegistryEntry,
+  homeAssistantService,
+} from '../services/home-assistant.service';
+import type { HomeAssistantPanelHass } from '../services/home-assistant-panel-adapter';
+import type { IntegrationUser } from '../types/integration-user';
+import { useErrorStore } from './error-store';
+
+interface HomeAssistantState {
+  connected: boolean;
+  config: HassConfig | null;
+  entities: HassEntities | null;
+  user: IntegrationUser | null;
+  areas: HomeAssistantAreaRegistryEntry[];
+  deviceRegistry: HomeAssistantDeviceRegistryEntry[];
+  entityRegistry: HomeAssistantEntityRegistryEntry[];
+  automationCategories: HomeAssistantCategoryRegistryEntry[];
+  registriesHydrated: boolean;
+  connection: Connection | null;
+  error: string | null;
+  connecting: boolean;
+  reconnecting: boolean;
+}
+
+interface HomeAssistantActions {
+  connect: (config: HomeAssistantConfiguration) => Promise<void>;
+  syncPanelHass: (hass: HomeAssistantPanelHass) => void;
+  disconnect: () => void;
+  clearError: () => void;
+}
+
+export type { HomeAssistantActions, HomeAssistantState };
+export type HomeAssistantStore = HomeAssistantState & HomeAssistantActions;
+
+const initialState: HomeAssistantState = {
+  connected: false,
+  config: null,
+  entities: null,
+  user: null,
+  areas: [],
+  deviceRegistry: [],
+  entityRegistry: [],
+  automationCategories: [],
+  registriesHydrated: false,
+  connection: null,
+  error: null,
+  connecting: false,
+  reconnecting: false,
+};
+
+// Bounded coalescing window for entity state updates. Multiple HA entity changes
+// arriving within this window are committed in a single Zustand set call,
+// reducing React reconciler pressure during bursts (automations, energy sensors,
+// etc.) without postponing the flush indefinitely under a continuous stream.
+const ENTITY_COALESCE_MS = 50;
+const HA_CONNECTION_GRACE_PERIOD_MS = 10_000;
+const HA_CONNECTION_TIMEOUT_MESSAGE =
+  'Cannot connect to Home Assistant. Check the saved URL and update it if your Home Assistant address changed.';
+
+interface PanelEntityFingerprint {
+  source: HassEntities[string];
+  state: string;
+  lastChanged: string;
+  lastReported: string | undefined;
+  lastUpdated: string;
+  attributes: HassEntities[string]['attributes'];
+  context: HassEntities[string]['context'];
+}
+
+function getEntityLastReported(entity: HassEntities[string]) {
+  const lastReported = (entity as HassEntities[string] & { last_reported?: unknown }).last_reported;
+  return typeof lastReported === 'string' ? lastReported : undefined;
+}
+
+function reconcilePanelEntities(
+  entities: HassEntities | null,
+  previousEntities: HassEntities | null,
+  previousFingerprints: Map<string, PanelEntityFingerprint>
+): {
+  entities: HassEntities | null;
+  fingerprints: Map<string, PanelEntityFingerprint>;
+} {
+  if (!entities) {
+    return { entities: null, fingerprints: new Map() };
+  }
+
+  const fingerprints = new Map<string, PanelEntityFingerprint>();
+  const nextEntities: HassEntities = {};
+  let changed = previousEntities === null;
+  let entityCount = 0;
+
+  for (const [entityId, entity] of Object.entries(entities)) {
+    entityCount += 1;
+    const lastReported = getEntityLastReported(entity);
+    const previousFingerprint = previousFingerprints.get(entityId);
+    const canReusePrevious =
+      previousFingerprint?.source === entity &&
+      previousFingerprint.state === entity.state &&
+      previousFingerprint.lastChanged === entity.last_changed &&
+      previousFingerprint.lastReported === lastReported &&
+      previousFingerprint.lastUpdated === entity.last_updated &&
+      previousFingerprint.attributes === entity.attributes &&
+      previousFingerprint.context === entity.context &&
+      previousEntities?.[entityId] !== undefined;
+
+    nextEntities[entityId] = canReusePrevious
+      ? (previousEntities[entityId] as HassEntities[string])
+      : { ...entity };
+    changed ||= !canReusePrevious;
+    fingerprints.set(entityId, {
+      source: entity,
+      state: entity.state,
+      lastChanged: entity.last_changed,
+      lastReported,
+      lastUpdated: entity.last_updated,
+      attributes: entity.attributes,
+      context: entity.context,
+    });
+  }
+
+  changed ||= previousFingerprints.size !== entityCount;
+  return {
+    entities: changed ? nextEntities : previousEntities,
+    fingerprints,
+  };
+}
+
+export const homeAssistantStore = createStore<HomeAssistantStore>()((set, get) => {
+  let entityCoalesceTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingEntities: HassEntities | null = null;
+  let connectionGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  let activeServiceUnsubscribe: (() => void) | null = null;
+  let panelRegistryLoadStarted = false;
+  let panelHassAttached = false;
+  let panelEntityFingerprints = new Map<string, PanelEntityFingerprint>();
+  let connectAttemptId = 0;
+
+  const clearEntityCoalescer = () => {
+    if (entityCoalesceTimer !== null) {
+      clearTimeout(entityCoalesceTimer);
+      entityCoalesceTimer = null;
+    }
+    pendingEntities = null;
+  };
+
+  const clearConnectionGraceTimer = () => {
+    if (connectionGraceTimer !== null) {
+      clearTimeout(connectionGraceTimer);
+      connectionGraceTimer = null;
+    }
+  };
+
+  const clearServiceSubscriptions = () => {
+    activeServiceUnsubscribe?.();
+    activeServiceUnsubscribe = null;
+    clearEntityCoalescer();
+  };
+
+  const getConnectionTimeoutDetails = (config: HomeAssistantConfiguration) => {
+    const url = config.hassUrl ?? 'unknown Home Assistant URL';
+    return `Saved Home Assistant URL did not respond within ${HA_CONNECTION_GRACE_PERIOD_MS / 1000} seconds: ${url}`;
+  };
+
+  return {
+    ...initialState,
+
+    connect: async (config: HomeAssistantConfiguration) => {
+      const attemptId = ++connectAttemptId;
+      clearConnectionGraceTimer();
+      set({ connecting: true, error: null, registriesHydrated: false });
+      useErrorStore.getState().clearError();
+      clearServiceSubscriptions();
+
+      const connectionTimeout = new Promise<'timed-out'>((resolve) => {
+        connectionGraceTimer = setTimeout(() => {
+          if (attemptId !== connectAttemptId) {
+            return;
+          }
+
+          connectAttemptId += 1;
+          connectionGraceTimer = null;
+          clearServiceSubscriptions();
+          homeAssistantService.disconnect();
+
+          const details = getConnectionTimeoutDetails(config);
+          set({
+            error: HA_CONNECTION_TIMEOUT_MESSAGE,
+            connected: false,
+            connection: null,
+            connecting: false,
+            reconnecting: false,
+          });
+          useErrorStore.getState().setError(HA_CONNECTION_TIMEOUT_MESSAGE, details);
+          resolve('timed-out');
+        }, HA_CONNECTION_GRACE_PERIOD_MS);
+      });
+
+      try {
+        // Subscribe to each typed event — only update the slice of state that changed
+        const unsubscribers = [
+          homeAssistantService.addListener('entities', (entities) => {
+            if (attemptId !== connectAttemptId) {
+              return;
+            }
+            pendingEntities = entities;
+            if (entityCoalesceTimer !== null) {
+              return;
+            }
+            entityCoalesceTimer = setTimeout(() => {
+              entityCoalesceTimer = null;
+              const nextEntities = pendingEntities;
+              pendingEntities = null;
+              if (attemptId !== connectAttemptId) {
+                return;
+              }
+              if (nextEntities === null || get().entities === nextEntities) {
+                return;
+              }
+              set({ entities: nextEntities });
+            }, ENTITY_COALESCE_MS);
+          }),
+          homeAssistantService.addListener('config', (config) => {
+            if (attemptId !== connectAttemptId) {
+              return;
+            }
+            if (get().config === config) {
+              return;
+            }
+            set({ config });
+          }),
+          homeAssistantService.addListener(
+            'registries',
+            ({ areas, devices, entities: entityRegistry, automationCategories }) => {
+              if (attemptId !== connectAttemptId) {
+                return;
+              }
+              const current = get();
+              if (
+                current.areas === areas &&
+                current.deviceRegistry === devices &&
+                current.entityRegistry === entityRegistry &&
+                current.automationCategories === automationCategories &&
+                current.registriesHydrated
+              ) {
+                return;
+              }
+              set({
+                areas,
+                deviceRegistry: devices,
+                entityRegistry,
+                automationCategories,
+                registriesHydrated: true,
+              });
+            }
+          ),
+          homeAssistantService.addListener(
+            'connection',
+            ({ connected, connection, reconnecting }) => {
+              if (attemptId !== connectAttemptId) {
+                return;
+              }
+              const current = get();
+              if (
+                current.connected === connected &&
+                current.connection === connection &&
+                current.connecting === reconnecting &&
+                current.reconnecting === reconnecting
+              ) {
+                return;
+              }
+              set({ connected, connection, connecting: reconnecting, reconnecting });
+            }
+          ),
+          homeAssistantService.addListener('error', ({ message }) => {
+            if (attemptId !== connectAttemptId) {
+              return;
+            }
+            const current = get();
+            if (
+              current.error === message &&
+              current.connecting === false &&
+              current.reconnecting === false &&
+              current.connected === false
+            ) {
+              return;
+            }
+            set({
+              error: message,
+              connecting: false,
+              reconnecting: false,
+              connected: false,
+            });
+            useErrorStore.getState().setError(message);
+          }),
+        ];
+        const unsubscribe = () => {
+          for (const fn of unsubscribers) fn();
+          clearEntityCoalescer();
+        };
+        activeServiceUnsubscribe = unsubscribe;
+
+        // Authenticate and connect
+        const result = await Promise.race([
+          homeAssistantService.authenticate(config).then(() => 'connected' as const),
+          connectionTimeout,
+        ]);
+        if (result === 'timed-out') {
+          return;
+        }
+
+        // Populate full initial state after connection
+        if (attemptId !== connectAttemptId) {
+          return;
+        }
+
+        clearConnectionGraceTimer();
+        set({
+          connected: homeAssistantService.isConnected(),
+          config: homeAssistantService.getConfig(),
+          entities: homeAssistantService.getEntities(),
+          user: homeAssistantService.getUser(),
+          areas: homeAssistantService.getAreas(),
+          deviceRegistry: homeAssistantService.getDeviceRegistry(),
+          entityRegistry: homeAssistantService.getEntityRegistry(),
+          automationCategories: homeAssistantService.getAutomationCategories(),
+          registriesHydrated: true,
+          connection: homeAssistantService.getConnection(),
+          connecting: false,
+          reconnecting: false,
+        });
+      } catch (error) {
+        if (attemptId !== connectAttemptId) {
+          return;
+        }
+
+        clearConnectionGraceTimer();
+        clearServiceSubscriptions();
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+              ? error
+              : 'Failed to connect';
+        set({
+          error: message,
+          connecting: false,
+          reconnecting: false,
+          connected: false,
+        });
+        useErrorStore.getState().setError(message);
+        throw error;
+      }
+    },
+
+    syncPanelHass: (hass: HomeAssistantPanelHass) => {
+      const isPanelUpdate = panelHassAttached;
+      panelHassAttached = true;
+      homeAssistantService.setPanelHass(hass);
+      const panelEntityReconciliation = reconcilePanelEntities(
+        homeAssistantService.getEntities(),
+        get().entities,
+        panelEntityFingerprints
+      );
+      panelEntityFingerprints = panelEntityReconciliation.fingerprints;
+      const panelEntities = panelEntityReconciliation.entities;
+
+      if (isPanelUpdate) {
+        useErrorStore.getState().clearError();
+        set({
+          connected: true,
+          config: homeAssistantService.getConfig(),
+          entities: panelEntities,
+          user: homeAssistantService.getUser(),
+          connection: homeAssistantService.getConnection(),
+          error: null,
+          connecting: false,
+          reconnecting: false,
+        });
+        return;
+      }
+
+      connectAttemptId += 1;
+      clearConnectionGraceTimer();
+      clearServiceSubscriptions();
+      useErrorStore.getState().clearError();
+      activeServiceUnsubscribe = homeAssistantService.addListener(
+        'registries',
+        ({ areas, devices, entities, automationCategories }) => {
+          set({
+            areas,
+            deviceRegistry: devices,
+            entityRegistry: entities,
+            automationCategories,
+            registriesHydrated: true,
+          });
+        }
+      );
+
+      set({
+        connected: true,
+        config: homeAssistantService.getConfig(),
+        entities: panelEntities,
+        user: homeAssistantService.getUser(),
+        connection: homeAssistantService.getConnection(),
+        registriesHydrated: false,
+        error: null,
+        connecting: false,
+        reconnecting: false,
+      });
+
+      if (panelRegistryLoadStarted) {
+        return;
+      }
+
+      panelRegistryLoadStarted = true;
+      void homeAssistantService
+        .loadRegistries()
+        .then(() => {
+          set({
+            areas: homeAssistantService.getAreas(),
+            deviceRegistry: homeAssistantService.getDeviceRegistry(),
+            entityRegistry: homeAssistantService.getEntityRegistry(),
+            automationCategories: homeAssistantService.getAutomationCategories(),
+            registriesHydrated: true,
+          });
+        })
+        .catch((error) => {
+          console.error('[HomeAssistantStore] Failed to load panel registries:', error);
+          panelRegistryLoadStarted = false;
+        });
+    },
+
+    disconnect: () => {
+      connectAttemptId += 1;
+      clearConnectionGraceTimer();
+      useErrorStore.getState().clearError();
+      clearServiceSubscriptions();
+      panelRegistryLoadStarted = false;
+      panelHassAttached = false;
+      panelEntityFingerprints = new Map();
+      homeAssistantService.disconnect();
+      set(initialState);
+    },
+
+    clearError: () => {
+      useErrorStore.getState().clearError();
+      set({ error: null });
+    },
+  };
+});
+
+export function resetHomeAssistantStoreDiagnostics() {
+  // Diagnostics are currently kept inside the store instance; this exported
+  // reset hook keeps test reset code stable across store internals changes.
+}

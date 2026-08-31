@@ -1,0 +1,266 @@
+import { ColorInputSwatch } from '@navet/app/components/primitives/color-input-swatch';
+import {
+  BUILT_IN_WALLPAPERS,
+  type BuiltInWallpaperToken,
+  resolveWallpaperPreviewSources,
+} from '@navet/app/constants/built-in-wallpapers';
+import { PRIMARY_COLOR_OPTIONS, THEME_OPTIONS } from '@navet/app/constants/theme-options';
+import type { TranslateFn } from '@navet/app/hooks';
+import type { PrimaryColor, ThemeType } from '@navet/app/hooks/use-theme';
+import { Palette } from 'lucide-react';
+
+function WallpaperPreviewImage({
+  value,
+  alt,
+  className,
+}: {
+  value: string;
+  alt: string;
+  className: string;
+}) {
+  const preview = resolveWallpaperPreviewSources(value);
+  if (!preview) {
+    return null;
+  }
+
+  if (preview.kind === 'custom') {
+    return <img src={preview.imgSrc} alt={alt} className={className} />;
+  }
+
+  return (
+    <picture>
+      <source srcSet={preview.avifSrc} type="image/avif" />
+      <source srcSet={preview.webpSrc} type="image/webp" />
+      <img src={preview.imgSrc} alt={alt} className={className} />
+    </picture>
+  );
+}
+
+export function OnboardingThemeStep({
+  accentColor,
+  borderColor,
+  isLightTheme = false,
+  mutedColor,
+  routeLabel,
+  selectedAccent,
+  selectedCustomAccent,
+  selectedTheme,
+  selectedWallpaper,
+  setSelectedAccent,
+  setSelectedCustomAccent,
+  setSelectedTheme,
+  setSelectedWallpaper,
+  staticCardBg,
+  textColor,
+  t,
+}: {
+  accentColor: string;
+  borderColor: string;
+  isLightTheme?: boolean;
+  mutedColor: string;
+  routeLabel: string;
+  selectedAccent: PrimaryColor;
+  selectedCustomAccent: string | null;
+  selectedTheme: ThemeType;
+  selectedWallpaper: BuiltInWallpaperToken | null;
+  setSelectedAccent: (accent: PrimaryColor) => void;
+  setSelectedCustomAccent: (accent: string | null) => void;
+  setSelectedTheme: (theme: ThemeType) => void;
+  setSelectedWallpaper: (wallpaper: BuiltInWallpaperToken | null) => void;
+  staticCardBg: string;
+  textColor: string;
+  t: TranslateFn;
+}) {
+  const sectionCardClassName = `rounded-[22px] border ${borderColor} ${staticCardBg} p-4 sm:rounded-[24px] sm:p-5`;
+
+  return (
+    <div className="mt-4 space-y-4 sm:mt-5">
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-11 sm:w-11"
+          style={{ backgroundColor: `${accentColor}22` }}
+        >
+          <Palette className="h-5 w-5" style={{ color: accentColor }} />
+        </div>
+        <div className="min-w-0">
+          <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${mutedColor}`}>
+            {t('dashboard.onboarding.theme.stepLabel')}
+          </p>
+          <p className={`text-sm font-semibold ${textColor}`}>{routeLabel}</p>
+        </div>
+      </div>
+
+      <section className={sectionCardClassName}>
+        <div>
+          <p className={`text-sm font-semibold ${textColor}`}>{t('themePicker.themeMode')}</p>
+          <p className={`mt-0.5 text-sm leading-relaxed ${mutedColor}`}>
+            {t('themePicker.manualThemeEnabledHelp')}
+          </p>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {THEME_OPTIONS.map((option) => {
+            const isActive = selectedTheme === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSelectedTheme(option.value)}
+                aria-pressed={isActive}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform,filter] ${textColor}`}
+                style={
+                  isActive
+                    ? {
+                        borderColor: `${accentColor}66`,
+                        background: `linear-gradient(180deg, ${accentColor}22, ${accentColor}12)`,
+                        boxShadow: `0 0 0 1px ${accentColor}33 inset`,
+                      }
+                    : {
+                        borderColor: isLightTheme
+                          ? 'rgba(148,163,184,0.42)'
+                          : 'rgba(255,255,255,0.14)',
+                        background: isLightTheme
+                          ? 'rgba(248,250,252,0.95)'
+                          : 'rgba(255,255,255,0.015)',
+                      }
+                }
+              >
+                {t(option.labelKey)}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className={`mt-3 text-sm leading-relaxed ${mutedColor}`}>
+          {t(
+            THEME_OPTIONS.find((option) => option.value === selectedTheme)?.descriptionKey ??
+              'themeOption.dark.description'
+          )}
+        </p>
+      </section>
+
+      <section className={sectionCardClassName}>
+        <div>
+          <p className={`text-sm font-semibold ${textColor}`}>{t('themePicker.accentColor')}</p>
+          <p className={`mt-0.5 text-sm leading-relaxed ${mutedColor}`}>
+            {t('themePicker.accentHelp')}
+          </p>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <ColorInputSwatch
+            value={selectedCustomAccent ?? '#f97316'}
+            ariaLabel={t('themePicker.customAccent')}
+            title={t('themePicker.customAccent')}
+            size="small"
+            visual="rainbow"
+            selected={selectedAccent === 'custom'}
+            ringColor={selectedCustomAccent ?? '#f97316'}
+            onClick={() => setSelectedAccent('custom')}
+            onChange={(value) => {
+              setSelectedCustomAccent(value);
+              setSelectedAccent('custom');
+            }}
+          />
+          {PRIMARY_COLOR_OPTIONS.filter((option) => option.value !== 'custom').map((option) => {
+            const isActive = selectedAccent === option.value;
+            const optionLabel = t(option.labelKey);
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSelectedAccent(option.value)}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform ${
+                  isActive ? 'scale-110 ring-2 ring-offset-2' : 'hover:scale-105'
+                }`}
+                style={{
+                  backgroundColor: option.color,
+                  ...(isActive
+                    ? {
+                        boxShadow: `0 0 0 2px ${accentColor}`,
+                      }
+                    : undefined),
+                }}
+                title={optionLabel}
+                aria-label={t('themePicker.selectAccent', { color: optionLabel })}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={sectionCardClassName}>
+        <div>
+          <p className={`text-sm font-semibold ${textColor}`}>
+            {t('settings.appearance.wallpaper.title')}
+          </p>
+          <p className={`mt-0.5 text-sm leading-relaxed ${mutedColor}`}>
+            {t('settings.appearance.wallpaper.description')}
+          </p>
+        </div>
+
+        {selectedWallpaper ? (
+          <div
+            className="mt-4 overflow-hidden rounded-[22px] border"
+            style={{ borderColor: `${accentColor}40` }}
+          >
+            <div className="relative h-28">
+              <WallpaperPreviewImage
+                value={selectedWallpaper}
+                alt={t('settings.appearance.wallpaper.previewAlt')}
+                className="h-full w-full object-cover"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${accentColor}50, ${accentColor}10)`,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          {BUILT_IN_WALLPAPERS.map((option) => {
+            const isActive = selectedWallpaper === option.token;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setSelectedWallpaper(option.token)}
+                aria-pressed={isActive}
+                aria-label={t('settings.appearance.wallpaper.optionAria', { id: option.id })}
+                className="group relative h-14 w-14 overflow-hidden rounded-full border transition-[color,background-color,border-color,box-shadow,opacity,transform,filter] md:h-16 md:w-16"
+                style={{
+                  borderColor: isActive ? `${accentColor}88` : undefined,
+                  boxShadow: isActive ? `0 0 0 1px ${accentColor}55` : undefined,
+                }}
+              >
+                <WallpaperPreviewImage
+                  value={option.token}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(180deg, transparent, ${accentColor}18)`,
+                  }}
+                />
+                {isActive ? (
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{ boxShadow: `inset 0 0 0 2px ${accentColor}` }}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}

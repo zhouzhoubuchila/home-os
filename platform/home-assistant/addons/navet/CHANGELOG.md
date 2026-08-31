@@ -1,0 +1,544 @@
+# Changelog
+
+## 0.15.1
+
+## New features
+
+- Added backup import to first-time chore setup, restoring the household without repeating onboarding.
+
+## Improvements and bug fixes
+
+- Added bug fixes and safeguards that recover chore setup if a management PIN error leaves it unusable.
+
+## 0.15.0
+
+## New features
+
+- Redesigned the Climate dashboard with comfort guidance, room and device grouping, trend charts, and faster mode controls.
+- Expanded shared chores with Home Assistant persistence plus weekday, weekend, and custom interval schedules.
+
+## Improvements and bug fixes
+
+- Improved the Lights dashboard with room controls, whole-home shutoff, and responsive layouts.
+- Upgraded live maps and cameras with clearer locations, automatic framing, and smoother playback recovery.
+- Improved dashboard creation and profile recovery across phones, tablets, and shared displays.
+
+## 0.14.0
+
+## New features
+
+- Redesigned the Energy dashboard with live demand, historical trends, period comparisons, and breakdowns by source, room, and device.
+- Redesigned the Security dashboard with a status command center, activity history, customizable overview, and responsive camera browsing.
+
+## Improvements and bug fixes
+
+- Improved camera alerts with clearer motion and person detection, status timing, and activity details.
+- Improved dashboard layouts and controls across phones, tablets, and large displays, with more flexible card sizes.
+
+## 0.13.2
+
+## New features
+
+- Expanded fullscreen camera views with configurable sensor details, motion state, and connected-light controls.
+- Missed chores can now be completed late while preserving approvals and completion history.
+
+## Improvements and bug fixes
+
+- Dashboard sync now respects independent device layouts and keeps routine updates unobtrusive.
+- Chores now hide points, missions, and rewards when motivation is off, with clearer add and edit forms.
+- Improved room and card settings with palette-aware controls, easier navigation visibility, and resolved alerts from hidden unavailable cameras.
+
+## 0.13.1
+
+## New features
+
+- Added entity navigation, room filtering, and sorting to the redesigned Add Card library.
+- Camera cards can now bypass low-power snapshots when live streaming is needed.
+
+## Improvements and bug fixes
+
+- Improved chores onboarding with clearer guidance, consistent forms, flexible assignments, and complete recurring schedules.
+- Made chore summaries and daily tasks denser and easier to use on phones and tablets.
+- Kept light cards expanded by default and dashboard-change alerts dismissible above dialogs.
+
+## 0.13.0
+
+## New features
+
+- Added shared household chores with recurring schedules, flexible assignments, approvals, reminders, and completion history.
+- Added guided setup, optional points and rewards, progress reviews, and backup and recovery tools.
+- Home Assistant now exposes chore summaries and actions for automations.
+
+## Improvements and bug fixes
+
+- Refined navigation, Settings, dashboard summaries, and controls for phones, tablets, and shared wall screens.
+
+## 0.12.6
+
+## Improvements and bug fixes
+
+- Camera streams now fall back to MSE when WebRTC connects without displaying video.
+- Fullscreen camera controls remain available while a stream is loading.
+- Camera settings now keep all controls inside phone viewports.
+
+## 0.12.5
+
+No user-facing add-on changes in this release.
+
+## 0.12.4
+
+No user-facing add-on changes in this release.
+
+## 0.12.3
+
+No user-facing changes in this release.
+
+## 0.12.2
+
+## New features
+
+- Added linked device profiles and one-time copying to sync device settings across selected devices.
+
+## 0.12.1
+
+## Improvements and bug fixes
+
+- Redesigned Settings with grouped navigation and search across desktop, tablet, and mobile.
+- Redesigned kiosk controls with room swipe navigation and mobile-safe layouts.
+- Fixed dashboard synchronization recovery for profiles saved in the current format.
+
+## 0.12.0
+
+## New features
+
+- Navet now supports multiple dashboards.
+
+## Improvements and bug fixes
+
+- Reduced rendering, media, and provider-update work on low-power wall displays.
+- Dashboard changes now survive concurrent edits and browser identity recovery without losing device preferences.
+
+## 0.11.1
+
+## Improvements and bug fixes
+
+- Fixed standalone Home Assistant sign-in redirects when Navet runs behind HTTPS proxies or custom ports.
+
+## Security
+
+- Hardened OAuth return paths by rejecting unsafe Home Assistant URLs and removing stale authorization codes and state values.
+
+## 0.11.0
+
+## New features
+
+- Added a room workspace for creating, organizing, styling, moving, and removing rooms across supported providers.
+- Dashboard layouts now sync safely across devices, with connected-device management and conflict recovery in Settings.
+- Added Norwegian, Danish, Finnish, and Polish translations across the dashboard.
+
+## Improvements and bug fixes
+
+- Improved camera playback with direct go2rtc streams, MSE fallback, persistent stream settings, and clearer controls and errors.
+- Improved automation rows and connected-device controls across mobile, tablet, and wide layouts.
+
+## 0.10.3
+
+## New features
+
+- Added Dutch translations across the dashboard.
+
+## Improvements and bug fixes
+
+- Refreshed Navet's add-on and custom panel icons.
+- Media folders now show every item, with compact artwork and responsive tables for larger libraries.
+
+## 0.10.2
+
+## Improvements and bug fixes
+
+- Improved the Lights dashboard with cleaner room lists, quicker scene access, and compact controls for active lights.
+- Light color and effect controls now stay in sync when switching modes or closing menus.
+- Tasks tables can now be sorted by name, category, type, or status, with clearer responsive rows.
+
+## 0.10.1
+
+## Improvements and bug fixes
+
+- Navet now adjusts visual effects and card loading to match each device, with manual controls in Settings.
+- Added new translations across all supported languages, which now load only when needed.
+- Improved the Music dashboard with search, clearer library categories, better track details, and smoother touch scrolling.
+- Fixed unwanted transitions across cards, controls, and mobile navigation, and improved reduced-motion support.
+
+## 0.10.0
+
+- Updated Navet to `0.10.0`
+- Added a room-first Lights dashboard with room status, brightness and power controls, scene shortcuts, and responsive light lists
+- Improved provider-backed Energy, Media, Security, Tasks, Habits, Settings, and home dashboard surfaces
+- Improved recovery from provider changes, unavailable data, and page visibility transitions across dashboard entities and resources
+- Expanded translation coverage across every supported language and added automated catalog consistency checks
+- Reduced unnecessary dashboard work with bounded resource caches, visibility-aware scheduling, and deferred settings UI
+
+## 0.9.1
+
+- Updated Navet to `0.9.1`
+- Fixed Now Playing session recovery when Home Assistant media entities become idle and clear their metadata
+- Routed mirrored media controls through the matching physical player for more reliable pause and resume behavior
+- Prevented active and grouped speakers from appearing twice in media sections
+- Improved media artwork, volume, grouping synchronization, responsive browser layouts, and mobile grouping controls
+
+## 0.9.0
+
+- Updated Navet to `0.9.0`
+- Added more flexible room and entity layouts, dashboard packs, manual entity cards, and a faster home-edit command bar
+- Added discovery and room assignment for newly available provider entities
+- Added provider-aware media browsing, search, source selection, playback queues, and richer speaker destinations
+- Improved speaker grouping, destination selection, and playback reliability
+- Improved room navigation, section customization, automation insights, and energy summaries
+- Improved OAuth redirects and music-service authorization flows for hosted installs
+
+## 0.8.0
+
+- Updated Navet to `0.8.0`
+- Continued the public beta dashboard line for the standalone app, Home Assistant custom panel, and Home Assistant add-on
+- Included scoped dashboard profile settings so selected preferences can persist per device while shared profile values stay intact
+- Included the refined automation dashboard with summary cards, state and room filters, attention states, recent-run metadata, and a clearer automations/scripts split
+- Included direct stream URL support for camera cards when a setup exposes a playable stream endpoint
+- Included the latest dashboard profile sync fixes for multi-device conflicts, the "Keep mine" popup, empty remote profile handling, and stale validators
+- Included climate, media activity, room-grid refresh, and dashboard card hierarchy improvements from the latest beta line
+
+## 0.7.12
+
+- Updated Navet to `0.7.12`
+- Added scoped dashboard profile settings so selected preferences can persist per device while shared profile values stay intact
+- Refined the automation dashboard with summary cards, state and room filters, attention states, recent-run metadata, and a clearer automations/scripts split
+- Fixed dashboard profile sync so multi-device conflicts resolve correctly, including "Keep mine", "Load remote", and stale validator handling after empty remote profiles
+- Fixed climate summaries so target-only thermostat setpoints are not treated as current room temperature
+- Fixed powered Home Assistant TVs so they count as active media without counting idle speakers as active
+- Improved automation, quick-action, and habit insight card hierarchy and typography
+
+## 0.7.11
+
+- Updated Navet to `0.7.11`
+- Added scoped dashboard profile settings so selected preferences can persist per device while shared profile values stay intact
+- Refined the automation dashboard with summary cards, state and room filters, attention states, recent-run metadata, and a clearer automations/scripts split
+- Fixed climate summaries so target-only thermostat setpoints are not treated as current room temperature
+- Fixed powered Home Assistant TVs so they count as active media without counting idle speakers as active
+- Improved automation, quick-action, and habit insight card hierarchy and typography
+
+## 0.7.10
+
+- Updated Navet to `0.7.10`
+- Fixed alarm panel cards so the numeric keypad appears more reliably when needed
+- Improved dashboard profile sync, persistence, and hosted profile-store handling
+- Refined kiosk orbit navigation, section cards, and related energy/security dashboard surfaces
+- Expanded Storybook inventory/docs coverage and removed obsolete UI stories
+
+## 0.7.9
+
+- Updated Navet to `0.7.9`
+- Expanded advanced custom sidebar extensions to support up to five quick actions per item
+- Improved compact device-card layouts across fans, covers, humidifiers, lights, switches, cameras, and related dashboard surfaces
+- Added a megamenu-style room overflow picker for dashboards with more rooms than fit in the visible navigation row
+- Updated cover cards with a cleaner compact layout and tap-to-toggle behavior outside edit mode
+
+## 0.7.8
+
+- Updated Navet to `0.7.8`
+- Added support for opening custom sidebar links inside Navet in an iframe-backed panel
+- Fixed recent WebRTC camera live-stream regressions and improved stream fallback handling
+- Fixed Home Assistant mobile safe-area spacing and overly transparent affected UI surfaces
+- Improved room navigation and room management for larger dashboards
+- Improved toast, banner, lock, and related dashboard UI contrast across mobile and kiosk flows
+- Improved the Home Assistant panel and add-on shell flow, including optional native header and sidebar hiding when the Navet shell module is enabled
+
+## 0.7.7
+
+- Updated Navet to `0.7.7`
+- Added more energy dashboard customization, including prepaid-style remaining-balance support
+- Added dashboard support for lawn mower devices
+- Fixed demo entities crashing Navet
+- Improved climate, energy, and cleaning-device card layouts plus related settings flows
+- Improved Liquid Glass and Light theme UI polish across shared dashboard surfaces and dialogs
+
+## 0.7.6
+
+- Updated Navet to `0.7.6`
+- Added custom dashboard extensions, including sidebar links for more tailored navigation
+- Improved the add-card dialog with denser browsing and pill-based navigation for faster dashboard editing
+- Improved media card speaker grouping for cleaner multi-speaker control flows
+- Improved framerates on low-energy devices when using `Low` visual settings
+
+## 0.7.5
+
+- Updated Navet to `0.7.5`
+- Fixed Homey sign-in recovery for standalone and Docker installs
+- Fixed missing artwork accent colors on media cards in standalone Docker installs
+- Improved onboarding with wallpaper theme selection during setup
+
+## 0.7.4
+
+- Updated Navet to `0.7.4`
+- Reduced unnecessary dashboard rerenders so larger dashboards stay steadier during routine updates
+- Deferred heavier card work on dense or low-power dashboards for smoother loading
+- Improved media cards so artwork palette and accent colors carry through more clearly in playback surfaces
+- Improved media and camera card behavior under load
+
+## 0.7.3
+
+- Updated Navet to `0.7.3`
+- Added clearer TV-focused media dialogs with better source badges and compact remote controls
+- Cleaned up Home Assistant update release notes and restart-required update messaging
+- Fixed vacuum status and current-room handling so active cleaning runs stay more accurate
+- Improved dense-dashboard rendering and device update stability on heavier dashboards
+
+## 0.7.2
+
+- Updated Navet to `0.7.2`
+- Added richer Roborock-friendly vacuum controls, including area cleaning support on supported devices
+- Added repeat and shuffle controls across media cards, with cleaner TV control handling
+- Fixed Apple Music and Music Assistant artwork recovery, including grouped-player cases
+- Improved repeated device labels and room/media control readability on mixed-device dashboards
+
+## 0.7.0
+
+- Updated Navet to `0.7.0`
+- Added richer vacuum card controls, status details, and Roborock-friendly presentation
+- Fixed missing Apple Music and Music Assistant album artwork in affected media cards
+- Improved security state colors, dashboard feedback, and deployment install guidance
+- Reduced disruptive full-dashboard refresh behavior during routine updates
+
+## 0.6.1
+
+- Updated Navet to `0.6.1`
+- Fixed Home dashboard weather and calendar cards so they stay visible more reliably on low-power displays
+
+## 0.6.0
+
+- Updated Navet to `0.6.0`
+- Added dashboard support for alarm panel and humidifier entities
+- Improved security dashboard organization, room navigation, and larger mixed-device layouts
+- Improved provider-backed dashboard loading and camera stream fallback handling
+
+## 0.5.3
+
+- Updated Navet to `0.5.3`
+- Fixed energy dashboard daily totals so they respect the source sensor unit instead of showing incorrect kWh values
+- Fixed media card room pickers and speaker naming so dropdown entries stay readable and offline speakers keep better names
+- Improved light card controls when brightness is not available on the device
+- Improved energy dashboard statistics and current-usage presentation across more setups
+- Refreshed dark, light, and liquid glass theme styling for clearer dashboard card and media surfaces
+- Added bundled sample imagery for photo frame demos and previews
+- Updated release and architecture documentation to match the current package layout
+
+## 0.5.2
+
+- Updated Navet to `0.5.2`
+- Improved Home Assistant camera playback, session handling, and stream fallback reliability
+- Fixed camera settings dialogs so large switch lists and smaller screens remain usable
+- Kept tagged release and HACS export metadata aligned more reliably across Navet releases
+
+## 0.5.1
+
+- Updated Navet to `0.5.1`
+- Restored the Home Assistant custom-panel packaging needed for HACS to detect the repository correctly
+
+## 0.5.0
+
+- Updated Navet to `0.5.0`
+- Camera cards can refresh Home Assistant snapshots directly and recover live playback more reliably
+- Camera settings now focus on supported viewing controls instead of global go2rtc overrides
+
+## 0.4.7
+
+- Updated Navet to `0.4.7`
+- Refreshed the website and marketing presentation with new screenshots and clearer product storytelling
+- Added new wallpapers
+- Improved settings actions and section management flows
+
+## 0.4.6
+
+- Updated Navet to `0.4.6`
+- Provider login for Homey and openHAB in the add-on remains beta and may not work reliably yet
+- Fixed widget and RSS cards so shared edit actions reopen their settings reliably
+- Improved user avatar rendering
+
+## 0.4.5
+
+- Updated Navet to `0.4.5`
+- Fixed switch cards so their settings reopen reliably in dashboard edit mode
+- Fixed adding openHAB to an existing setup so it no longer crashes during connection setup
+- Fixed Home Assistant alerts so they render correctly again in the dashboard
+
+## 0.4.1
+
+- Updated Navet to `0.4.1`
+- Fixed a Home dashboard edit-mode render loop that could break card-grid editing
+- Consolidated Home Assistant setup docs and moved public deployment hardening guidance into the main security policy
+
+## 0.4.0
+
+- Updated Navet to `0.4.0`
+- Added clearer system/provider settings and a dedicated experimental keep-device-awake section
+- Fixed weather and calendar cards disappearing from Home dashboards
+- Improved dashboard responsiveness by deferring heavier map widget loading work
+- Improved dashboard section loading, shared snapshot handling, and provider-backed card reliability
+
+## 0.3.1
+
+- Updated Navet to `0.3.1`
+- Fixed custom action card fields clearing during editing
+- Improved light button card brightness and color behavior
+- Media cards now show artwork more efficiently
+
+## 0.3.0
+
+- Updated Navet to `0.3.0`
+- Added UPS widgets, sensor history sparklines, and a keep-device-awake dashboard setting
+- Fixed hosted OAuth session recovery and ingress Home Assistant connection reuse
+- Improved Home Assistant proxy handling for camera snapshots and other authenticated resources
+- Refined light effect controls, camera behavior, and dashboard profile sync reliability
+
+## 0.2.5
+
+- Updated Navet to `0.2.5`
+- Fixed dashboard config imports so Home cards restore correctly from recent exports
+- Fixed Home dashboards getting stuck on "Still loading devices" after stale imported card ids or removing the final card
+- Improved Home summary spacing when the dashboard is empty or showing cards
+
+## 0.2.4
+
+- Updated Navet to `0.2.4`
+- Added cleaner kiosk-mode dashboard behavior for wall panels and tablets
+- Added direct dashboard cards for single sensors, binary sensors, scripts, scenes, and more device classes
+- Added compact dashboard summaries for lights, climate, media, security, and energy
+- Fixed HVAC card updates for Nest-style climate entities and Fahrenheit setups
+- Fixed media playback commands for TV, Spotify, and Android TV integrations
+- Fixed sensor timestamp display so local time is used instead of GMT
+- Added hidden-room support without deleting dashboard content
+
+## 0.2.3
+
+- Updated Navet to `0.2.3`
+- Replaced legacy long-lived token login with Home Assistant OAuth
+- Fixed old dashboard config imports breaking the new OAuth session flow
+- Improved add-on ingress websocket reliability after Home Assistant restarts
+- Add-on installs now tolerate stale `hass_url` and `token` options from older releases
+
+## 0.2.2
+
+- Updated Navet to `0.2.2`
+- Improved add-on login, ingress proxying, and media artwork loading
+- Add-on users authenticate through Home Assistant Ingress without `hass_url` or `token` options
+- Direct port `8099` users now sign in with Home Assistant OAuth instead of manually configured
+  long-lived tokens
+- Added direct go2rtc WebRTC camera feed support outside the Home Assistant custom panel
+
+## 0.2.1
+
+- Updated Navet to `0.2.1`
+- Fixed Home Assistant add-on Ingress proxy setup when Home Assistant URL config is blank
+- Added fan dashboard cards with power, percentage, oscillation, direction, preset, and speed controls
+- Added fan controls to supported HVAC card settings
+- Fixed Fahrenheit climate readings being converted twice
+- Improved empty states for dashboard widgets without configured data
+- Added explicit camera feed choices for Auto, Live, and Snapshot view modes, plus Auto, WebRTC, HLS, and MJPEG live-feed selection with fallback
+
+## 0.2.0
+
+- Updated Navet to `0.2.0`
+- Added Sensor Group widgets for compact multi-sensor dashboard summaries
+- Added HVAC preset temperature controls
+- Improved camera live-feed refresh behavior
+- Improved cover card support and position controls
+- Optimized dashboard loading with lazy card/widget chunks and reduced duplicate energy/RSS requests
+- Updated release, setup, roadmap, and Storybook documentation for the current public beta
+
+## 0.1.13
+
+- Updated Navet to `0.1.3`
+- Fixed Docker media artwork loading
+- Fixed dashboard navigation unexpectedly returning to the unassigned room tab
+- Added cover card drag controls, card locking, and editable custom card names
+- Refined card dialogs, scrollbars, slide actions, and add-on setup guidance
+
+## 0.1.12
+
+- Updated Navet to `0.1.2`
+- Published add-on images for stable version tags as well as beta tags
+- Clarified when to use the HACS custom panel and when to use the add-on
+
+## 0.1.11
+
+- Updated Navet to `0.1.1`
+- Published the current Navet release as a stable GitHub release for HACS users
+- Fixed HACS update metadata so Home Assistant uses release versions instead of branch commit SHAs
+- Fixed release announcement links opening a missing GitHub commit-based release page
+- Included the custom panel loading, media artwork, localization, unit, time format, and room navigation fixes from the beta line
+
+## 0.1.10
+
+- Updated Navet to `0.1.1-beta.3`
+- Fixed HACS update metadata so Home Assistant uses release versions instead of branch commit SHAs
+- Fixed release announcement links opening a missing GitHub commit-based release page
+
+## 0.1.9
+
+- Updated Navet to `0.1.1-beta.2`
+- Fixed media artwork loading in the Home Assistant custom panel
+- Fixed dashboards getting stuck on "Loading devices..." for affected users
+- Fixed Celsius/Fahrenheit and 12-hour/24-hour settings so units and time formats update correctly
+- Added scrolling room navigation for dashboards with more rooms than available space
+- Re-enabled the custom panel setup notice for Home Assistant add-on users
+- Improved custom panel style loading, iframe embedding, and live update support
+- Added Chinese, Italian, and Portuguese (Brazil) language support
+
+## 0.1.8
+
+- Updated Navet to `0.1.1-beta.1`
+- Added section-focused dashboard surfaces for media, security, and device layouts
+- Added Home Assistant `water_heater` entities to the HVAC card flow
+- Improved hosted/authenticated app, login, and error-display behavior
+- Added HACS repository metadata for custom repository installs (WIP)
+
+## 0.1.7
+
+- Updated Navet to `0.1.0-beta.4`
+- Polished the login experience for hosted and authenticated Home Assistant setups
+- Fixed Home Assistant add-on ingress routing for Navet internal endpoints, including dashboard profile/session APIs and RSS proxying
+- Fixed runtime credential loading for Docker and add-on deployments
+- Fixed authenticated media artwork and album art loading
+- Improved HVAC mode controls, entity synchronization, and temperature/status labels
+- Fixed lock, cover, RSS, and slide-action dashboard card interactions
+- Fixed hosted demo and website bundle asset paths
+- Added dashboard profile/session sync so deployed dashboards can persist state across browser sessions
+- Expanded automated coverage for Home Assistant connections, dashboard endpoints, media artwork, cards, RSS feeds, and sessions
+
+## 0.1.6
+
+- Refreshed Home Assistant add-on bundle for release maintenance
+
+## 0.1.5
+
+- Added Home Assistant add-on presentation assets for the store view
+- Added add-on changelog metadata
+- Fixed ingress asset/logo path handling for the embedded Navet UI
+
+## 0.1.4
+
+- Fixed logo asset paths in the sidebar, onboarding dialog, and dashboard reveal
+
+## 0.1.3
+
+- Refreshed bundled add-on assets for Home Assistant ingress
+
+## 0.1.2
+
+- Fixed missing frontend chunk in the bundled add-on assets
+
+## 0.1.1
+
+- Forced add-on rebuild after ingress asset fixes
+
+## 0.1.0
+
+- Initial Home Assistant add-on packaging for Navet

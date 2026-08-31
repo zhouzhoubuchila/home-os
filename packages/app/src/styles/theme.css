@@ -1,0 +1,933 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --scrollbar-size: 10px;
+  --scrollbar-track: rgba(15, 23, 42, 0.06);
+  --scrollbar-thumb: rgba(100, 116, 139, 0.42);
+  --scrollbar-thumb-hover: rgba(71, 85, 105, 0.62);
+  --scrollbar-thumb-border: rgba(255, 255, 255, 0.68);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+  --scrollbar-track: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
+  --scrollbar-thumb-border: rgba(15, 23, 42, 0.42);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+
+  /**
+   * Default typography styles for HTML elements (h1-h4, p, label, button, and form fields).
+   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+   */
+
+  html {
+    font-size: 16px;
+    scrollbar-gutter: auto;
+  }
+
+  html[data-pointer-modality="mouse"],
+  html[data-pointer-modality="mouse"] * {
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  html[data-pointer-modality="touch"],
+  html[data-pointer-modality="touch"] * {
+    -ms-overflow-style: none;
+    scrollbar-gutter: auto;
+    scrollbar-width: none;
+  }
+
+  @supports (overflow: overlay) {
+    html[data-pointer-modality="mouse"],
+    html[data-pointer-modality="mouse"] body {
+      overflow: overlay;
+    }
+  }
+
+  html[data-pointer-modality="mouse"] body::-webkit-scrollbar,
+  html[data-pointer-modality="mouse"] *::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  html[data-pointer-modality="touch"] body::-webkit-scrollbar,
+  html[data-pointer-modality="touch"] *::-webkit-scrollbar {
+    display: none;
+  }
+
+  html[data-pointer-modality="mouse"] body::-webkit-scrollbar-track,
+  html[data-pointer-modality="mouse"] *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 999px;
+  }
+
+  html[data-pointer-modality="mouse"] body::-webkit-scrollbar-thumb,
+  html[data-pointer-modality="mouse"] *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-thumb-border);
+    border-radius: 999px;
+    min-height: 40px;
+  }
+
+  html[data-pointer-modality="mouse"] body::-webkit-scrollbar-thumb:hover,
+  html[data-pointer-modality="mouse"] *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  html[data-pointer-modality="mouse"] body::-webkit-scrollbar-corner,
+  html[data-pointer-modality="mouse"] *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+
+  html[data-no-animation="true"] {
+    /* biome-ignore lint/complexity/noImportantStyles: must override a scroll-smooth utility applied directly to the root element */
+    scroll-behavior: auto !important;
+  }
+
+  html[data-no-animation="true"] *,
+  html[data-no-animation="true"] *::before,
+  html[data-no-animation="true"] *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: low-power mode must override Tailwind animation utilities declared in a later cascade layer */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: low-power mode must override Tailwind transition utilities declared in a later cascade layer */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: low-power mode must override smooth-scroll utilities declared in a later cascade layer */
+    scroll-behavior: auto !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      scroll-behavior: auto !important;
+      transition: none !important;
+    }
+  }
+
+  /* Universal suppression — catches all backdrop-blur values including arbitrary Tailwind classes */
+  html[data-effects-quality="low"] *,
+  [data-navet-effects-quality="low"] * {
+    /* biome-ignore lint/complexity/noImportantStyles: must override Tailwind utilities regardless of cascade layer order for RPi low-quality mode */
+    -webkit-backdrop-filter: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: low-power mode must also neutralize inline blur and drop-shadow filters on gauges, maps, and ambient layers */
+    filter: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must override Tailwind utilities regardless of cascade layer order for RPi low-quality mode */
+    will-change: auto !important;
+  }
+
+  /*
+   * Keep the standards declaration in a distinct conditional rule. Lightning CSS
+   * otherwise folds adjacent prefixed/unprefixed declarations down to the final
+   * form during production minification, which left Chromium's backdrop-filter
+   * utility active on low-power devices.
+   */
+  @supports (backdrop-filter: none) {
+    html[data-effects-quality="low"] *,
+    [data-navet-effects-quality="low"] * {
+      /* biome-ignore lint/complexity/noImportantStyles: must override Tailwind utilities regardless of cascade layer order for RPi low-quality mode */
+      backdrop-filter: none !important;
+    }
+  }
+
+  html[data-effects-quality="low"] body {
+    /* biome-ignore lint/complexity/noImportantStyles: removes the standalone boot gradient that otherwise remains as a full-viewport repaint layer */
+    background-image: none !important;
+  }
+
+  [data-navet-effects-quality="low"] *,
+  [data-navet-effects-quality="low"] *::before,
+  [data-navet-effects-quality="low"] *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: scoped dashboard low quality must override Tailwind motion utilities while the global preference remains high */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: scoped dashboard low quality must override Tailwind motion utilities while the global preference remains high */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: scoped dashboard low quality must override smooth-scroll utilities while the global preference remains high */
+    scroll-behavior: auto !important;
+  }
+
+  /* ── MEDIUM: reduce motion and blur costs without eliminating them ─────────
+     Goal: mid-range phones and low-end desktops feel responsive while
+     preserving visual identity.                                               */
+
+  /* Cut transition/animation durations. Hover feedback and state changes still
+     animate, but the GPU spends less time per transition. 150 ms feels instant
+     on mid-range hardware while still communicating interactivity. */
+  html[data-effects-quality="medium"] *:not([data-preserve-animation-duration="true"]),
+  html[data-effects-quality="medium"] *:not([data-preserve-animation-duration="true"])::before,
+  html[data-effects-quality="medium"] *:not([data-preserve-animation-duration="true"])::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must cap Tailwind transition/animation durations to reduce GPU workload on mid-range hardware */
+    transition-duration: 150ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must cap Tailwind transition/animation durations to reduce GPU workload on mid-range hardware */
+    animation-duration: 250ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: clears eager compositor-layer hints so the GPU isn't pre-promoting every animated card element */
+    will-change: auto !important;
+  }
+
+  /* Reduce backdrop-blur from the typical card value (~24 px) to 6 px.
+     Blur cost scales roughly with radius² on the GPU: 6 px vs 24 px is ~16×
+     less fill work per composited element. The glass aesthetic survives at
+     6 px — it reads as frosted rather than clear. */
+  html[data-effects-quality="medium"] [class*="backdrop-blur"] {
+    /* biome-ignore lint/complexity/noImportantStyles: must reduce Tailwind backdrop-blur utilities to cut GPU compositing cost on mid-range hardware */
+    backdrop-filter: blur(6px) !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must reduce Tailwind backdrop-blur utilities to cut GPU compositing cost on mid-range hardware */
+    -webkit-backdrop-filter: blur(6px) !important;
+  }
+
+  /* Ambient light bleed: mix-blend-mode radial gradient overlay per card.
+     Each one forces an independent compositing layer and GPU overdraw.
+     In MEDIUM this is a visual flourish worth trading for responsiveness. */
+  html[data-effects-quality="medium"] [data-ambient-light-bleed="true"] {
+    /* biome-ignore lint/complexity/noImportantStyles: must override any display utility on the decorative layer */
+    display: none !important;
+  }
+
+  /* Remove large drop shadows. [class*="shadow-[0_"] catches all outer arbitrary
+     shadows (0_22px, 0_24px, 0_28px, 0_32px …) while leaving inset shadows
+     (which start with "inset") untouched so borders/highlights are preserved. */
+  html[data-effects-quality="medium"] .shadow-xl,
+  html[data-effects-quality="medium"] .shadow-2xl,
+  html[data-effects-quality="medium"] [class*="shadow-[0_"] {
+    /* biome-ignore lint/complexity/noImportantStyles: must override Tailwind shadow utilities declared in a later cascade layer */
+    box-shadow: none !important;
+  }
+
+  html[data-effects-quality="low"] .shadow-lg,
+  html[data-effects-quality="low"] .shadow-xl,
+  html[data-effects-quality="low"] .shadow-2xl,
+  html[data-effects-quality="low"] [class*="shadow-["],
+  [data-navet-effects-quality="low"] .shadow-lg,
+  [data-navet-effects-quality="low"] .shadow-xl,
+  [data-navet-effects-quality="low"] .shadow-2xl,
+  [data-navet-effects-quality="low"] [class*="shadow-["] {
+    /* biome-ignore lint/complexity/noImportantStyles: must override Tailwind shadow utilities declared in a later cascade layer */
+    box-shadow: none !important;
+  }
+
+  html[data-effects-quality="medium"] .room-nav-shell.is-stuck,
+  html[data-effects-quality="low"] .room-nav-shell.is-stuck {
+    /* biome-ignore lint/complexity/noImportantStyles: must override the sticky navigation shadow utility */
+    box-shadow: none !important;
+  }
+
+  html[data-effects-quality="medium"] [data-ambient-light-bleed="true"],
+  html[data-effects-quality="low"] [data-ambient-light-bleed="true"],
+  [data-navet-effects-quality="low"] [data-ambient-light-bleed="true"] {
+    /* biome-ignore lint/complexity/noImportantStyles: must override any display utility on the decorative layer */
+    display: none !important;
+  }
+}
+
+@layer utilities {
+  .navet-card-header-control,
+  .navet-card-action-control {
+    height: 2rem;
+    width: 2rem;
+  }
+
+  @media (any-pointer: coarse) {
+    .navet-card-header-control,
+    .navet-card-action-control {
+      height: 2.25rem;
+      width: 2.25rem;
+    }
+
+    .navet-entity-card-header {
+      align-items: center;
+    }
+  }
+
+  .navet-card-header-control-dense {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+
+  .sbdocs-content {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides Storybook's own .sbdocs-content max-width */
+    max-width: 1200px !important;
+  }
+
+  @media (max-width: 767px) {
+    input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+        [type="color"]
+      ):not([type="button"]):not([type="submit"]):not([type="reset"]),
+    textarea,
+    select {
+      font-size: var(--text-sm);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes zoom-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-top {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-in {
+    animation-fill-mode: both;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fade-in {
+    animation-name: fade-in;
+    animation-duration: 150ms;
+  }
+
+  .zoom-in {
+    animation-name: zoom-in;
+    animation-duration: 150ms;
+  }
+
+  .slide-in-from-top {
+    animation-name: slide-in-from-top;
+    animation-duration: 150ms;
+  }
+
+  .slide-in-from-bottom {
+    animation-name: slide-in-from-bottom;
+    animation-duration: 150ms;
+  }
+
+  .slide-in-from-left {
+    animation-name: slide-in-from-left;
+    animation-duration: 150ms;
+  }
+
+  .slide-in-from-right {
+    animation-name: slide-in-from-right;
+    animation-duration: 150ms;
+  }
+
+  .duration-200 {
+    animation-duration: 200ms;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /*
+   * iOS standalone WebKit can retain a rounded card's surface while failing to
+   * repaint its children after a long document scroll. Keep the workaround
+   * opt-in so regular browsers and dense kiosk grids do not gain extra layers.
+   */
+  @supports (-webkit-touch-callout: none) {
+    @media (display-mode: standalone), (display-mode: fullscreen) {
+      .ios-pwa-scroll-repaint {
+        transform: scale(1);
+      }
+    }
+  }
+
+  .room-nav-scrollbar {
+    --room-nav-scrollbar-thumb: rgba(2, 6, 23, 0.28);
+    --room-nav-scrollbar-thumb-hover: rgba(2, 6, 23, 0.38);
+    --room-nav-scrollbar-track: rgba(2, 6, 23, 0.1);
+  }
+
+  .room-nav-scrollbar-bar {
+    background: var(--room-nav-scrollbar-track);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  .room-nav-scrollbar:hover .room-nav-scrollbar-bar,
+  .room-nav-scrollbar:focus-within .room-nav-scrollbar-bar,
+  .room-nav-scrollbar.is-dragging .room-nav-scrollbar-bar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  html[data-pointer-modality="touch"] .room-nav-scrollbar:hover .room-nav-scrollbar-bar,
+  html[data-pointer-modality="touch"] .room-nav-scrollbar:focus-within .room-nav-scrollbar-bar,
+  html[data-pointer-modality="touch"] .room-nav-scrollbar.is-dragging .room-nav-scrollbar-bar {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .room-nav-scrollbar-thumb {
+    left: var(--room-nav-scrollbar-left);
+    width: var(--room-nav-scrollbar-width);
+    background: var(--room-nav-scrollbar-thumb);
+    transition: background-color 160ms ease;
+  }
+
+  .room-nav-scrollbar-thumb:hover {
+    background: var(--room-nav-scrollbar-thumb-hover);
+  }
+
+  .tab-list-scrollbar {
+    --tab-list-scrollbar-left: 0px;
+    --tab-list-scrollbar-width: 0px;
+    position: relative;
+  }
+
+  .tab-list-scrollbar::before,
+  .tab-list-scrollbar::after {
+    bottom: 2px;
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    transition:
+      opacity 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .tab-list-scrollbar::before {
+    background: rgba(2, 6, 23, 0.1);
+    border-radius: 999px;
+    height: 2px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .tab-list-scrollbar::after {
+    background: rgba(2, 6, 23, 0.28);
+    border-radius: 999px;
+    height: 2px;
+    left: var(--tab-list-scrollbar-left);
+    width: var(--tab-list-scrollbar-width);
+  }
+
+  html[data-pointer-modality="mouse"]
+    .tab-list-scrollbar[data-scrollbar-overflow="true"]:hover::before,
+  html[data-pointer-modality="mouse"]
+    .tab-list-scrollbar[data-scrollbar-overflow="true"]:hover::after,
+  html[data-pointer-modality="mouse"]
+    .tab-list-scrollbar[data-scrollbar-overflow="true"]:focus-within::before,
+  html[data-pointer-modality="mouse"]
+    .tab-list-scrollbar[data-scrollbar-overflow="true"]:focus-within::after {
+    opacity: 1;
+  }
+
+  html[data-pointer-modality="mouse"]
+    .tab-list-scrollbar[data-scrollbar-overflow="true"]:hover::after {
+    background: rgba(2, 6, 23, 0.36);
+  }
+
+  html[data-pointer-modality="touch"] .tab-list-scrollbar::before,
+  html[data-pointer-modality="touch"] .tab-list-scrollbar::after {
+    opacity: 0;
+  }
+
+  .overlay-scroll-area {
+    --overlay-scrollbar-track: rgba(2, 6, 23, 0.1);
+    --overlay-scrollbar-thumb: rgba(2, 6, 23, 0.28);
+    --overlay-scrollbar-thumb-hover: rgba(2, 6, 23, 0.38);
+  }
+
+  .overlay-scrollbar-track {
+    bottom: var(--overlay-scrollbar-track-end);
+    background: var(--overlay-scrollbar-track);
+    opacity: 0;
+    pointer-events: none;
+    top: var(--overlay-scrollbar-track-start);
+    transition: opacity 160ms ease;
+  }
+
+  .overlay-scroll-area:hover .overlay-scrollbar-track,
+  .overlay-scroll-area:focus-within .overlay-scrollbar-track,
+  .overlay-scroll-area.is-dragging .overlay-scrollbar-track {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  html[data-pointer-modality="touch"] .overlay-scroll-area:hover .overlay-scrollbar-track,
+  html[data-pointer-modality="touch"] .overlay-scroll-area:focus-within .overlay-scrollbar-track,
+  html[data-pointer-modality="touch"] .overlay-scroll-area.is-dragging .overlay-scrollbar-track {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .overlay-scrollbar-thumb {
+    top: var(--overlay-scrollbar-start);
+    height: var(--overlay-scrollbar-size);
+    background: var(--overlay-scrollbar-thumb);
+    transition: background-color 160ms ease;
+  }
+
+  .overlay-scrollbar-thumb:hover {
+    background: var(--overlay-scrollbar-thumb-hover);
+  }
+
+  .safe-area-pt {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+
+  .safe-area-pt-3 {
+    padding-top: calc(0.75rem + var(--navet-safe-area-top-offset, 0px));
+  }
+
+  .room-nav-shell {
+    margin-inline: -8px;
+    border: 1px solid transparent;
+    border-radius: 22px;
+    padding: 0.375rem;
+    background: transparent;
+    box-shadow: none;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      backdrop-filter 160ms ease,
+      -webkit-backdrop-filter 160ms ease;
+  }
+
+  @media (min-width: 768px) {
+    .room-nav-shell {
+      padding: 0.5rem;
+    }
+  }
+
+  .room-nav-shell.is-stuck[data-theme="light"] {
+    border-color: var(--room-nav-sticky-border);
+    background: var(--room-nav-sticky-bg);
+    box-shadow: var(--room-nav-sticky-shadow);
+  }
+
+  .room-nav-shell.is-stuck[data-theme="glass"] {
+    border-color: var(--room-nav-sticky-border);
+    background: var(--room-nav-sticky-bg);
+    box-shadow: var(--room-nav-sticky-shadow);
+  }
+
+  .room-nav-shell.is-stuck[data-theme="black"] {
+    border-color: var(--room-nav-sticky-border);
+    background: var(--room-nav-sticky-bg);
+    box-shadow: var(--room-nav-sticky-shadow);
+  }
+
+  .room-nav-shell.is-stuck[data-theme="dark"] {
+    border-color: var(--room-nav-sticky-border);
+    background: var(--room-nav-sticky-bg);
+    box-shadow: var(--room-nav-sticky-shadow);
+  }
+
+  .safe-area-pt-4 {
+    padding-top: calc(1rem + var(--navet-safe-area-top-offset, 0px));
+  }
+
+  .safe-area-pt-5 {
+    padding-top: calc(1.25rem + var(--navet-safe-area-top-offset, 0px));
+  }
+
+  .safe-area-pb {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  .safe-area-bottom-offset {
+    bottom: max(calc(env(safe-area-inset-bottom) - 8px), 0px);
+  }
+
+  .mobile-bottom-dock-offset {
+    --mobile-bottom-dock-offset: 1.3125rem;
+    --mobile-bottom-dock-viewport-overlap: max(
+      calc(var(--navet-viewport-height, 0px) - var(--navet-visible-viewport-height, 0px)),
+      0px
+    );
+    bottom: var(--mobile-bottom-dock-offset);
+  }
+
+  :root[data-navet-runtime='ha-panel'],
+  :root[data-navet-runtime='ha-ingress'] {
+    --navet-safe-area-top-offset: max(env(safe-area-inset-top), 0px);
+  }
+
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    :root {
+      --navet-safe-area-top-offset: max(env(safe-area-inset-top), 0px);
+    }
+
+    .mobile-bottom-dock-offset {
+      --mobile-bottom-dock-offset: max(calc(env(safe-area-inset-bottom) - 6px), 0.5rem);
+      --mobile-bottom-dock-viewport-overlap: 0px;
+    }
+  }
+
+  /* iOS-style wiggle animation for edit mode */
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(-0.5deg);
+    }
+    50% {
+      transform: rotate(0.5deg);
+    }
+  }
+
+  .animate-wiggle {
+    animation: wiggle 0.3s ease-in-out infinite;
+  }
+
+  /* Card text — tinted toward the user's accent color so text and background feel like the same color family */
+  .card-primary-text {
+    color: color-mix(in oklch, var(--navet-accent, #f97316) 40%, oklch(0.9 0 0));
+  }
+  .card-muted-text {
+    color: color-mix(in oklch, var(--navet-accent, #f97316) 45%, oklch(0.68 0 0));
+  }
+
+  [data-draggable-card="true"][data-size-selector-open="true"] {
+    animation: none;
+  }
+
+  /* Media card — scrolling marquee for long track/artist titles */
+  @keyframes media-track-marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes navet-light-effect-border-beam {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @keyframes navet-light-card-color-cycle {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  .navet-light-effect-beam {
+    position: relative;
+    isolation: isolate;
+    border-color: color-mix(
+      in srgb,
+      var(--navet-light-effect-accent, #f59e0b) 38%,
+      transparent
+    );
+  }
+
+  .navet-light-effect-beam::before {
+    position: absolute;
+    inset: -1px;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: conic-gradient(
+      transparent 0deg 268deg,
+      color-mix(in srgb, var(--navet-light-effect-accent, #f59e0b) 24%, transparent) 286deg,
+      var(--navet-light-effect-accent, #f59e0b) 316deg,
+      color-mix(in srgb, var(--navet-light-effect-accent, #f59e0b) 58%, white) 334deg,
+      transparent 360deg
+    );
+    opacity: 0;
+    content: '';
+    pointer-events: none;
+    transform-origin: center;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  html[data-effects-quality='high'] .navet-light-effect-beam::before {
+    animation: navet-light-effect-border-beam 4.2s linear infinite;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .navet-light-effect-beam::before {
+      opacity: 0;
+    }
+  }
+
+  .navet-light-card-color-cycle-effect {
+    overflow: hidden;
+    opacity: 0.42;
+    mix-blend-mode: color;
+    pointer-events: none;
+  }
+
+  .navet-light-card-color-cycle-effect::before {
+    position: absolute;
+    inset: -65%;
+    background: conic-gradient(
+      from 20deg,
+      #38bdf8,
+      #818cf8,
+      #e879f9,
+      #f87171,
+      #facc15,
+      #4ade80,
+      #38bdf8
+    );
+    content: '';
+    transform: rotate(0deg);
+    transform-origin: center;
+  }
+
+  html[data-effects-quality='high'] .navet-light-card-color-cycle-effect::before {
+    animation: navet-light-card-color-cycle 14s linear infinite;
+  }
+
+  html[data-effects-quality='medium'] .navet-light-card-color-cycle-effect {
+    opacity: 0.3;
+  }
+
+  html[data-effects-quality='low'] .navet-light-card-color-cycle-effect {
+    display: none;
+  }
+
+  [data-navet-effects-quality='low'] .navet-light-effect-beam::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  [data-navet-effects-quality='low'] .navet-light-card-color-cycle-effect {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .navet-light-card-color-cycle-effect::before {
+      animation: none;
+    }
+  }
+}

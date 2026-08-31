@@ -1,0 +1,271 @@
+import * as integrationHistoryServiceModule from '@navet/app/services/integration-history.service';
+import { renderHookWithProviders } from '@navet/app/test/render';
+import { waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useSensorStatisticsHistory } from '../use-sensor-statistics-history';
+
+const { useProviderEntitySnapshotMock } = vi.hoisted(() => ({
+  useProviderEntitySnapshotMock: vi.fn(),
+}));
+
+vi.mock('@navet/app/hooks', () => ({
+  useProviderEntitySnapshot: useProviderEntitySnapshotMock,
+}));
+
+describe('useSensorStatisticsHistory', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    useProviderEntitySnapshotMock.mockReset();
+    vi.spyOn(
+      integrationHistoryServiceModule,
+      'supportsIntegrationStatisticsHistory'
+    ).mockReturnValue(true);
+  });
+
+  it('returns recorder history for numeric sensors with statistics', async () => {
+    const messageClient = {
+      sendMessagePromise: vi.fn().mockResolvedValue({
+        'sensor.kitchen_temperature': [
+          {
+            start: '2026-05-25T10:00:00.000Z',
+            end: '2026-05-25T10:05:00.000Z',
+            mean: 20.9,
+            min: 20.4,
+            max: 21.2,
+          },
+          {
+            start: '2026-05-25T10:05:00.000Z',
+            end: '2026-05-25T10:10:00.000Z',
+            mean: 21.3,
+            min: 21,
+            max: 21.5,
+          },
+        ],
+      }),
+    };
+
+    useProviderEntitySnapshotMock.mockReturnValue({
+      entityId: 'sensor.kitchen_temperature',
+      state: '21.3',
+      attributes: {
+        friendly_name: 'Kitchen Temperature',
+        device_class: 'temperature',
+        unit_of_measurement: '°C',
+      },
+    });
+    vi.spyOn(integrationHistoryServiceModule, 'getIntegrationHistoryMessageClient').mockReturnValue(
+      messageClient
+    );
+
+    const { result } = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('sensor.kitchen_temperature')
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasHistory).toBe(true);
+    });
+
+    expect(result.current.points).toHaveLength(2);
+    expect(messageClient.sendMessagePromise).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches recorder history for provider-scoped Home Assistant sensors using the native entity id', async () => {
+    const messageClient = {
+      sendMessagePromise: vi.fn().mockResolvedValue({
+        'sensor.remaining_electricity': [
+          {
+            start: '2026-05-25T10:00:00.000Z',
+            end: '2026-05-25T10:05:00.000Z',
+            mean: 198.6,
+            min: 198.1,
+            max: 199.0,
+          },
+          {
+            start: '2026-05-25T10:05:00.000Z',
+            end: '2026-05-25T10:10:00.000Z',
+            mean: 199.2,
+            min: 198.9,
+            max: 199.4,
+          },
+        ],
+      }),
+    };
+
+    useProviderEntitySnapshotMock.mockReturnValue({
+      entityId: 'sensor.remaining_electricity',
+      state: '199.2',
+      attributes: {
+        friendly_name: 'Remaining Electricity',
+        device_class: 'energy',
+        unit_of_measurement: 'kWh',
+      },
+    });
+    vi.spyOn(integrationHistoryServiceModule, 'getIntegrationHistoryMessageClient').mockReturnValue(
+      messageClient
+    );
+
+    const { result } = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('home_assistant:sensor.remaining_electricity')
+    );
+
+    await waitFor(() => {
+      expect(result.current.hasHistory).toBe(true);
+    });
+
+    expect(result.current.points).toHaveLength(2);
+    expect(messageClient.sendMessagePromise).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statistic_ids: ['sensor.remaining_electricity'],
+      })
+    );
+  });
+
+  it('does not fetch history for binary, timestamp, or unavailable sensors', async () => {
+    const messageClient = {
+      sendMessagePromise: vi.fn(),
+    };
+
+    vi.spyOn(integrationHistoryServiceModule, 'getIntegrationHistoryMessageClient').mockReturnValue(
+      messageClient
+    );
+
+    useProviderEntitySnapshotMock
+      .mockReturnValueOnce({
+        entityId: 'binary_sensor.hall_motion',
+        state: 'on',
+        attributes: { device_class: 'motion' },
+      })
+      .mockReturnValueOnce({
+        entityId: 'sensor.sun_next_setting',
+        state: '2026-05-25T19:29:00.000Z',
+        attributes: { device_class: 'timestamp' },
+      })
+      .mockReturnValueOnce({
+        entityId: 'sensor.garage_temperature',
+        state: 'unavailable',
+        attributes: {
+          device_class: 'temperature',
+          unit_of_measurement: '°C',
+        },
+      });
+
+    const motion = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('binary_sensor.hall_motion')
+    );
+    const timestamp = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('sensor.sun_next_setting')
+    );
+    const unavailable = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('sensor.garage_temperature')
+    );
+
+    await waitFor(() => {
+      expect(motion.result.current.canFetch).toBe(false);
+      expect(timestamp.result.current.canFetch).toBe(false);
+      expect(unavailable.result.current.canFetch).toBe(false);
+    });
+
+    expect(messageClient.sendMessagePromise).not.toHaveBeenCalled();
+  });
+
+  it('fetches cumulative recorder history for total_increasing sensors', async () => {
+    const messageClient = {
+      sendMessagePromise: vi.fn().mockResolvedValue({
+        'sensor.remaining_electricity': [
+          {
+            start: '2026-05-25T10:00:00.000Z',
+            end: '2026-05-25T10:05:00.000Z',
+            state: 198.6,
+            sum: 198.6,
+          },
+          {
+            start: '2026-05-25T10:05:00.000Z',
+            end: '2026-05-25T10:10:00.000Z',
+            state: 199.2,
+            sum: 199.2,
+          },
+        ],
+      }),
+    };
+
+    vi.spyOn(integrationHistoryServiceModule, 'getIntegrationHistoryMessageClient').mockReturnValue(
+      messageClient
+    );
+
+    useProviderEntitySnapshotMock.mockReturnValue({
+      entityId: 'sensor.remaining_electricity',
+      state: '199.2',
+      attributes: {
+        friendly_name: 'Remaining Electricity',
+        device_class: 'energy',
+        unit_of_measurement: 'kWh',
+        state_class: 'total_increasing',
+      },
+    });
+
+    const { result } = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('home_assistant:sensor.remaining_electricity')
+    );
+
+    await waitFor(() => {
+      expect(result.current.canFetch).toBe(true);
+      expect(result.current.hasHistory).toBe(true);
+    });
+
+    expect(result.current.points).toEqual([
+      {
+        value: 198.6,
+        timestampMs: Date.parse('2026-05-25T10:00:00.000Z'),
+        endTimestampMs: Date.parse('2026-05-25T10:05:00.000Z'),
+        minValue: 198.6,
+        maxValue: 198.6,
+      },
+      {
+        value: 199.2,
+        timestampMs: Date.parse('2026-05-25T10:05:00.000Z'),
+        endTimestampMs: Date.parse('2026-05-25T10:10:00.000Z'),
+        minValue: 199.2,
+        maxValue: 199.2,
+      },
+    ]);
+    expect(messageClient.sendMessagePromise).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statistic_ids: ['sensor.remaining_electricity'],
+        types: ['state', 'sum'],
+      })
+    );
+  });
+
+  it('does not query Home Assistant history for non-HA provider-scoped sensors', async () => {
+    const messageClient = {
+      sendMessagePromise: vi.fn(),
+    };
+
+    useProviderEntitySnapshotMock.mockReturnValue({
+      entityId: 'sensor.office_temperature',
+      state: '20.1',
+      attributes: {
+        device_class: 'temperature',
+        unit_of_measurement: '°C',
+      },
+    });
+    vi.spyOn(
+      integrationHistoryServiceModule,
+      'supportsIntegrationStatisticsHistory'
+    ).mockReturnValue(false);
+    vi.spyOn(integrationHistoryServiceModule, 'getIntegrationHistoryMessageClient').mockReturnValue(
+      messageClient
+    );
+
+    const { result } = renderHookWithProviders(() =>
+      useSensorStatisticsHistory('homey:sensor.office_temperature')
+    );
+
+    await waitFor(() => {
+      expect(result.current.canFetch).toBe(false);
+      expect(result.current.points).toEqual([]);
+    });
+
+    expect(messageClient.sendMessagePromise).not.toHaveBeenCalled();
+  });
+});

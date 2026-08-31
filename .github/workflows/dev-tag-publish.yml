@@ -1,0 +1,53 @@
+name: Prepare Navet Dev Publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev-publish-main
+  cancel-in-progress: true
+
+jobs:
+  tier-1-release-critical:
+    name: Release Safety Checks
+    uses: ./.github/workflows/provider-platform-validation.yml
+
+  prepare-dev-release:
+    name: Create Navet Dev Metadata Commit And Tag
+    runs-on: ubuntu-latest
+    needs: tier-1-release-critical
+
+    steps:
+      - name: Ensure workflow runs from main
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
+            echo "Publish Navet Dev must be dispatched from main. Received ref: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push Navet Dev metadata commit and tag
+        run: node scripts/create-dev-release.mjs --push
+
+      - name: Summarize next step
+        run: |
+          echo "Created and pushed the Navet Dev metadata commit and matching navet-dev tag."
+          echo "The tag-triggered publish workflow will build and publish the dev artifacts."

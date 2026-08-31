@@ -1,0 +1,164 @@
+import { BaseCard } from '@navet/app/components/primitives';
+import { CardSettingsActionButton } from '@navet/app/components/shared/card-settings-action-button';
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import { type ThemeType, useI18n } from '@navet/app/hooks';
+import { RSSArticleListLarge, RSSArticleListMedium, RSSArticleListSmall } from './rss-article-list';
+import { RSSEmptyState } from './rss-empty-state';
+import { RSSFeedLoadingSkeleton } from './rss-loading-skeleton';
+import { RSSProviderFilterPills } from './rss-provider-filter-pills';
+import { getRSSFeedCardSurfaceTokens } from './surface-tokens';
+import type { RSSItem, RSSProvider } from './types';
+
+interface RSSFeedCardViewProps {
+  inEditMode?: boolean;
+  size?: CardSize;
+  onSizeChange?: (size: CardSize) => void;
+  theme: ThemeType;
+  accentColor: string;
+  tintColor?: string;
+  isSmall: boolean;
+  isMedium: boolean;
+  latestArticle: RSSItem | null;
+  items: RSSItem[];
+  selectedProviders: RSSProvider[];
+  activeProviderId: 'all' | string;
+  onActiveProviderChange: (providerId: 'all' | string) => void;
+  handleArticleClick: (url: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  hasConfiguredProviders: boolean;
+  hasSelectedProviders: boolean;
+  onOpenSettings: () => void;
+}
+
+export function RSSFeedCardView({
+  inEditMode = false,
+  size = 'large',
+  onSizeChange: _onSizeChange,
+  theme,
+  accentColor,
+  tintColor,
+  isSmall,
+  isMedium,
+  latestArticle,
+  items,
+  selectedProviders,
+  activeProviderId,
+  onActiveProviderChange,
+  handleArticleClick,
+  isLoading,
+  error,
+  hasConfiguredProviders,
+  hasSelectedProviders,
+  onOpenSettings,
+}: RSSFeedCardViewProps) {
+  const { t } = useI18n();
+  const rssSurface = getRSSFeedCardSurfaceTokens(theme, accentColor, tintColor);
+  const chromeSize = size === 'large' ? 'medium' : size;
+  const hasCustomTint = Boolean(rssSurface.resolvedTintColor);
+  const controlAccentColor = rssSurface.resolvedTintColor ?? rssSurface.accentColor.base;
+  const isEmpty = !latestArticle && !isLoading;
+  const shouldUseCustomCardSurface = hasCustomTint;
+  const isGlassTheme = theme === 'glass';
+
+  return (
+    <BaseCard
+      size={size}
+      className={`
+        group transition-[color,background-color,border-color,box-shadow,opacity,transform,filter] duration-300
+        ${rssSurface.containerShadowClassName}
+        ${!inEditMode ? 'cursor-default' : ''}
+      `}
+      frameClassName={shouldUseCustomCardSurface ? rssSurface.surface.panel : undefined}
+      style={shouldUseCustomCardSurface ? rssSurface.cardStyle : undefined}
+      disableDefaultSheen={!isGlassTheme}
+      overlay={
+        <>
+          {shouldUseCustomCardSurface && rssSurface.glowStyle ? (
+            <div
+              className="pointer-events-none absolute inset-0 rounded-[inherit]"
+              style={rssSurface.glowStyle}
+            />
+          ) : null}
+          {shouldUseCustomCardSurface || isGlassTheme ? (
+            <div
+              className={`pointer-events-none absolute inset-0 rounded-[inherit] ${rssSurface.overlayClassName}`}
+            />
+          ) : null}
+        </>
+      }
+      contentClassName="h-full"
+    >
+      <div className="relative flex h-full flex-col">
+        {isEmpty ? (
+          <RSSEmptyState
+            hasConfiguredProviders={hasConfiguredProviders}
+            hasSelectedProviders={hasSelectedProviders}
+            error={error}
+            inEditMode={inEditMode}
+            size={size}
+            rssSurface={rssSurface}
+            onOpenSettings={onOpenSettings}
+          />
+        ) : isLoading && !latestArticle ? (
+          <RSSFeedLoadingSkeleton
+            isSmall={isSmall}
+            isMedium={isMedium}
+            theme={theme}
+            accentColor={controlAccentColor}
+          />
+        ) : (
+          <>
+            <div className="mb-2 flex items-start gap-2">
+              <RSSProviderFilterPills
+                selectedProviders={selectedProviders}
+                activeProviderId={activeProviderId}
+                onActiveProviderChange={onActiveProviderChange}
+                rssSurface={rssSurface}
+                controlAccentColor={controlAccentColor}
+                theme={theme}
+              />
+              <CardSettingsActionButton
+                theme={theme}
+                size={chromeSize === 'small' ? 'small' : 'medium'}
+                variant="soft"
+                accentColor={controlAccentColor}
+                disableHoverEffects
+                aria-label={t('rss.configureProviders')}
+                className="shrink-0"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenSettings();
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              />
+            </div>
+
+            {isSmall && latestArticle ? (
+              <RSSArticleListSmall
+                items={items}
+                inEditMode={inEditMode}
+                rssSurface={rssSurface}
+                handleArticleClick={handleArticleClick}
+              />
+            ) : isMedium ? (
+              <RSSArticleListMedium
+                items={items}
+                inEditMode={inEditMode}
+                rssSurface={rssSurface}
+                handleArticleClick={handleArticleClick}
+              />
+            ) : (
+              <RSSArticleListLarge
+                items={items}
+                inEditMode={inEditMode}
+                rssSurface={rssSurface}
+                handleArticleClick={handleArticleClick}
+              />
+            )}
+          </>
+        )}
+      </div>
+    </BaseCard>
+  );
+}

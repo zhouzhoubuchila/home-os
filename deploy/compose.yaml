@@ -1,0 +1,47 @@
+services:
+  home-os:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NAVET_ENABLE_DEMO: "false"
+        NAVET_RELEASE_CHANNEL: home-os
+    image: home-os:local
+    environment:
+      NAVET_HASS_URL: ${NAVET_HASS_URL:-}
+      NAVET_INSTALLATION_KEY: ${NAVET_INSTALLATION_KEY:-}
+    volumes:
+      - home-os-data:/data
+    restart: unless-stopped
+    networks: [home-os]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2.10-alpine
+    environment:
+      HOME_OS_DOMAIN: ${HOME_OS_DOMAIN:?请在 .env 设置 HOME_OS_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      home-os:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [home-os]
+
+networks:
+  home-os:
+
+volumes:
+  home-os-data:
+  caddy-data:
+  caddy-config:

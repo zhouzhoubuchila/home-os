@@ -1,0 +1,103 @@
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import type { useCardState, useDeviceMap } from '@navet/app/hooks';
+import type { Section } from '@navet/app/navigation/sections';
+import type { DeviceWithType } from '@navet/app/types/device.types';
+import type { DashboardEntityView } from '@navet/ui/dashboard-entity-view';
+import type { ClimateDashboardSection } from '../../climate/types/climate-dashboard';
+import type { AllViewGrouping } from '../all-view-grid';
+import type { CardTemplate } from '../components/add-card-dialog';
+import type { DashboardPackId } from '../packs/dashboard-packs';
+import type { CustomCard } from '../stores/custom-cards-store';
+import type { ZoneName } from '../zones/zone-types';
+import type { useCardOrdering } from './use-card-ordering';
+import type { useCardZones } from './use-card-zones';
+import type { DashboardDialogs } from './use-dashboard-dialogs';
+import type { useHomeDashboardLayout } from './use-home-dashboard-layout';
+import type { OnboardingController } from './use-onboarding-controller';
+
+export type DashboardClimateSectionGroup = ClimateDashboardSection;
+
+export interface DashboardSectionData {
+  isOverviewSection: boolean;
+  energyCustomCards: CustomCard[];
+  energyOrderedCardIds: string[];
+  hiddenLightEntityIds: string[];
+  allLightDeviceMap: Map<string, DeviceWithType>;
+  climateDeviceMap: Map<string, DeviceWithType>;
+  allClimateDeviceMap: Map<string, DeviceWithType>;
+  hiddenClimateEntityIds: string[];
+  climateSections: DashboardClimateSectionGroup[];
+}
+
+export type DashboardController = OnboardingController &
+  DashboardDialogs & {
+    activeRoom: string;
+    activeSection: Section;
+    addableEntityIds: string[];
+    allCustomCards: CustomCard[];
+    allEntityIds: string[];
+    allViewGrouping: AllViewGrouping;
+    availableDeviceMap: ReturnType<typeof useDeviceMap>['deviceMap'];
+    cardOrders: ReturnType<typeof useCardOrdering>['cardOrders'];
+    cardSizes: ReturnType<typeof useCardState>['cardSizes'];
+    cardZones: ReturnType<typeof useCardZones>['cardZones'];
+    changeRoom: (room: string) => void;
+    customCards: CustomCard[];
+    deviceMap: ReturnType<typeof useDeviceMap>['deviceMap'];
+    connecting: boolean;
+    densePerformanceMode: boolean;
+    denseVisibleCardCount: number;
+    optimizeOffscreenPaint: boolean;
+    devicesLoaded: boolean;
+    handleAddCard: (template: CardTemplate, size: CardSize) => void;
+    handleAddLibraryCard: (cardId: string) => void;
+    handleAddGenericEntityCard: (entityId: string) => void;
+    handleAddEntity: (entityId: string) => void;
+    handleDeleteCard: (cardId: string) => void;
+    handleRemoveEntity: (entityId: string) => void;
+    handleApplyDashboardPack: (packId: DashboardPackId) => void;
+    handleUpdateCard: (
+      cardId: string,
+      updates: Partial<Omit<CustomCard, 'id' | 'createdAt'>>
+    ) => void;
+    hiddenEntityIds: string[];
+    hiddenRoomNames: string[];
+    homeLayout: ReturnType<typeof useHomeDashboardLayout>['layout'];
+    canRedoHomeLayout: ReturnType<typeof useHomeDashboardLayout>['canRedo'];
+    canUndoHomeLayout: ReturnType<typeof useHomeDashboardLayout>['canUndo'];
+    homeLayoutHydrated: boolean;
+    addHomeCard: ReturnType<typeof useHomeDashboardLayout>['addCard'];
+    removeHomeCard: ReturnType<typeof useHomeDashboardLayout>['removeCard'];
+    moveHomeCard: ReturnType<typeof useHomeDashboardLayout>['moveCard'];
+    setHomeLayoutMode: ReturnType<typeof useHomeDashboardLayout>['setMode'];
+    addHomeSection: ReturnType<typeof useHomeDashboardLayout>['addSection'];
+    addHomeColumnSection: ReturnType<typeof useHomeDashboardLayout>['addColumnSection'];
+    addHomeSectionBelow: ReturnType<typeof useHomeDashboardLayout>['addSectionBelow'];
+    moveHomeSection: ReturnType<typeof useHomeDashboardLayout>['moveSection'];
+    moveHomeColumn: ReturnType<typeof useHomeDashboardLayout>['moveColumn'];
+    renameHomeSection: ReturnType<typeof useHomeDashboardLayout>['renameSection'];
+    removeHomeSection: ReturnType<typeof useHomeDashboardLayout>['removeSection'];
+    redoHomeLayout: ReturnType<typeof useHomeDashboardLayout>['redoLayout'];
+    resizeHomeSection: ReturnType<typeof useHomeDashboardLayout>['resizeSection'];
+    undoHomeLayout: ReturnType<typeof useHomeDashboardLayout>['undoLayout'];
+    isEditMode: boolean;
+    lightDeviceMap: ReturnType<typeof useDeviceMap>['deviceMap'];
+    lightRooms: string[];
+    manualDeviceMap: ReturnType<typeof useDeviceMap>['deviceMap'];
+    manualEntityViewsByCanonicalId: Record<string, DashboardEntityView>;
+    onToggleEditMode: () => void;
+    orderedCardIds: string[];
+    onSetRoomOrder: (rooms: string[]) => void;
+    onSetAllViewGrouping: (grouping: AllViewGrouping) => void;
+    onSetHiddenRoomNames: (rooms: string[]) => void;
+    roomHiddenItemCounts: Map<string, number>;
+    roomItemCounts: Map<string, number>;
+    dashboardRooms: string[];
+    rooms: string[];
+    sectionData: DashboardSectionData;
+    securityAlertCount: number;
+    activeRoomSecurityAlertCount: number;
+    setActiveSection: (section: Section) => void;
+    updateCardSize: ReturnType<typeof useCardState>['updateCardSize'];
+    updateCardZone: (id: string, zone: ZoneName) => void;
+  };

@@ -1,0 +1,1544 @@
+:root {
+  color-scheme: light;
+  --navet-accent: #f97316;
+  --navet-canvas: #fafaf9;
+  --navet-surface: #ffffff;
+  --navet-surface-raised: #f8fafc;
+  --navet-surface-subtle: #f1f5f9;
+  --navet-chrome: rgba(255, 255, 255, 0.82);
+  --navet-border: rgba(203, 213, 225, 0.8);
+  --navet-border-strong: #cbd5e1;
+  --navet-text: #020617;
+  --navet-text-secondary: #334155;
+  --navet-text-muted: #64748b;
+
+  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sl-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --sl-nav-height: 4.5rem;
+  --sl-sidebar-width: 16rem;
+  --sl-content-width: 50rem;
+  --sl-color-accent-low: #ffedd5;
+  --sl-color-accent: #ea580c;
+  --sl-color-accent-high: #7c2d12;
+  --sl-color-white: var(--navet-text);
+  --sl-color-gray-1: #1e293b;
+  --sl-color-gray-2: #475569;
+  --sl-color-gray-3: #64748b;
+  --sl-color-gray-4: #cbd5e1;
+  --sl-color-gray-5: #e2e8f0;
+  --sl-color-gray-6: #f1f5f9;
+  --sl-color-black: var(--navet-canvas);
+  --sl-color-bg: var(--navet-canvas);
+  --sl-color-bg-nav: transparent;
+  --sl-color-bg-sidebar: var(--navet-canvas);
+  --sl-color-hairline-light: var(--navet-border);
+  --sl-color-hairline: var(--navet-border-strong);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --navet-canvas: #06080d;
+  --navet-surface: #0d1119;
+  --navet-surface-raised: #121722;
+  --navet-surface-subtle: rgba(28, 28, 32, 0.92);
+  --navet-chrome: rgba(6, 8, 13, 0.58);
+  --navet-border: rgba(255, 255, 255, 0.09);
+  --navet-border-strong: rgba(255, 255, 255, 0.17);
+  --navet-text: #ffffff;
+  --navet-text-secondary: rgba(255, 255, 255, 0.7);
+  --navet-text-muted: rgba(255, 255, 255, 0.48);
+
+  --sl-color-accent-low: #431407;
+  --sl-color-accent: #fb923c;
+  --sl-color-accent-high: #ffedd5;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #f4f4f5;
+  --sl-color-gray-2: #d4d4d8;
+  --sl-color-gray-3: #a1a1aa;
+  --sl-color-gray-4: #52525b;
+  --sl-color-gray-5: #27272a;
+  --sl-color-gray-6: #18181b;
+  --sl-color-black: var(--navet-canvas);
+  --sl-color-bg: var(--navet-canvas);
+  --sl-color-bg-sidebar: var(--navet-canvas);
+}
+
+html,
+body {
+  background: var(--navet-canvas);
+  color: var(--navet-text);
+}
+
+:root:not([data-theme="dark"]) body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(249, 115, 22, 0.1), transparent 24rem),
+    radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.07), transparent 22rem),
+    linear-gradient(180deg, #fafaf9 0%, #f8fafc 100%);
+  background-attachment: fixed;
+}
+
+@keyframes navet-docs-grid-pan {
+  from {
+    background-position: 0 0, 0 0;
+  }
+
+  to {
+    background-position: -64px -64px, -64px -64px;
+  }
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top, rgba(249, 115, 22, 0.18), transparent 24rem),
+    radial-gradient(circle at 82% 12%, rgba(59, 130, 246, 0.12), transparent 20rem),
+    linear-gradient(180deg, #080c13 0%, #06080d 100%);
+  background-attachment: fixed;
+}
+
+:root[data-theme="dark"] body::before,
+:root[data-theme="dark"] body::after,
+:root:not([data-theme="dark"]) body::before,
+:root:not([data-theme="dark"]) body::after {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+}
+
+:root:not([data-theme="dark"]) body::before {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.34), transparent 72%);
+  opacity: 0.3;
+  animation: navet-docs-grid-pan 24s linear infinite;
+}
+
+:root:not([data-theme="dark"]) body::after {
+  background:
+    radial-gradient(circle at calc(100% + 4rem) -8rem, rgba(249, 115, 22, 0.1), transparent 38%),
+    radial-gradient(circle at -8rem 28rem, rgba(59, 130, 246, 0.08), transparent 42%);
+  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.58) 58%, transparent 100%);
+}
+
+:root[data-theme="dark"] body::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.48), transparent 78%);
+  opacity: 0.24;
+  animation: navet-docs-grid-pan 24s linear infinite;
+}
+
+:root[data-theme="dark"] body::after {
+  background:
+    radial-gradient(circle at calc(100% + 4rem) -8rem, rgba(249, 115, 22, 0.2), rgba(251, 191, 36, 0.1) 22%, transparent 42%),
+    radial-gradient(circle at -8rem 28rem, rgba(59, 130, 246, 0.14), rgba(14, 165, 233, 0.08) 24%, transparent 44%),
+    radial-gradient(ellipse at 50% 22rem, rgba(249, 115, 22, 0.09), rgba(251, 191, 36, 0.04) 24%, transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 16%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.025) 22%, rgba(249, 115, 22, 0.035) 46%, rgba(255, 255, 255, 0.015) 62%, transparent 78%);
+  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.72) 58%, transparent 100%);
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+* {
+  scrollbar-color: color-mix(in srgb, var(--navet-text-muted) 38%, transparent) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--navet-accent) 78%, white);
+  outline-offset: 3px;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+/* A single product bar shared with navet.app. */
+header.header {
+  height: var(--sl-nav-height);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.navet-header-shell {
+  display: grid;
+  width: calc(100% - 2rem);
+  max-width: 82.5rem;
+  min-height: 4rem;
+  grid-template-columns: auto 1fr auto;
+  gap: clamp(1rem, 2vw, 2rem);
+  align-items: center;
+  margin: 0.75rem auto;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--navet-surface) 82%, transparent);
+  box-shadow: 0 20px 60px -40px rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(20px);
+}
+
+.navet-brand {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+
+.navet-brand img {
+  width: auto;
+  height: 2.75rem;
+}
+
+.navet-brand-mark,
+.navet-explore-menu {
+  display: none;
+}
+
+.navet-brand-logo--dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .navet-brand-logo--light {
+  display: none;
+}
+
+:root[data-theme="dark"] .navet-brand-logo--dark {
+  display: block;
+}
+
+.navet-primary-nav,
+.navet-header-tools {
+  display: flex;
+  align-items: center;
+}
+
+.navet-primary-nav {
+  justify-content: flex-end;
+  gap: 0.2rem;
+}
+
+.navet-primary-nav a {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.72rem;
+  border-radius: 999px;
+  color: var(--navet-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.navet-primary-nav a:hover,
+.navet-primary-nav a.is-active {
+  background: var(--navet-surface-subtle);
+  color: var(--navet-text);
+}
+
+.navet-header-tools {
+  gap: 0.5rem;
+}
+
+.navet-search {
+  width: clamp(10rem, 18vw, 15rem);
+}
+
+.navet-github-stars {
+  display: inline-flex;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.78rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 999px;
+  background: var(--navet-surface-subtle);
+  color: var(--navet-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.navet-github-stars:hover {
+  border-color: var(--navet-border-strong);
+  background: var(--navet-surface);
+  color: var(--navet-text);
+}
+
+.navet-github-mark {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+}
+
+.navet-github-stars-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: var(--navet-text-muted);
+  font-size: 0.72rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+.navet-github-stars-meta[hidden] {
+  display: none;
+}
+
+.navet-github-star {
+  width: 0.72rem;
+  height: 0.72rem;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+site-search button[data-open-modal],
+.navet-theme-toggle button,
+starlight-menu-button button {
+  border: 1px solid var(--navet-border) !important;
+  border-radius: 999px !important;
+  background: var(--navet-surface-subtle) !important;
+  color: var(--navet-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.navet-theme-toggle {
+  display: flex;
+}
+
+.navet-theme-toggle button {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  padding: 0 !important;
+  cursor: pointer;
+}
+
+.navet-theme-icon {
+  display: none;
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+:root[data-theme="dark"] .navet-theme-icon--sun,
+:root[data-theme="light"] .navet-theme-icon--moon {
+  display: block;
+}
+
+site-search button[data-open-modal]:hover,
+.navet-theme-toggle button:hover,
+starlight-menu-button button:hover {
+  border-color: var(--navet-border-strong) !important;
+  color: var(--navet-text) !important;
+}
+
+/* Documentation shell: quiet structure, familiar Navet surfaces. */
+.sidebar-pane {
+  border-inline-end: 1px solid var(--navet-border);
+  background: var(--navet-chrome);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+}
+
+.sidebar-content {
+  padding: 1.75rem 1rem 2rem 1.25rem;
+}
+
+.sidebar-content .top-level > li + li {
+  margin-top: 0.3rem;
+}
+
+.sidebar-content summary,
+.sidebar-content a {
+  border-radius: 12px;
+}
+
+.sidebar-content .large {
+  color: var(--navet-text);
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.sidebar-content a {
+  padding-block: 0.46rem;
+  color: var(--navet-text-secondary);
+  font-size: 0.85rem;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.sidebar-content a:hover {
+  background: var(--navet-surface-subtle);
+  color: var(--navet-text);
+}
+
+.sidebar-content a[aria-current="page"] {
+  background: color-mix(in srgb, var(--navet-accent) 13%, var(--navet-surface));
+  color: var(--navet-text);
+  font-weight: 600;
+}
+
+.sidebar-content a[aria-current="page"]::before {
+  background-color: var(--navet-accent);
+}
+
+.main-pane,
+.main-frame,
+.content-panel {
+  background: transparent;
+}
+
+.content-panel,
+.right-sidebar {
+  border: 0;
+}
+
+.right-sidebar-panel {
+  padding-top: 1.5rem;
+}
+
+.right-sidebar-panel a {
+  color: var(--navet-text-muted);
+}
+
+.right-sidebar-panel a[aria-current="true"] {
+  color: var(--navet-text);
+}
+
+.sl-markdown-content {
+  color: var(--navet-text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.72;
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4,
+h1[data-page-title] {
+  color: var(--navet-text);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+}
+
+.navet-page-heading {
+  padding-top: clamp(1.5rem, 4vw, 3rem);
+}
+
+.navet-page-heading p {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.8rem;
+  color: var(--navet-text-muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.navet-page-heading p span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--navet-accent);
+  box-shadow: 0 0 0 0.26rem color-mix(in srgb, var(--navet-accent) 15%, transparent);
+}
+
+.navet-page-heading h1 {
+  max-width: 15ch;
+  margin: 0;
+  color: var(--navet-text);
+  font-size: clamp(2.45rem, 5vw, 4rem);
+  font-weight: 620;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+h1[data-page-title] {
+  max-width: 14ch;
+  font-size: clamp(2.6rem, 5vw, 4.15rem);
+  line-height: 0.98;
+  letter-spacing: -0.058em;
+}
+
+.sl-markdown-content h2 {
+  font-size: 1.52rem;
+}
+
+.sl-markdown-content h3 {
+  font-size: 1.1rem;
+}
+
+.sl-markdown-content a {
+  color: var(--navet-text);
+  font-weight: 560;
+  text-decoration-color: color-mix(in srgb, var(--navet-accent) 55%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.sl-markdown-content code:not(:where(.not-content *)) {
+  border: 1px solid var(--navet-border);
+  border-radius: 0.5rem;
+  background: var(--navet-surface-raised);
+  color: var(--navet-text);
+}
+
+.expressive-code {
+  overflow: hidden;
+  border: 1px solid var(--navet-border);
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.starlight-aside {
+  border: 1px solid var(--navet-border);
+  border-inline-start-width: 1px;
+  border-radius: 18px;
+  background: var(--navet-surface-raised);
+  box-shadow: none;
+}
+
+.pagination-links {
+  gap: 0.75rem;
+}
+
+.pagination-links a {
+  min-height: 4.5rem;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 20px;
+  background: var(--navet-surface);
+  color: var(--navet-text-muted);
+  box-shadow: none;
+  font-family: var(--sl-font);
+  text-decoration: none;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.pagination-links a > span {
+  color: var(--navet-text-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.pagination-links .link-title {
+  display: inline-block;
+  margin-top: 0.32rem;
+  color: var(--navet-text);
+  font-family: var(--sl-font);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+.pagination-links a > svg {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  padding: 0.48rem;
+  border-radius: 999px;
+  background: var(--navet-surface-subtle);
+  color: var(--navet-text-secondary);
+}
+
+.pagination-links a:hover {
+  border-color: var(--navet-border-strong);
+  background: var(--navet-surface-raised);
+  color: var(--navet-text);
+}
+
+.pagination-links a:hover > svg {
+  background: color-mix(in srgb, var(--navet-accent) 13%, var(--navet-surface-subtle));
+  color: var(--navet-accent);
+}
+
+/* Changelog: a compact release ledger generated from the repository changelog. */
+.navet-changelog,
+.navet-resources {
+  margin-top: 2rem;
+}
+
+.navet-changelog {
+  margin-top: 0;
+}
+
+.navet-changelog-intro,
+.navet-changelog-toolbar,
+.navet-resource-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.navet-changelog-intro {
+  padding: 0 0 1.5rem;
+  border-bottom: 1px solid var(--navet-border);
+}
+
+.navet-changelog-intro p {
+  max-width: 38rem;
+  margin: 0;
+  color: var(--navet-text-secondary);
+}
+
+.navet-resource-section-heading > a,
+.navet-video-callout > a {
+  flex: 0 0 auto;
+  color: var(--navet-text);
+  font-size: 0.82rem;
+  font-weight: 620;
+  text-decoration: none;
+}
+
+.navet-changelog-intro p a {
+  color: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--navet-accent) 55%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.navet-changelog-toolbar {
+  margin: 0;
+  padding: 1.25rem 0;
+}
+
+.navet-changelog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.navet-changelog-filters button {
+  display: inline-flex;
+  height: 2.35rem;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 0.85rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 999px;
+  background: var(--navet-surface);
+  color: var(--navet-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 620;
+  line-height: 1;
+}
+
+.navet-changelog-filters button:hover,
+.navet-changelog-filters button.is-active {
+  border-color: color-mix(in srgb, var(--navet-accent) 42%, var(--navet-border));
+  background: color-mix(in srgb, var(--navet-accent) 11%, var(--navet-surface));
+  color: var(--navet-text);
+}
+
+.navet-changelog-search {
+  display: flex;
+  width: min(14rem, 100%);
+  height: 2.35rem;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 999px;
+  background: var(--navet-surface);
+}
+
+.navet-changelog-search:focus-within {
+  border-color: color-mix(in srgb, var(--navet-accent) 68%, var(--navet-border));
+  outline: 2px solid color-mix(in srgb, var(--navet-accent) 18%, transparent);
+}
+
+.navet-changelog-search svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--navet-text-muted);
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.navet-changelog-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--navet-text);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.navet-changelog-search input::placeholder {
+  color: var(--navet-text-muted);
+}
+
+.navet-release-list {
+  margin-top: 0;
+}
+
+.navet-release {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.34fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 4vw, 3.5rem);
+  padding: 2rem 0 2.25rem;
+  border-top: 1px solid var(--navet-border);
+}
+
+.navet-release:first-child {
+  border-top-color: var(--navet-border-strong);
+}
+
+.navet-release[hidden],
+.navet-release-groups section[hidden],
+.navet-changelog-empty[hidden] {
+  display: none;
+}
+
+.navet-release header {
+  position: relative;
+}
+
+.navet-release time {
+  display: block;
+  color: var(--navet-text-muted);
+  font-size: 0.7rem;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.navet-release h2 {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.navet-release h2 a {
+  color: var(--navet-text);
+  text-decoration: none;
+}
+
+.navet-release h2 a:hover {
+  color: var(--navet-accent);
+}
+
+.navet-release-latest {
+  display: inline-flex;
+  margin-top: 0.8rem;
+  padding: 0.22rem 0.52rem;
+  border: 1px solid color-mix(in srgb, var(--navet-accent) 38%, var(--navet-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--navet-accent) 11%, var(--navet-surface));
+  color: var(--navet-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.navet-release-groups {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.navet-release-groups section {
+  margin: 0;
+}
+
+.navet-release-groups h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.65rem;
+  color: var(--navet-text);
+  font-size: 0.78rem;
+  font-weight: 680;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.navet-release-groups h3 span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--navet-text-muted);
+}
+
+.navet-release-groups [data-change-kind="new"] h3 span {
+  background: #22c55e;
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, #22c55e 13%, transparent);
+}
+
+.navet-release-groups [data-change-kind="improved"] h3 span {
+  background: #3b82f6;
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, #3b82f6 13%, transparent);
+}
+
+.navet-release-groups [data-change-kind="fixed"] h3 span {
+  background: var(--navet-accent);
+  box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--navet-accent) 13%, transparent);
+}
+
+.navet-release-groups ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navet-release-groups li {
+  position: relative;
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--navet-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.navet-release-groups li::before {
+  position: absolute;
+  top: 0.68em;
+  left: 0;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--navet-border-strong);
+  content: "";
+}
+
+.navet-changelog-empty {
+  margin: 2rem 0;
+  padding: 2rem;
+  border: 1px dashed var(--navet-border-strong);
+  border-radius: 20px;
+  color: var(--navet-text-muted);
+  text-align: center;
+}
+
+.navet-changelog-source {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 18px;
+  background: var(--navet-surface);
+}
+
+.navet-changelog-source > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--navet-accent) 12%, var(--navet-surface-subtle));
+  color: var(--navet-accent);
+}
+
+.navet-changelog-source p {
+  margin: 0;
+  color: var(--navet-text-muted);
+  font-size: 0.78rem;
+}
+
+/* Resources: product surfaces arranged like rooms around one shared dashboard. */
+.navet-resource-lead {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(18rem, 1.15fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  padding: clamp(1.4rem, 4vw, 2.5rem);
+  border: 1px solid var(--navet-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--navet-accent) 18%, transparent), transparent 50%),
+    var(--navet-surface);
+}
+
+.navet-resource-lead::after {
+  position: absolute;
+  width: 8rem;
+  height: 8rem;
+  top: -4rem;
+  right: -4rem;
+  border: 1px solid color-mix(in srgb, var(--navet-accent) 28%, transparent);
+  border-radius: 50%;
+  content: "";
+  box-shadow:
+    0 0 0 2rem color-mix(in srgb, var(--navet-accent) 5%, transparent),
+    0 0 0 4rem color-mix(in srgb, var(--navet-accent) 3%, transparent);
+}
+
+.navet-resource-kicker,
+.navet-resource-section-heading p,
+.navet-video-callout > div > p:first-child {
+  margin: 0 0 0.65rem;
+  color: var(--navet-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.navet-resource-lead h2 {
+  max-width: 14ch;
+  margin: 0;
+  color: var(--navet-text);
+  font-size: clamp(1.7rem, 4vw, 2.65rem);
+  letter-spacing: -0.052em;
+  line-height: 1.02;
+}
+
+.navet-resource-lead > div:first-child > p:last-child {
+  max-width: 30rem;
+  margin: 1rem 0 0;
+  color: var(--navet-text-muted);
+  font-size: 0.9rem;
+}
+
+.navet-resource-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.navet-resource-action {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--navet-surface-raised) 92%, transparent);
+  color: var(--navet-text);
+  text-decoration: none;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.navet-resource-action span {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.navet-resource-action small {
+  color: var(--navet-text-muted);
+  font-size: 0.7rem;
+}
+
+.navet-resource-action b {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  color: var(--navet-text-muted);
+  font-weight: 500;
+}
+
+.navet-resource-action:hover {
+  border-color: var(--navet-border-strong);
+  background: var(--navet-surface-raised);
+  transform: translateY(-1px);
+}
+
+.navet-resource-action--primary {
+  border-color: color-mix(in srgb, var(--navet-accent) 45%, var(--navet-border));
+  background: color-mix(in srgb, var(--navet-accent) 12%, var(--navet-surface));
+}
+
+.navet-resource-section {
+  margin-top: clamp(3rem, 7vw, 5rem);
+}
+
+.navet-resource-section-heading {
+  margin-bottom: 1.15rem;
+}
+
+.navet-resource-section-heading h2,
+.navet-video-callout h2 {
+  margin: 0;
+  color: var(--navet-text);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.navet-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.navet-showcase-card {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid var(--navet-border);
+  border-radius: 22px;
+  background: var(--navet-surface);
+}
+
+.navet-showcase-card--wide {
+  grid-column: 1 / -1;
+}
+
+.navet-showcase-media {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--navet-surface-subtle);
+}
+
+.navet-showcase-card--wide .navet-showcase-media {
+  aspect-ratio: 16 / 8.2;
+}
+
+.navet-showcase-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 350ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.navet-showcase-card:hover img {
+  transform: scale(1.018);
+}
+
+.navet-showcase-card > div:last-child {
+  padding: 1rem 1.1rem 1.15rem;
+}
+
+.navet-showcase-card h3,
+.navet-guide-card h3 {
+  margin: 0;
+  color: var(--navet-text);
+  font-size: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.navet-showcase-card p,
+.navet-guide-card p {
+  margin: 0.45rem 0 0;
+  color: var(--navet-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.navet-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.navet-guide-card {
+  display: flex;
+  min-height: 12rem;
+  flex-direction: column;
+  padding: 1.15rem;
+  border: 1px solid var(--navet-border);
+  border-radius: 20px;
+  background: var(--navet-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.navet-guide-card:hover {
+  border-color: var(--navet-border-strong);
+  transform: translateY(-2px);
+}
+
+.navet-guide-card small {
+  margin-bottom: 1rem;
+  color: var(--navet-accent);
+  font-size: 0.64rem;
+  font-weight: 680;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.navet-guide-card span {
+  margin-top: auto;
+  padding-top: 1rem;
+  color: var(--navet-text);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.navet-video-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1.2rem;
+  align-items: center;
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding: clamp(1.2rem, 3vw, 1.75rem);
+  border: 1px dashed var(--navet-border-strong);
+  border-radius: 24px;
+}
+
+.navet-video-mark {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--navet-accent) 13%, var(--navet-surface));
+  color: var(--navet-accent);
+}
+
+.navet-video-mark span {
+  margin-left: 0.15rem;
+}
+
+.navet-video-callout > div > p:last-child {
+  max-width: 37rem;
+  margin: 0.65rem 0 0;
+  color: var(--navet-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 50rem) {
+  header.header {
+    border-bottom: 1px solid var(--navet-border);
+    background: var(--navet-chrome);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+  }
+
+  .navet-header-shell {
+    width: 100%;
+    max-width: none;
+    min-height: var(--sl-nav-height);
+    grid-template-columns: calc(var(--sl-sidebar-width) - 1.25rem) minmax(0, 1fr) auto;
+    gap: 1rem;
+    margin: 0;
+    padding: 0 1.25rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .navet-primary-nav {
+    justify-content: center;
+  }
+
+  .sidebar-pane {
+    inset-block-start: var(--sl-nav-height);
+    padding-top: 0;
+  }
+}
+
+@media (min-width: 72rem) {
+  .right-sidebar-panel {
+    padding-top: clamp(10.5rem, 11vw, 13.5rem);
+  }
+}
+
+@media (min-width: 50rem) and (max-width: 62rem) {
+  .navet-header-shell {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .navet-search {
+    width: 2.5rem;
+  }
+
+  .navet-search button[data-open-modal] {
+    width: 2.5rem;
+    justify-content: center;
+    padding: 0 !important;
+  }
+
+  .navet-search button[data-open-modal] > span,
+  .navet-search button[data-open-modal] > kbd {
+    display: none !important;
+  }
+}
+
+@media (min-width: 50rem) and (max-width: 64rem) {
+  .navet-github-label {
+    display: none;
+  }
+
+  .navet-github-stars {
+    padding-inline: 0.65rem;
+  }
+}
+
+@media (max-width: 72rem) {
+  .navet-page-heading {
+    padding-top: 1rem;
+  }
+}
+
+@media (max-width: 50rem) {
+  :root {
+    --sl-nav-height: 4rem;
+  }
+
+  header.header {
+    border-bottom: 1px solid var(--navet-border);
+    background: var(--navet-chrome);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+  }
+
+  .navet-header-shell {
+    width: 100%;
+    min-height: var(--sl-nav-height);
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.5rem;
+    margin: 0;
+    padding-block: 0.5rem;
+    padding-inline: 4rem 1rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  starlight-menu-button button {
+    top: 0.75rem;
+    inset-inline-start: 0.75rem;
+    inset-inline-end: auto;
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0.65rem !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  starlight-menu-button button svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  starlight-menu-button[aria-expanded="true"] button {
+    border-color: transparent !important;
+    background: transparent !important;
+    color: var(--navet-accent) !important;
+  }
+
+  .navet-page-heading {
+    padding-top: 0.5rem;
+  }
+
+  .navet-brand-mark {
+    display: none;
+  }
+
+  .navet-brand .navet-brand-logo {
+    height: 2.5rem;
+  }
+
+  .navet-brand-logo--light {
+    display: block !important;
+  }
+
+  .navet-brand-logo--dark {
+    display: none !important;
+  }
+
+  :root[data-theme="dark"] .navet-brand-logo--light {
+    display: none !important;
+  }
+
+  :root[data-theme="dark"] .navet-brand-logo--dark {
+    display: block !important;
+  }
+
+  .navet-explore-menu {
+    position: relative;
+    display: block;
+    justify-self: end;
+  }
+
+  .navet-explore-menu summary {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0 0.55rem;
+    border-radius: 999px;
+    color: var(--navet-text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .navet-explore-menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .navet-explore-menu summary:hover,
+  .navet-explore-menu[open] summary {
+    background: var(--navet-surface-subtle);
+    color: var(--navet-text);
+  }
+
+  .navet-explore-menu summary svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+    transition: transform 150ms ease;
+  }
+
+  .navet-explore-menu[open] summary svg {
+    transform: rotate(180deg);
+  }
+
+  .navet-explore-panel {
+    position: absolute;
+    z-index: calc(var(--sl-z-index-navbar) + 1);
+    top: calc(100% + 0.75rem);
+    right: 0;
+    width: 13rem;
+    padding: 0.45rem;
+    border: 1px solid var(--navet-border);
+    border-radius: 14px;
+    background: var(--navet-surface-raised);
+    box-shadow: 0 20px 50px -22px rgba(0, 0, 0, 0.8);
+  }
+
+  .navet-explore-menu nav {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .navet-explore-menu nav a {
+    display: flex;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.7rem;
+    border-radius: 9px;
+    color: var(--navet-text-secondary);
+    font-size: 0.82rem;
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .navet-explore-menu nav a:hover,
+  .navet-explore-menu nav a[aria-current="page"] {
+    background: var(--navet-surface-subtle);
+    color: var(--navet-text);
+  }
+
+  .navet-explore-menu nav a b {
+    color: var(--navet-text-muted);
+    font-weight: 500;
+  }
+
+  .navet-explore-search {
+    margin-top: 0.35rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--navet-border);
+  }
+
+  .navet-explore-search site-search {
+    display: block;
+  }
+
+  .navet-explore-search button[data-open-modal] {
+    display: flex;
+    width: 100%;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    padding: 0 0.7rem;
+    border: 0 !important;
+    border-radius: 9px !important;
+    background: var(--navet-surface-subtle) !important;
+    color: var(--navet-text-secondary) !important;
+    font-size: 0.82rem;
+  }
+
+  .navet-explore-search button[data-open-modal] > span {
+    display: block !important;
+  }
+
+  .navet-explore-search button[data-open-modal] > kbd {
+    display: none !important;
+  }
+
+  .navet-primary-nav,
+  .navet-search {
+    display: none;
+  }
+
+  .navet-header-tools {
+    justify-self: end;
+  }
+
+  .navet-github-stars {
+    width: auto;
+    min-width: 0;
+    height: 1.875rem;
+    gap: 0.25rem;
+    padding: 0 0.625rem;
+  }
+
+  .navet-github-label {
+    display: none;
+  }
+
+  .navet-github-mark {
+    display: block;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .navet-github-stars-meta {
+    gap: 0.25rem;
+    color: var(--navet-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .navet-github-star {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .navet-theme-toggle {
+    display: none;
+  }
+
+  @media (max-width: 22rem) {
+    .navet-header-shell {
+      gap: 0.25rem;
+    }
+
+    .navet-explore-menu summary {
+      padding-inline: 0.35rem;
+    }
+
+    .navet-github-stars {
+      padding-inline: 0.4rem;
+    }
+  }
+
+  .sidebar-content {
+    padding: 1rem;
+  }
+
+  .navet-changelog-intro,
+  .navet-changelog-toolbar,
+  .navet-resource-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .navet-changelog-search {
+    width: 100%;
+  }
+
+  .navet-release {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .navet-release-latest {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+  }
+
+  .navet-resource-lead,
+  .navet-showcase-grid,
+  .navet-guide-grid,
+  .navet-video-callout {
+    grid-template-columns: 1fr;
+  }
+
+  .navet-showcase-card--wide {
+    grid-column: auto;
+  }
+
+  .navet-showcase-card--wide .navet-showcase-media,
+  .navet-showcase-media {
+    aspect-ratio: 16 / 10;
+  }
+
+  .navet-video-callout > a {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+  }
+
+  .navet-primary-nav a {
+    transition: none;
+  }
+
+  .navet-resource-action,
+  .navet-showcase-media img,
+  .navet-guide-card {
+    transition: none;
+  }
+}
