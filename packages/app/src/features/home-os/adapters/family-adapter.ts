@@ -1,0 +1,48 @@
+import { HOME_OS_ROLES } from '../core/semantic-roles';
+import type { ResolvedSemanticEntity } from '../core/types';
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  personEntityId: string;
+  trackerEntityIds: string[];
+  state: string;
+  lastChanged?: string;
+  location?: string;
+  battery?: number;
+  avatar?: string;
+}
+
+const asString = (value: unknown) => (typeof value === 'string' ? value : undefined);
+
+export function buildFamilyMembers(entities: readonly ResolvedSemanticEntity[]): FamilyMember[] {
+  const visible = entities.filter((entity) => !entity.ignored && entity.displayMode !== 'hidden');
+  const trackersByPerson = new Map<string, string[]>();
+  for (const tracker of visible.filter((entity) =>
+    entity.roles.includes(HOME_OS_ROLES.familyTracker)
+  )) {
+    const personId = tracker.mapping?.familyPersonId;
+    if (!personId) continue;
+    trackersByPerson.set(personId, [
+      ...(trackersByPerson.get(personId) ?? []),
+      tracker.entity.externalId,
+    ]);
+  }
+
+  return visible
+    .filter((entity) => entity.roles.includes(HOME_OS_ROLES.familyPerson))
+    .map((person) => ({
+      id: person.entity.canonicalId,
+      name: person.displayName,
+      personEntityId: person.entity.externalId,
+      trackerEntityIds: trackersByPerson.get(person.entity.externalId) ?? [],
+      state: String(person.entity.primaryState ?? 'unknown'),
+      lastChanged: asString(person.entity.attributes.lastChanged) ?? person.entity.lastUpdated,
+      location: asString(person.entity.attributes.location) ?? person.room,
+      battery:
+        typeof person.entity.attributes.battery === 'number'
+          ? person.entity.attributes.battery
+          : undefined,
+      avatar: person.entity.resources?.primary_image?.path,
+    }));
+}

@@ -1,4 +1,5 @@
 import { useLocalHabitsFeature } from '@navet/app/features/habits';
+import { MappingSettingsPage } from '@navet/app/features/home-os/components/mapping/mapping-settings-page';
 import { useI18n, useMediaQuery, usePersistedState } from '@navet/app/hooks';
 import {
   Brain,
@@ -9,6 +10,7 @@ import {
   LayoutGrid,
   Palette,
   Server,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useSettingsSectionController } from '../hooks/use-settings-section-controller';
@@ -57,6 +59,7 @@ export function SettingsSection({
         { id: 'localization', label: t('settings.nav.localization'), icon: Languages },
         { id: 'interaction', label: t('settings.nav.interaction'), icon: Hand },
         { id: 'dashboard', label: t('settings.nav.dashboard'), icon: LayoutGrid },
+        { id: 'home-os', label: 'Home OS', icon: SlidersHorizontal },
         ...(localHabitsEnabled
           ? [{ id: 'habits', label: t('settings.nav.habits'), icon: Brain }]
           : []),
@@ -114,7 +117,7 @@ export function SettingsSection({
 
     return [
       createGroup('personal', ['appearance', 'localization', 'interaction']),
-      createGroup('dashboard', ['dashboard', 'habits'], t('settings.nav.dashboard')),
+      createGroup('dashboard', ['dashboard', 'habits', 'home-os'], t('settings.nav.dashboard')),
       createGroup('navet', ['system', 'experimental', 'project'], 'Home OS'),
     ].filter((group) => group.items.length > 0);
   }, [navItems, t]);
@@ -187,6 +190,8 @@ export function SettingsSection({
       <SettingsInteractionSection controller={controller} />
     ) : activeTab === 'dashboard' ? (
       <SettingsDashboardSection controller={controller} />
+    ) : activeTab === 'home-os' ? (
+      <MappingSettingsPage controller={controller} />
     ) : activeTab === 'habits' && localHabitsEnabled ? (
       <SettingsHabitsSection controller={controller} />
     ) : activeTab === 'experimental' ? (
