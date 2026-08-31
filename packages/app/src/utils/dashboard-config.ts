@@ -281,6 +281,7 @@ const cardTypes = new Set<CardType>([
   'button',
   'map',
   'entity',
+  'home-os',
 ]);
 const cardSizes = new Set(['small', 'medium', 'large', 'extra-large']);
 const MAX_IMPORTED_CARDS = 200;

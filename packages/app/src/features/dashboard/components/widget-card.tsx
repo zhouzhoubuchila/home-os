@@ -91,6 +91,11 @@ const GenericEntityWidget = lazy(async () => {
   return { default: module.GenericEntityWidget };
 });
 
+const HomeOsWidget = lazy(async () => {
+  const module = await import('@navet/app/features/home-os/components/cards/home-os-widget');
+  return { default: module.HomeOsWidget };
+});
+
 const RSSFeedCard = lazy(async () => {
   const module = await import('@navet/app/features/rss');
   return { default: module.RSSFeedCard };
@@ -316,6 +321,19 @@ export function WidgetCard({
           data={card.data as GenericEntityWidgetData | undefined}
           language={language}
           t={t}
+        />
+      );
+      break;
+    case 'home-os':
+      widgetContent = (
+        <HomeOsWidget
+          size={card.size}
+          data={
+            card.data as {
+              kind?: import('@navet/app/features/home-os/cards/card-registry').HomeOsCardKind;
+            }
+          }
+          isEditMode={isEditMode}
         />
       );
       break;

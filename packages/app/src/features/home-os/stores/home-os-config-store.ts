@@ -7,6 +7,7 @@ import { upsertManualMapping } from '../mapping/manual-overrides';
 interface HomeOsConfigState {
   config: HomeOsConfig;
   loading: boolean;
+  loaded: boolean;
   saving: boolean;
   recovered: boolean;
   error: string | null;
@@ -23,14 +24,16 @@ const messageOf = (error: unknown) =>
 export const useHomeOsConfigStore = create<HomeOsConfigState>((set, get) => ({
   config: createDefaultHomeOsConfig(),
   loading: false,
+  loaded: false,
   saving: false,
   recovered: false,
   error: null,
   load: async () => {
+    if (get().loading) return;
     set({ loading: true, error: null });
     try {
       const result = await homeOsConfigStorage.load();
-      set({ config: result.config, recovered: result.recovered, loading: false });
+      set({ config: result.config, recovered: result.recovered, loading: false, loaded: true });
     } catch (error) {
       set({ error: messageOf(error), loading: false });
     }
@@ -48,7 +51,7 @@ export const useHomeOsConfigStore = create<HomeOsConfigState>((set, get) => ({
   reset: async () => {
     set({ saving: true, error: null });
     try {
-      const result = await homeOsConfigStorage.reset();
+      const result = await homeOsConfigStorage.reset(get().config.revision);
       set({ config: result.config, recovered: false, saving: false });
     } catch (error) {
       set({ error: messageOf(error), saving: false });

@@ -1245,7 +1245,7 @@ export const zhMessages = {
   'sidebar.tasks': '家庭',
   'sidebar.settings': '设置',
   'sections.security.title': '安全',
-  'sections.tasks.title': '例程',
+  'sections.tasks.title': '任务',
   'deviceType.light': '灯',
   'deviceType.switch': '开关',
   'deviceType.sensor': '传感器',

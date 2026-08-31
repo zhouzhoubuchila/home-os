@@ -25,7 +25,8 @@ export type CardType =
   | 'media-stack'
   | 'button'
   | 'map'
-  | 'entity';
+  | 'entity'
+  | 'home-os';
 
 export interface CustomCard {
   id: string;
@@ -141,6 +142,13 @@ export function normalizeCustomCard(card: NormalizableCustomCard): CustomCard {
     normalizedCard.size !== 'large'
   ) {
     return { ...normalizedCard, size: 'small' };
+  }
+
+  if (
+    normalizedCard.type === 'home-os' &&
+    !['small', 'medium', 'large'].includes(normalizedCard.size)
+  ) {
+    return { ...normalizedCard, size: 'medium' };
   }
 
   return normalizedCard;

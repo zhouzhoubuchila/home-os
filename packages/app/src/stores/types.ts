@@ -140,7 +140,8 @@ export type CardType =
   | 'media-stack'
   | 'button'
   | 'map'
-  | 'entity';
+  | 'entity'
+  | 'home-os';
 
 export interface CustomCard {
   id: string;

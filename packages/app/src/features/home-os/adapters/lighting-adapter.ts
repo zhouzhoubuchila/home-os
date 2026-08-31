@@ -5,6 +5,7 @@ import type { ResolvedSemanticEntity } from '../core/types';
 export interface HomeOsLight {
   id: string;
   sourceEntityId: string;
+  providerId: ResolvedSemanticEntity['entity']['providerId'];
   sourceDomain: string;
   name: string;
   room?: string;
@@ -27,6 +28,7 @@ export function buildHomeOsLights(entities: readonly ResolvedSemanticEntity[]): 
     .map(({ entity, displayName, room, controlPolicy }) => ({
       id: entity.canonicalId,
       sourceEntityId: entity.externalId,
+      providerId: entity.providerId,
       sourceDomain: entity.externalId.split('.')[0] ?? entity.type,
       name: displayName,
       room,

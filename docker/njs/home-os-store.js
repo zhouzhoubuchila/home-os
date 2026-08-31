@@ -128,6 +128,16 @@ function route(r) {
     sendJson(r, 403, { error: 'Cross-origin Home OS configuration mutation is not allowed' });
     return;
   }
+  if (r.method !== 'PUT' && r.method !== 'DELETE') {
+    r.headersOut.Allow = 'GET, PUT, DELETE';
+    sendJson(r, 405, { error: 'Method not allowed' });
+    return;
+  }
+  const baseRevision = Number.parseInt(headerValue(r, REVISION_HEADER), 10);
+  if (baseRevision !== current.config.revision) {
+    sendJson(r, 409, { error: 'Home OS configuration changed on another client' });
+    return;
+  }
   if (r.method === 'DELETE') {
     writeJson(BACKUP_PATH, current.config);
     const reset = emptyConfig();
@@ -137,19 +147,9 @@ function route(r) {
     sendJson(r, 200, { config: reset, recovered: false });
     return;
   }
-  if (r.method !== 'PUT') {
-    r.headersOut.Allow = 'GET, PUT, DELETE';
-    sendJson(r, 405, { error: 'Method not allowed' });
-    return;
-  }
   const body = r.requestText || '';
   if (Buffer.byteLength(body, 'utf8') > MAX_BYTES) {
     sendJson(r, 413, { error: 'Home OS configuration is too large' });
-    return;
-  }
-  const baseRevision = Number.parseInt(headerValue(r, REVISION_HEADER), 10);
-  if (baseRevision !== current.config.revision) {
-    sendJson(r, 409, { error: 'Home OS configuration changed on another client' });
     return;
   }
   let proposed;

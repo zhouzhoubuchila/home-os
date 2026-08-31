@@ -4,7 +4,7 @@ import { useI18n, useTheme } from '@navet/app/hooks';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DashboardLibraryCard, DashboardLibraryEntityType } from '../dashboard-library-list';
 import { createCardTemplates } from './templates';
-import type { AddCardDialogContainerProps, CardTemplateId } from './types';
+import { type AddCardDialogContainerProps, type CardTemplateId, cardTemplateName } from './types';
 import { AddCardDialogView } from './view';
 
 function resolveLibraryEntityType(card: DashboardLibraryCard) {
@@ -31,7 +31,7 @@ export function AddCardDialogContainer({
   showCardsTab = true,
   allowedTemplateIds,
 }: AddCardDialogContainerProps) {
-  const { locale, t } = useI18n();
+  const { language, locale, t } = useI18n();
   const { theme, primaryColor } = useTheme();
   const [activeTab, setActiveTab] = useState<'cards' | 'widgets'>(
     showCardsTab ? 'cards' : 'widgets'
@@ -45,16 +45,16 @@ export function AddCardDialogContainer({
   const [selectedSize, setSelectedSize] = useState<CardSize>('medium');
   const resolveColorValue = (color: string) => getThemeColorValue(color as typeof primaryColor);
   const cardTemplates = useMemo(() => {
-    const templates = createCardTemplates(t);
+    const templates = createCardTemplates(t, language);
     const allowedIds = allowedTemplateIds?.length ? new Set(allowedTemplateIds) : null;
     const visibleTemplates = allowedIds
       ? templates.filter((template) => allowedIds.has(template.id))
       : templates;
 
     return visibleTemplates.sort((left, right) =>
-      t(left.nameKey).localeCompare(t(right.nameKey), locale)
+      cardTemplateName(left, t).localeCompare(cardTemplateName(right, t), locale)
     );
-  }, [allowedTemplateIds, locale, t]);
+  }, [allowedTemplateIds, language, locale, t]);
 
   useEffect(() => {
     if (!open) {

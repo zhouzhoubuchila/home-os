@@ -1,12 +1,7 @@
 export type Section =
   | 'home'
-  | 'rooms'
-  | 'devices'
   | 'energy'
-  | 'cameras'
   | 'homelab'
-  | 'scenes'
-  | 'family'
   | 'climate'
   | 'security'
   | 'tasks'
@@ -16,13 +11,8 @@ export type Section =
 
 export const NAVIGATION_SECTIONS = [
   'home',
-  'rooms',
-  'devices',
   'energy',
-  'cameras',
   'homelab',
-  'scenes',
-  'family',
   'climate',
   'security',
   'lights',

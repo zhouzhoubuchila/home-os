@@ -44,6 +44,14 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(HOME_OS_ROLES.deviceSwitch, 0.95, 'domain', 'domain=switch'));
   } else if (domain === 'lock') {
     result.push(candidate(HOME_OS_ROLES.securityLock, 0.99, 'domain', 'domain=lock'));
+  } else if (domain === 'weather') {
+    result.push(candidate(HOME_OS_ROLES.weatherCurrent, 0.99, 'domain', 'domain=weather'));
+  } else if (domain === 'calendar') {
+    result.push(candidate(HOME_OS_ROLES.familyCalendar, 0.99, 'domain', 'domain=calendar'));
+  } else if (domain === 'scene') {
+    result.push(candidate(HOME_OS_ROLES.homeMode, 0.98, 'domain', 'domain=scene'));
+  } else if (domain === 'vacuum') {
+    result.push(candidate(HOME_OS_ROLES.homeCleaning, 0.99, 'domain', 'domain=vacuum'));
   }
 
   const deviceClassRoles: Record<string, string> = {
@@ -57,6 +65,9 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     smoke: HOME_OS_ROLES.securitySmoke,
     battery: HOME_OS_ROLES.diagnosticBattery,
     connectivity: HOME_OS_ROLES.diagnosticConnectivity,
+    aqi: HOME_OS_ROLES.environmentAirQuality,
+    pm25: HOME_OS_ROLES.environmentPm25,
+    carbon_dioxide: HOME_OS_ROLES.environmentCo2,
   };
   const roleFromClass = deviceClassRoles[deviceClass];
   if (roleFromClass) {
@@ -73,6 +84,26 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
             ? HOME_OS_ROLES.homelabPveCpu
             : HOME_OS_ROLES.homelabPveOnline;
     result.push(candidate(role, 0.94, 'integration', `integration=${integration}`));
+  }
+
+  if (integration.includes('home_assistant') || integration.includes('systemmonitor')) {
+    const role = name.includes('version')
+      ? HOME_OS_ROLES.homelabHomeAssistantVersion
+      : name.includes('memory')
+        ? HOME_OS_ROLES.homelabHomeAssistantMemory
+        : name.includes('cpu')
+          ? HOME_OS_ROLES.homelabHomeAssistantCpu
+          : HOME_OS_ROLES.homelabHomeAssistantOnline;
+    result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
+  }
+
+  if (integration.includes('openwrt') || integration.includes('immortalwrt')) {
+    const role = name.includes('client')
+      ? HOME_OS_ROLES.networkRouterClients
+      : name.includes('uptime')
+        ? HOME_OS_ROLES.networkRouterUptime
+        : HOME_OS_ROLES.networkRouterOnline;
+    result.push(candidate(role, 0.92, 'integration', `integration=${integration}`));
   }
 
   const fallbackRules: Array<[RegExp, string]> = [

@@ -37,13 +37,14 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const entitiesById = useIntegrationStore(
     useShallow(integrationSelectors.providerEntitiesByCanonicalId)
   );
-  const { config, loading, saving, error, recovered, load, upsertMapping, removeMapping } =
+  const { config, loading, saving, error, recovered, load, reset, upsertMapping, removeMapping } =
     useHomeOsConfigStore();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<NavetEntity | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     void load();
@@ -98,7 +99,8 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const importConfig = async (file: File) => {
     try {
       setTransferError(null);
-      await useHomeOsConfigStore.getState().save(importHomeOsConfig(await file.text()));
+      const imported = importHomeOsConfig(await file.text());
+      await useHomeOsConfigStore.getState().save({ ...imported, revision: config.revision });
     } catch (cause) {
       setTransferError(cause instanceof Error ? cause.message : 'Configuration import failed');
     }
@@ -139,6 +141,20 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
           </Button>
           <Button size="small" variant="ghost" onClick={() => importInputRef.current?.click()}>
             Import config
+          </Button>
+          <Button
+            size="small"
+            variant={confirmReset ? 'destructive' : 'ghost'}
+            loading={saving}
+            onClick={() => {
+              if (!confirmReset) {
+                setConfirmReset(true);
+                return;
+              }
+              void reset().finally(() => setConfirmReset(false));
+            }}
+          >
+            {confirmReset ? 'Confirm reset' : 'Reset Home OS'}
           </Button>
           <input
             ref={importInputRef}

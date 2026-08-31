@@ -6,14 +6,18 @@ const ENDPOINT = '/__home_os__/config';
 
 type ConfigEnvelope = { config: unknown; recovered?: boolean };
 
-async function request(method: 'GET' | 'PUT' | 'DELETE', config?: HomeOsConfig) {
+async function request(method: 'GET' | 'PUT' | 'DELETE', config?: HomeOsConfig, revision?: number) {
   const response = await fetch(resolveAddonLocalEndpointUrl(ENDPOINT), {
     method,
     cache: 'no-store',
     credentials: 'same-origin',
-    headers: config
-      ? { 'Content-Type': 'application/json', 'X-Home-OS-Revision': String(config.revision) }
-      : undefined,
+    headers:
+      config || revision !== undefined
+        ? {
+            ...(config ? { 'Content-Type': 'application/json' } : {}),
+            'X-Home-OS-Revision': String(config?.revision ?? revision),
+          }
+        : undefined,
     body: config ? JSON.stringify(config) : undefined,
   });
   if (!response.ok) {
@@ -27,5 +31,5 @@ async function request(method: 'GET' | 'PUT' | 'DELETE', config?: HomeOsConfig) 
 export const homeOsConfigStorage = {
   load: () => request('GET'),
   save: (config: HomeOsConfig) => request('PUT', config),
-  reset: () => request('DELETE'),
+  reset: (revision: number) => request('DELETE', undefined, revision),
 };

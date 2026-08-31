@@ -72,4 +72,31 @@ describe('Home OS durable configuration', () => {
       })
     );
   });
+
+  it('sends the current revision when resetting', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          config: {
+            schemaVersion: 2,
+            revision: 4,
+            updatedAt: '2026-09-01T00:00:00.000Z',
+            mappings: [],
+            physicalDevices: [],
+            alertRules: [],
+            cardPreferences: {},
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+    await homeOsConfigStorage.reset(3);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/__home_os__/config'),
+      expect.objectContaining({
+        method: 'DELETE',
+        headers: expect.objectContaining({ 'X-Home-OS-Revision': '3' }),
+      })
+    );
+  });
 });
