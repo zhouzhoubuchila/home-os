@@ -1,12 +1,7 @@
 services:
   home-os:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      args:
-        NAVET_ENABLE_DEMO: "false"
-        NAVET_RELEASE_CHANNEL: home-os
-    image: home-os:local
+    image: ghcr.io/zhouzhoubuchila/home-os:main
+    pull_policy: always
     environment:
       NAVET_HASS_URL: ${NAVET_HASS_URL:-}
       NAVET_INSTALLATION_KEY: ${NAVET_INSTALLATION_KEY:-}

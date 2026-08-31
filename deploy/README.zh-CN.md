@@ -17,12 +17,22 @@ docker compose up -d --build
 
 访问 `http://Docker主机IP:8082`。首次打开选择 Home Assistant，并按页面引导完成 OAuth 授权。
 
+如果不需要源码，直接运行已发布的多架构镜像：
+
+```bash
+docker run -d --name home-os --restart unless-stopped \
+  -p 8082:80 \
+  -e NAVET_HASS_URL=http://你的HA地址:8123 \
+  -v home-os-data:/data \
+  ghcr.io/zhouzhoubuchila/home-os:main
+```
+
 ## 3. 公网 HTTPS 启动
 
 把 `.env` 中的 `HOME_OS_DOMAIN` 改成自己的域名，然后执行：
 
 ```bash
-docker compose --env-file .env -f deploy/compose.yaml up -d --build
+docker compose --env-file .env -f deploy/compose.yaml up -d
 ```
 
 Caddy 自动申请并续期 HTTPS 证书，WebSocket 无需额外配置。随后访问 `https://你的域名` 完成首次配对。
@@ -30,8 +40,7 @@ Caddy 自动申请并续期 HTTPS 证书，WebSocket 无需额外配置。随后
 ## 4. 更新与回滚
 
 ```bash
-git pull
-docker compose --env-file .env -f deploy/compose.yaml build --pull home-os
+docker compose --env-file .env -f deploy/compose.yaml pull
 docker compose --env-file .env -f deploy/compose.yaml up -d
 ```
 
