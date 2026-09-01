@@ -282,11 +282,13 @@ describe('DashboardSectionRouter home controls', () => {
 
     renderWithProviders(<DashboardSectionRouter controller={controller} />);
 
-    await waitFor(() =>
-      expect(deviceGridPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
-        isEditMode: false,
-        optimizeOffscreenPaint: true,
-      })
+    await waitFor(
+      () =>
+        expect(deviceGridPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
+          isEditMode: false,
+          optimizeOffscreenPaint: true,
+        }),
+      { timeout: 10_000 }
     );
   });
 

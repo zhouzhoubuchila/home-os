@@ -386,12 +386,12 @@ describe('EnergyDashboardPage', () => {
     renderDashboardPage('default', { currentLoadStatisticId: 'sensor.house_power' });
 
     const now = new Date();
-    const currentMonthLabel = now.toLocaleDateString(undefined, {
+    const currentMonthLabel = now.toLocaleDateString('en-US', {
       month: 'long',
       year: 'numeric',
     });
     const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const previousMonthLabel = previousMonth.toLocaleDateString(undefined, {
+    const previousMonthLabel = previousMonth.toLocaleDateString('en-US', {
       month: 'long',
       year: 'numeric',
     });

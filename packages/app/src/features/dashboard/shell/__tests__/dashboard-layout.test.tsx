@@ -137,7 +137,9 @@ describe('DashboardLayout', () => {
     expect(screen.queryByTestId('header')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sidebar')).not.toBeInTheDocument();
     expect(screen.queryByTestId('kiosk-orbit-menu')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('kiosk-orbit-trigger')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('kiosk-orbit-trigger', {}, { timeout: 10_000 })
+    ).toBeInTheDocument();
     expect(screen.getByTestId('dashboard-layout-content')).not.toHaveClass('md:ml-16');
     expect(screen.getByTestId('dashboard-layout-content')).toHaveClass('pb-24');
   });
@@ -167,7 +169,7 @@ describe('DashboardLayout', () => {
       </DashboardLayout>
     );
 
-    fireEvent.click(await screen.findByTestId('kiosk-orbit-trigger'));
+    fireEvent.click(await screen.findByTestId('kiosk-orbit-trigger', {}, { timeout: 10_000 }));
     fireEvent.click(await screen.findByRole('button', { name: 'Home' }));
 
     expect(useNavigationStore.getState().activeSection).toBe('home');

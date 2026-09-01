@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import fs, { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 // @ts-expect-error Docker njs runtime modules are JavaScript and have no TypeScript declaration.
 import homeyProxyModule from '@docker/njs/homey-proxy.js';
 // @ts-expect-error Docker njs runtime modules are JavaScript and have no TypeScript declaration.
@@ -16,6 +16,7 @@ const { createHomeyProxy } = homeyProxyModule;
 const { createHomeySessionStore, normalizeHomeyRefreshToken } = homeyStoreModule;
 const { createOpenHABProxy } = openHABProxyModule;
 const { createOpenHABSessionStore, normalizeOpenHABBaseUrl } = openHABStoreModule;
+const samePath = (left: unknown, right: string) => normalize(String(left)) === normalize(right);
 
 const HOMEY_AUTH_A = {
   accessToken: 'homey-access-a',
@@ -554,7 +555,7 @@ describe('production njs provider credential sessions', () => {
     const sessionPath = join(paths.sessionsDirectory, `${cookieId}.json`);
     const readFile = fs.readFileSync.bind(fs);
     vi.spyOn(fs, 'readFileSync').mockImplementation(((path, ...args) => {
-      if (String(path) === sessionPath) {
+      if (samePath(path, sessionPath)) {
         const error = new Error('temporary I/O failure');
         // @ts-expect-error test-only errno
         error.code = 'EIO';
@@ -816,7 +817,7 @@ describe('production njs provider credential sessions', () => {
     const readFile = fs.readFileSync.bind(fs);
     let sessionReads = 0;
     vi.spyOn(fs, 'readFileSync').mockImplementation(((path, ...args) => {
-      if (String(path) === sessionPath || String(path) === otherSessionPath) {
+      if (samePath(path, sessionPath) || samePath(path, otherSessionPath)) {
         sessionReads += 1;
       }
       return readFile(path, ...args);
@@ -1792,7 +1793,7 @@ describe('production njs provider credential sessions', () => {
     const readFile = fs.readFileSync.bind(fs);
     let sessionReads = 0;
     vi.spyOn(fs, 'readFileSync').mockImplementation(((path, ...args) => {
-      if (String(path) === sessionPath || String(path) === otherSessionPath) {
+      if (samePath(path, sessionPath) || samePath(path, otherSessionPath)) {
         sessionReads += 1;
       }
       return readFile(path, ...args);

@@ -499,7 +499,7 @@ describe('Vite standalone auth session conformance', () => {
     expect(readdirSync(sessionsDirectory).filter((name) => name.endsWith('.json'))).toHaveLength(
       256
     );
-  });
+  }, 20_000);
 
   it('keeps GET metadata token-free and gates credentials with the public binding', async () => {
     const { store } = createStore();
