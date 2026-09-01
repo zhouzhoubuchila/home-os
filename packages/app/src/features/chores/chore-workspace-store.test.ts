@@ -16,6 +16,13 @@ const {
 }));
 
 vi.mock('@navet/app/services/chore-workspace.service', () => ({
+  getChoreWorkspaceTransport: () => ({
+    kind: 'http',
+    loadCapabilities: vi.fn(),
+    loadWorkspace: loadChoreWorkspace,
+    sendCommand: sendChoreWorkspaceCommand,
+    subscribe: vi.fn(),
+  }),
   loadChoreWorkspace,
   resetChoreWorkspace,
   recoverChoreWorkspace,
