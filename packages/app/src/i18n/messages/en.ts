@@ -1738,7 +1738,7 @@ export const enMessages = {
   'sections.security.emptyTitle': 'No Security Cameras',
   'sections.security.emptyDescription':
     "You don't have any security cameras configured yet. Add cameras to monitor your home.",
-  'sections.tasks.title': 'Routines',
+  'sections.tasks.title': 'Tasks',
   'sections.tasks.description':
     'Trigger and manage the automations that keep your home routines moving.',
   'sections.tasks.emptyTitle': 'No routines',

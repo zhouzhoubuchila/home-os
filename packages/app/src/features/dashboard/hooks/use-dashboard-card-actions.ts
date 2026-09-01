@@ -3,7 +3,7 @@ import { ENERGY_WIDGET_ROOM, HOME_WIDGET_ROOM, isAllRooms } from '@navet/app/con
 import type { TranslateFn } from '@navet/app/hooks';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import type { CardTemplate, CardType } from '../components/add-card-dialog';
+import { type CardTemplate, type CardType, cardTemplateName } from '../components/add-card-dialog';
 import type { CustomCard } from '../stores/custom-cards-store';
 
 interface UseDashboardCardActionsParams {
@@ -79,7 +79,7 @@ export function useDashboardCardActions({
 
       toast.success(
         t('dashboard.feedback.widgetAdded', {
-          type: t(template.nameKey),
+          type: cardTemplateName(template, t),
           room: targetRoomLabel,
         })
       );

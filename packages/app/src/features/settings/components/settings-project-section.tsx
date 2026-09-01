@@ -134,6 +134,7 @@ export function SettingsProjectSection({ controller }: SettingsProjectSectionPro
               }
               styles={styles}
             />
+            <CompactMetaRow label="Home OS" value="V2.0.0" styles={styles} />
           </div>
         </SettingsItem>
 

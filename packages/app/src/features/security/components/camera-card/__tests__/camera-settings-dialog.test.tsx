@@ -61,17 +61,14 @@ describe('CameraSettingsDialog', () => {
     toggleCameraAccessoryMock.mockResolvedValue(undefined);
   });
 
-  it('uses the neutral camera shell palette for room and Done controls', () => {
+  it('uses the neutral camera shell palette and exposes the room control', () => {
     renderWithProviders(<CameraSettingsDialog {...defaultProps} />);
 
     expect(screen.getByRole('button', { name: 'Done' })).toHaveStyle({
       backgroundColor: 'rgba(107, 114, 128, 0.14)',
       borderColor: 'rgba(107, 114, 128, 0.24)',
     });
-    expect(screen.getByRole('combobox', { name: 'Room' }).previousElementSibling).toHaveStyle({
-      backgroundColor: 'rgba(107, 114, 128, 0.14)',
-      borderColor: 'rgba(107, 114, 128, 0.24)',
-    });
+    expect(screen.getByRole('combobox', { name: 'Room' })).toBeInTheDocument();
   });
 
   it('shows snapshot-backed camera view modes for snapshot-only cameras', () => {

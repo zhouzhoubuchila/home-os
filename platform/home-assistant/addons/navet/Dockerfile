@@ -48,6 +48,7 @@ COPY platform/home-assistant/addons/navet/run.sh /run.sh
 COPY platform/home-assistant/addons/navet/rootfs/ /
 COPY docker/njs/rss-proxy.js /etc/nginx/njs/rss-proxy.js
 COPY docker/njs/profile-store.js /etc/nginx/njs/profile-store.js
+COPY docker/njs/home-os-store.js /etc/nginx/njs/home-os-store.js
 COPY docker/njs/chore-store.js /etc/nginx/njs/chore-store.js
 COPY docker/njs/auth-store.js /etc/nginx/njs/auth-store.js
 COPY docker/njs/provider-session-store.js /etc/nginx/njs/provider-session-store.js
@@ -60,6 +61,8 @@ COPY docker/njs/homey-proxy.js /etc/nginx/njs/homey-proxy.js
 COPY docker/snippets/navet-rss-proxy.conf /etc/nginx/snippets/navet-rss-proxy.conf
 COPY docker/snippets/navet-profile-store.conf /etc/nginx/snippets/navet-profile-store.conf
 COPY docker/snippets/navet-profile-store-ingress.conf /etc/nginx/snippets/navet-profile-store-ingress.conf
+COPY docker/snippets/home-os-store.conf /etc/nginx/snippets/home-os-store.conf
+COPY docker/snippets/home-os-store-ingress.conf /etc/nginx/snippets/home-os-store-ingress.conf
 COPY docker/snippets/navet-chore-store.conf /etc/nginx/snippets/navet-chore-store.conf
 COPY docker/snippets/navet-chore-store-ingress.conf /etc/nginx/snippets/navet-chore-store-ingress.conf
 COPY docker/snippets/navet-auth-store.conf /etc/nginx/snippets/navet-auth-store.conf

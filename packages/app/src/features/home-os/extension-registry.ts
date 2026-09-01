@@ -1,59 +1,90 @@
-import type { DeviceWithType } from '@navet/app/types/device.types';
+import { HOME_OS_ROLES, type SemanticRole } from './core/semantic-roles';
+import { HOME_OS_COPY } from './i18n/home-os-copy';
 
-export type HomeOsExtensionId =
-  | 'attention'
-  | 'cameras'
-  | 'energy-cn'
-  | 'family'
-  | 'homelab'
-  | 'scenes';
+export type HomeOsExtensionId = 'alerts' | 'energy-cn' | 'family' | 'homelab' | 'lighting';
 
-export interface HomeOsExtension {
+export interface ExtensionDefinition {
   id: HomeOsExtensionId;
-  capabilities: readonly ('read' | 'control' | 'stream')[];
-  entityMatches: (device: DeviceWithType) => boolean;
+  title: string;
+  capabilities: readonly ('read' | 'control' | 'history' | 'stream' | 'configure')[];
+  cards: readonly string[];
+  pages: readonly string[];
+  semanticRoles: {
+    required: readonly SemanticRole[];
+    optional: readonly SemanticRole[];
+  };
+  requiredCapabilities: readonly string[];
+  providerRequirements: readonly string[];
+  historyRequirements: readonly string[];
+  controlRequirements: readonly string[];
 }
 
-const text = (device: DeviceWithType) =>
-  `${device.id} ${device.name} ${device.room ?? ''}`.toLowerCase();
-
-export const HOME_OS_EXTENSIONS: readonly HomeOsExtension[] = [
+export const HOME_OS_EXTENSIONS: readonly ExtensionDefinition[] = [
   {
-    id: 'energy-cn',
-    capabilities: ['read'],
-    entityMatches: (device) =>
-      /state.?grid|electric|power|energy|towngas|gas|国家电网|电费|港华|燃气/.test(text(device)),
+    id: 'family',
+    title: HOME_OS_COPY.family,
+    capabilities: ['read', 'configure'],
+    cards: ['home-os.household-status'],
+    pages: [],
+    semanticRoles: {
+      required: [HOME_OS_ROLES.familyPerson],
+      optional: [HOME_OS_ROLES.familyTracker],
+    },
+    requiredCapabilities: [],
+    providerRequirements: [],
+    historyRequirements: [],
+    controlRequirements: [],
+  },
+  {
+    id: 'lighting',
+    title: HOME_OS_COPY.wholeHomeLighting,
+    capabilities: ['read', 'control', 'configure'],
+    cards: ['home-os.whole-home-lighting'],
+    pages: [],
+    semanticRoles: {
+      required: [],
+      optional: [HOME_OS_ROLES.lightingLight, HOME_OS_ROLES.lightingSwitch],
+    },
+    requiredCapabilities: [],
+    providerRequirements: [],
+    historyRequirements: [],
+    controlRequirements: ['toggle'],
+  },
+  {
+    id: 'alerts',
+    title: HOME_OS_COPY.attentionCenter,
+    capabilities: ['read', 'configure'],
+    cards: ['home-os.attention-center'],
+    pages: [],
+    semanticRoles: { required: [], optional: ['security.*', 'diagnostic.*', 'homelab.*'] },
+    requiredCapabilities: [],
+    providerRequirements: [],
+    historyRequirements: [],
+    controlRequirements: [],
   },
   {
     id: 'homelab',
-    capabilities: ['read'],
-    entityMatches: (device) =>
-      /proxmox|pve|home.?assistant|router|gateway|internet|ping|latency|loss|路由|网络/.test(
-        text(device)
-      ),
+    title: HOME_OS_COPY.homelab,
+    capabilities: ['read', 'history', 'configure'],
+    cards: ['home-os.pve', 'home-os.home-assistant', 'home-os.router', 'home-os.internet'],
+    pages: ['home-os.homelab'],
+    semanticRoles: { required: [], optional: ['homelab.*', 'network.*'] },
+    requiredCapabilities: [],
+    providerRequirements: [],
+    historyRequirements: ['history'],
+    controlRequirements: [],
   },
   {
-    id: 'cameras',
-    capabilities: ['read', 'stream'],
-    entityMatches: (device) => device.type === 'cameras',
-  },
-  {
-    id: 'scenes',
-    capabilities: ['read', 'control'],
-    entityMatches: (device) => device.type === 'scenes',
-  },
-  {
-    id: 'family',
-    capabilities: ['read'],
-    entityMatches: (device) => ['persons', 'calendars', 'vacuums'].includes(device.type),
-  },
-  {
-    id: 'attention',
-    capabilities: ['read'],
-    entityMatches: (device) =>
-      /battery|filter|brush|consumable|door|window|temperature|电池|耗材|门|窗|温度/.test(
-        text(device)
-      ),
+    id: 'energy-cn',
+    title: HOME_OS_COPY.energyUtilities,
+    capabilities: ['read', 'history', 'configure'],
+    cards: ['home-os.energy', 'home-os.gas'],
+    pages: ['home-os.energy-detail'],
+    semanticRoles: { required: [], optional: ['energy.electricity.*', 'energy.gas.*'] },
+    requiredCapabilities: [],
+    providerRequirements: [],
+    historyRequirements: ['history', 'statistics'],
+    controlRequirements: [],
   },
 ] as const;
 

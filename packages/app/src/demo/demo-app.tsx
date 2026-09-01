@@ -31,6 +31,7 @@ import {
   getEnergyDashboardScenario,
   getMockEnergySourceDiagnostics,
 } from '@navet/app/features/energy/data/mock-energy-dashboard';
+import { HomelabDetailPage } from '@navet/app/features/home-os/components/detail/homelab-detail-page';
 import { FanCard } from '@navet/app/features/lighting/components/fan-card';
 import { LightCard } from '@navet/app/features/lighting/components/light-card';
 import { SwitchCard } from '@navet/app/features/lighting/components/switch-card';
@@ -1585,6 +1586,7 @@ function RoomShot({ room }: { room: string }) {
 
 function DemoSectionContent({ section, activeRoom }: { section: DemoSection; activeRoom: string }) {
   if (section === 'energy') return <EnergyShot />;
+  if (section === 'homelab') return <HomelabDetailPage />;
   if (section === 'climate') return <ClimateShot />;
   if (section === 'security') return <SecurityShot />;
   if (section === 'tasks') return <TasksShot />;
@@ -1608,6 +1610,7 @@ function getDemoSectionFromPath() {
 function sanitizeDemoSection(value: unknown): DemoSection {
   if (
     value === 'energy' ||
+    value === 'homelab' ||
     value === 'climate' ||
     value === 'security' ||
     value === 'tasks' ||

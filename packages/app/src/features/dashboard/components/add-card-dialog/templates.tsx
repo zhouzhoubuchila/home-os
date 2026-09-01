@@ -1,5 +1,24 @@
+import { HOME_OS_CARD_REGISTRY } from '@navet/app/features/home-os/cards/card-registry';
 import type { TranslateFn } from '@navet/app/hooks';
-import { Zap as EnergyIcon, Gauge, Sparkles } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CircleGauge,
+  CloudSun,
+  Zap as EnergyIcon,
+  Gauge,
+  House,
+  Lightbulb,
+  Sparkles as ModeIcon,
+  Moon,
+  Network,
+  Server,
+  Sparkles,
+  Users,
+  WalletCards,
+  WandSparkles,
+  Wind,
+} from 'lucide-react';
 import type { SVGProps } from 'react';
 import type { ButtonWidgetData } from '../widgets/button-widget';
 import type { CardTemplate } from './types';
@@ -134,7 +153,40 @@ function createScenePresetData(t: TranslateFn): Record<string, unknown> {
   return data;
 }
 
-export function createCardTemplates(t: TranslateFn): CardTemplate[] {
+const HOME_OS_ICONS = {
+  household: Users,
+  lighting: Lightbulb,
+  alerts: AlertTriangle,
+  pve: Server,
+  'home-assistant': House,
+  router: Network,
+  internet: CircleGauge,
+  electricity: EnergyIcon,
+  gas: WalletCards,
+  weather: CloudSun,
+  'air-quality': Wind,
+  calendar: CalendarDays,
+  modes: ModeIcon,
+  cleaning: WandSparkles,
+  lunar: Moon,
+} as const;
+
+export function createCardTemplates(t: TranslateFn, language: string = 'en'): CardTemplate[] {
+  const homeOsTemplates: CardTemplate[] = HOME_OS_CARD_REGISTRY.map((definition) => {
+    const Icon = HOME_OS_ICONS[definition.kind];
+    return {
+      id: definition.templateId,
+      cardType: 'home-os',
+      nameKey: 'dashboard.addCard.templates.info.name',
+      descriptionKey: 'dashboard.addCard.templates.info.description',
+      name: language === 'zh' ? definition.name.zh : definition.name.en,
+      description: language === 'zh' ? definition.description.zh : definition.description.en,
+      icon: <Icon className="h-5 w-5" />,
+      defaultSize: definition.defaultSize,
+      supportedSizes: definition.supportedSizes,
+      initialData: { kind: definition.kind },
+    };
+  });
   return [
     {
       id: 'info',
@@ -239,5 +291,6 @@ export function createCardTemplates(t: TranslateFn): CardTemplate[] {
       defaultSize: 'medium',
       supportedSizes: ['small', 'medium', 'large'],
     },
+    ...homeOsTemplates,
   ];
 }

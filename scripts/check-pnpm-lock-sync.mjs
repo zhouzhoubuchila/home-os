@@ -119,9 +119,10 @@ if (mismatches.length > 0) {
   process.exit(1);
 }
 
+const pnpmEntrypoint = process.env.npm_execpath;
 const frozenLockfileCheck = spawnSync(
-  'pnpm',
-  ['install', '--lockfile-only', '--frozen-lockfile'],
+  pnpmEntrypoint ? process.execPath : 'pnpm',
+  [...(pnpmEntrypoint ? [pnpmEntrypoint] : []), 'install', '--lockfile-only', '--frozen-lockfile'],
   {
     env: {
       ...process.env,

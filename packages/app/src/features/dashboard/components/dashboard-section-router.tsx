@@ -17,16 +17,7 @@ import {
   getEnergyOverviewTemplateLayout,
   useEnergyOverviewLayout,
 } from '@navet/app/features/energy/components/dashboard/energy-overview-layout';
-import {
-  CamerasHeader,
-  DevicesSectionHeader,
-  EnergyCnSection,
-  FamilySection,
-  HomelabSection,
-  HomeOsOverviewStrip,
-  RoomsSection,
-  ScenesSection,
-} from '@navet/app/features/home-os';
+import { HomelabDetailPage } from '@navet/app/features/home-os/components/detail/homelab-detail-page';
 import { buildRoomStatusSummaryItems } from '@navet/app/features/sensors/components/home-status-summary-model';
 import {
   SummaryBar,
@@ -399,82 +390,35 @@ function DashboardSectionRouterComponent({ controller }: DashboardSectionRouterP
         />
       </RenderProfiler>
     );
-  } else if (activeSection === 'security' || activeSection === 'cameras') {
+  } else if (activeSection === 'security') {
     sectionContent = (
-      <div className="space-y-6">
-        {activeSection === 'cameras' ? (
-          <CamerasHeader deviceMap={controller.availableDeviceMap} />
-        ) : null}
-        <Suspense fallback={<LoadingSpinner />}>
-          <SecuritySection
-            openAddEntityRequestKey={securityAddEntityRequestKey}
-            suppressEditActions={isEditMode}
-            isOverviewCustomizationOpen={isSecurityOverviewCustomizationOpen}
-            onOverviewCustomizationOpenChange={setIsSecurityOverviewCustomizationOpen}
-          />
-        </Suspense>
-      </div>
+      <Suspense fallback={<LoadingSpinner />}>
+        <SecuritySection
+          openAddEntityRequestKey={securityAddEntityRequestKey}
+          suppressEditActions={isEditMode}
+          isOverviewCustomizationOpen={isSecurityOverviewCustomizationOpen}
+          onOverviewCustomizationOpenChange={setIsSecurityOverviewCustomizationOpen}
+        />
+      </Suspense>
     );
   } else if (activeSection === 'energy') {
     sectionContent = (
       <Suspense fallback={<LoadingSpinner />}>
         <RenderProfiler id="EnergySection">
-          <div className="space-y-6">
-            <EnergySection
-              energyCustomCards={sectionData.energyCustomCards}
-              energyOrderedCardIds={sectionData.energyOrderedCardIds}
-              isEditMode={isEditMode}
-              isKpiCustomizationOpen={isEnergyKpiCustomizationOpen}
-              onDeleteCard={handleDeleteCard}
-              onKpiCustomizationOpenChange={setIsEnergyKpiCustomizationOpen}
-              onUpdateCard={handleUpdateCard}
-            />
-            <EnergyCnSection deviceMap={controller.availableDeviceMap} />
-          </div>
+          <EnergySection
+            energyCustomCards={sectionData.energyCustomCards}
+            energyOrderedCardIds={sectionData.energyOrderedCardIds}
+            isEditMode={isEditMode}
+            isKpiCustomizationOpen={isEnergyKpiCustomizationOpen}
+            onDeleteCard={handleDeleteCard}
+            onKpiCustomizationOpenChange={setIsEnergyKpiCustomizationOpen}
+            onUpdateCard={handleUpdateCard}
+          />
         </RenderProfiler>
       </Suspense>
     );
-  } else if (activeSection === 'rooms') {
-    sectionContent = (
-      <RoomsSection
-        deviceMap={controller.availableDeviceMap}
-        onOpenRoom={(room) => {
-          changeRoom(room);
-          setActiveSection('home');
-        }}
-      />
-    );
-  } else if (activeSection === 'devices') {
-    sectionContent = (
-      <div className="space-y-6">
-        <DevicesSectionHeader deviceMap={controller.availableDeviceMap} />
-        <DeviceGrid
-          orderedCardIds={[...controller.availableDeviceMap.keys()]}
-          deviceMap={controller.availableDeviceMap}
-          isEditMode={false}
-          cardSizes={cardSizes}
-          updateCardSize={updateCardSize}
-          customCards={[]}
-          onDeleteCard={handleDeleteCard}
-          onUpdateCard={handleUpdateCard}
-          densePerformanceMode={controller.densePerformanceMode}
-          optimizeOffscreenPaint={controller.optimizeOffscreenPaint}
-        />
-      </div>
-    );
   } else if (activeSection === 'homelab') {
-    sectionContent = <HomelabSection deviceMap={controller.availableDeviceMap} />;
-  } else if (activeSection === 'scenes') {
-    sectionContent = <ScenesSection deviceMap={controller.availableDeviceMap} />;
-  } else if (activeSection === 'family') {
-    sectionContent = (
-      <div className="space-y-6">
-        <FamilySection deviceMap={controller.availableDeviceMap} />
-        <Suspense fallback={<LoadingSpinner />}>
-          {choresEnabled ? <HouseholdSection /> : <TasksSection />}
-        </Suspense>
-      </div>
-    );
+    sectionContent = <HomelabDetailPage />;
   } else if (activeSection === 'tasks') {
     sectionContent = (
       <Suspense fallback={<LoadingSpinner />}>
@@ -658,46 +602,43 @@ function DashboardSectionRouterComponent({ controller }: DashboardSectionRouterP
         )}
 
         {isAllRooms(activeRoom) ? (
-          <div className="space-y-6">
-            <HomeOsOverviewStrip deviceMap={controller.availableDeviceMap} />
-            <RenderProfiler id="HomeDashboardOverview">
-              <Suspense fallback={<LoadingSpinner message={t('common.loading')} />}>
-                <HomeDashboardOverview
-                  deviceMap={controller.availableDeviceMap}
-                  summaryDeviceMap={controller.availableDeviceMap}
-                  cardSizes={cardSizes}
-                  updateCardSize={updateCardSize}
-                  isEditMode={isEditMode}
-                  hiddenEntityCount={hiddenEntityIds.length}
-                  allCustomCards={controller.allCustomCards}
-                  homeLayout={controller.homeLayout}
-                  canRedoHomeLayout={controller.canRedoHomeLayout}
-                  canUndoHomeLayout={controller.canUndoHomeLayout}
-                  removeHomeCard={controller.removeHomeCard}
-                  moveHomeCard={controller.moveHomeCard}
-                  setHomeLayoutMode={controller.setHomeLayoutMode}
-                  addHomeSection={controller.addHomeSection}
-                  addHomeColumnSection={controller.addHomeColumnSection}
-                  addHomeSectionBelow={controller.addHomeSectionBelow}
-                  moveHomeSection={controller.moveHomeSection}
-                  moveHomeColumn={controller.moveHomeColumn}
-                  renameHomeSection={controller.renameHomeSection}
-                  removeHomeSection={controller.removeHomeSection}
-                  resizeHomeSection={controller.resizeHomeSection}
-                  redoHomeLayout={controller.redoHomeLayout}
-                  undoHomeLayout={controller.undoHomeLayout}
-                  onOpenAddCardDialog={controller.onOpenAddCardDialog}
-                  onApplyDashboardPack={controller.handleApplyDashboardPack}
-                  onUpdateCard={handleUpdateCard}
-                  onToggleEditMode={controller.onToggleEditMode}
-                  onNavigateSection={controller.setActiveSection}
-                  routineCount={totalRoutineCount}
-                  securityAlertCount={controller.securityAlertCount}
-                  densePerformanceMode={controller.densePerformanceMode}
-                />
-              </Suspense>
-            </RenderProfiler>
-          </div>
+          <RenderProfiler id="HomeDashboardOverview">
+            <Suspense fallback={<LoadingSpinner message={t('common.loading')} />}>
+              <HomeDashboardOverview
+                deviceMap={controller.availableDeviceMap}
+                summaryDeviceMap={controller.availableDeviceMap}
+                cardSizes={cardSizes}
+                updateCardSize={updateCardSize}
+                isEditMode={isEditMode}
+                hiddenEntityCount={hiddenEntityIds.length}
+                allCustomCards={controller.allCustomCards}
+                homeLayout={controller.homeLayout}
+                canRedoHomeLayout={controller.canRedoHomeLayout}
+                canUndoHomeLayout={controller.canUndoHomeLayout}
+                removeHomeCard={controller.removeHomeCard}
+                moveHomeCard={controller.moveHomeCard}
+                setHomeLayoutMode={controller.setHomeLayoutMode}
+                addHomeSection={controller.addHomeSection}
+                addHomeColumnSection={controller.addHomeColumnSection}
+                addHomeSectionBelow={controller.addHomeSectionBelow}
+                moveHomeSection={controller.moveHomeSection}
+                moveHomeColumn={controller.moveHomeColumn}
+                renameHomeSection={controller.renameHomeSection}
+                removeHomeSection={controller.removeHomeSection}
+                resizeHomeSection={controller.resizeHomeSection}
+                redoHomeLayout={controller.redoHomeLayout}
+                undoHomeLayout={controller.undoHomeLayout}
+                onOpenAddCardDialog={controller.onOpenAddCardDialog}
+                onApplyDashboardPack={controller.handleApplyDashboardPack}
+                onUpdateCard={handleUpdateCard}
+                onToggleEditMode={controller.onToggleEditMode}
+                onNavigateSection={controller.setActiveSection}
+                routineCount={totalRoutineCount}
+                securityAlertCount={controller.securityAlertCount}
+                densePerformanceMode={controller.densePerformanceMode}
+              />
+            </Suspense>
+          </RenderProfiler>
         ) : (
           <RenderProfiler id={`DeviceGrid:${activeRoom}`}>
             <SummaryBarStack>

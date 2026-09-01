@@ -1,15 +1,15 @@
 import type { TranslateFn, TranslationKey } from '@navet/app/i18n';
 import type { Section } from '@navet/app/navigation/sections';
 import {
-  Camera,
-  CircuitBoard,
-  DoorOpen,
+  ClipboardCheck,
+  Fan,
   Home,
+  Lightbulb,
   type LucideIcon,
   Network,
   Settings,
-  Sparkles,
-  Users,
+  Shield,
+  Speaker,
   Zap,
 } from 'lucide-react';
 
@@ -25,13 +25,13 @@ const SECTION_NAVIGATION_CONFIG: Array<{
   section: Section;
 }> = [
   { icon: Home, labelKey: 'sidebar.home', section: 'home' },
-  { icon: DoorOpen, labelKey: 'sidebar.rooms', section: 'rooms' },
-  { icon: CircuitBoard, labelKey: 'sidebar.devices', section: 'devices' },
   { icon: Zap, labelKey: 'sidebar.energy', section: 'energy' },
-  { icon: Camera, labelKey: 'sidebar.cameras', section: 'cameras' },
+  { icon: Fan, labelKey: 'sidebar.climate', section: 'climate' },
+  { icon: Shield, labelKey: 'sidebar.security', section: 'security' },
+  { icon: Lightbulb, labelKey: 'sidebar.lights', section: 'lights' },
+  { icon: Speaker, labelKey: 'sidebar.media', section: 'media' },
+  { icon: ClipboardCheck, labelKey: 'sidebar.tasks', section: 'tasks' },
   { icon: Network, labelKey: 'sidebar.homelab', section: 'homelab' },
-  { icon: Sparkles, labelKey: 'sidebar.scenes', section: 'scenes' },
-  { icon: Users, labelKey: 'sidebar.family', section: 'family' },
   { icon: Settings, labelKey: 'sidebar.settings', section: 'settings' },
 ];
 
@@ -39,13 +39,13 @@ export const MOBILE_SECTION_DOCK_ORDER: Section[] = ['home'];
 
 export const MOBILE_SECTION_ORBIT_ORDER: Section[] = [
   'home',
-  'rooms',
-  'devices',
   'energy',
-  'cameras',
+  'climate',
+  'security',
+  'lights',
+  'media',
+  'tasks',
   'homelab',
-  'scenes',
-  'family',
   'settings',
 ];
 

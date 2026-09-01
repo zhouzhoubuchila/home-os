@@ -39,7 +39,12 @@ import {
   type DashboardLibraryEntityType,
   DashboardLibraryList,
 } from '../dashboard-library-list';
-import type { CardTemplate, CardTemplateId } from './types';
+import {
+  type CardTemplate,
+  type CardTemplateId,
+  cardTemplateDescription,
+  cardTemplateName,
+} from './types';
 
 function cardSizeKey(size: CardSize): `dashboard.addCard.size.${CardSize}` {
   return `dashboard.addCard.size.${size}`;
@@ -413,10 +418,10 @@ export function AddCardDialogView({
                         </NavigationWorkspace.ItemIcon>
                         <div className="min-w-0 flex-1">
                           <h3 className={`truncate text-sm font-semibold ${textColor}`}>
-                            {t(selectedTemplate.nameKey)}
+                            {cardTemplateName(selectedTemplate, t)}
                           </h3>
                           <p className={`mt-1.5 text-xs ${mutedColor}`}>
-                            {t(selectedTemplate.descriptionKey)}
+                            {cardTemplateDescription(selectedTemplate, t)}
                           </p>
                         </div>
                       </div>
@@ -499,12 +504,12 @@ export function AddCardDialogView({
                             </span>
                             <div className="min-w-0 flex-1">
                               <h4 className={`truncate text-sm font-medium ${textColor}`}>
-                                {t(template.nameKey)}
+                                {cardTemplateName(template, t)}
                               </h4>
                               <p
                                 className={`mt-1 whitespace-normal break-words text-xs leading-4 ${surface.textMuted}`}
                               >
-                                {t(template.descriptionKey)}
+                                {cardTemplateDescription(template, t)}
                               </p>
                             </div>
                             <ChevronRight

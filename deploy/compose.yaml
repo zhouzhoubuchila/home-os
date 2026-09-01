@@ -1,6 +1,6 @@
 services:
   home-os:
-    image: ghcr.io/zhouzhoubuchila/home-os:main
+    image: ${HOME_OS_IMAGE:-ghcr.io/zhouzhoubuchila/home-os:main}
     pull_policy: always
     environment:
       NAVET_HASS_URL: ${NAVET_HASS_URL:-}

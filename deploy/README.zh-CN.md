@@ -42,9 +42,27 @@ Caddy 自动申请并续期 HTTPS 证书，WebSocket 无需额外配置。随后
 ```bash
 docker compose --env-file .env -f deploy/compose.yaml pull
 docker compose --env-file .env -f deploy/compose.yaml up -d
+docker compose --env-file .env -f deploy/compose.yaml logs -f --tail=100 home-os
+docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-更新前可备份 `home-os-data` 数据卷。回滚时切换到旧 Git 标签并重新构建；不要删除数据卷。
+健康检查也可以直接执行：
+
+```bash
+docker compose --env-file .env -f deploy/compose.yaml exec home-os \
+  wget -q -O /dev/null http://127.0.0.1/
+```
+
+更新前可备份 `home-os-data` 数据卷。回滚到已知版本时指定旧镜像并保留同一数据卷：
+
+```bash
+HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:<旧版本标签> \
+  docker compose --env-file .env -f deploy/compose.yaml pull home-os
+HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:<旧版本标签> \
+  docker compose --env-file .env -f deploy/compose.yaml up -d home-os
+```
+
+不要执行 `down -v`，否则会删除持久化数据卷。
 
 ## 5. 安全边界
 
