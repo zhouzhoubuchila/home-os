@@ -9,4 +9,11 @@ export interface HomeOsAlert {
   severity: AlertSeverity;
   message: string;
   activeSince: string;
+  deviceName: string;
+  room?: string;
+  currentValue: unknown;
+  unit?: string;
+  durationMs: number;
+  lastUpdated?: string;
+  sourceEntityId: string;
 }

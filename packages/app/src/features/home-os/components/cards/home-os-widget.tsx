@@ -20,15 +20,14 @@ import {
   Wind,
   Zap,
 } from 'lucide-react';
-import { Solar } from 'lunar-javascript';
 import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
 import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
 import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
-import { DEFAULT_HOME_OS_ALERT_RULES } from '../../alerts/default-rules';
-import { getMoonPhase } from '../../astronomy/moon-phase';
+import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
+import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
@@ -200,8 +199,12 @@ function AlertsCard({
   entities: ResolvedSemanticEntity[];
   copy: ReturnType<typeof getHomeOsCopy>;
 }) {
+  const { language } = useI18n();
   const customRules = useHomeOsConfigStore((state) => state.config.alertRules);
-  const rules = useMemo(() => [...DEFAULT_HOME_OS_ALERT_RULES, ...customRules], [customRules]);
+  const rules = useMemo(
+    () => [...getDefaultHomeOsAlertRules(language), ...customRules],
+    [customRules, language]
+  );
   const alerts = evaluateAlerts(entities, rules);
   return (
     <BaseCard
@@ -272,32 +275,20 @@ function ModesCard({
   );
 }
 
-function LunarCard({ size, title, language }: { size: CardSize; title: string; language: string }) {
-  const now = new Date();
-  const lunar = Solar.fromDate(now).getLunar();
-  const moon = getMoonPhase(now);
+function LunarCard({
+  size,
+  title,
+  language,
+  entities,
+}: {
+  size: CardSize;
+  title: string;
+  language: string;
+  entities: ResolvedSemanticEntity[];
+}) {
   return (
     <BaseCard size={size} title={title} headerLeading={<Moon className="h-5 w-5" />}>
-      <div className="flex h-full flex-col justify-between gap-2">
-        <strong className="line-clamp-2 text-lg">{lunar.toString()}</strong>
-        <p className="text-sm text-current/60">
-          {lunar.getYearShengXiao()} ·{' '}
-          {lunar.getJieQi() || lunar.getNextJieQi()?.getName() || '平日'}
-        </p>
-        <p className="text-sm font-medium">
-          {moon.icon} {language === 'zh' ? moon.name.zh : moon.name.en}
-        </p>
-        {size !== 'small' ? (
-          <div className="text-xs">
-            <p className="line-clamp-1 text-emerald-400">
-              宜：{lunar.getDayYi().slice(0, 4).join(' · ')}
-            </p>
-            <p className="line-clamp-1 text-amber-400">
-              忌：{lunar.getDayJi().slice(0, 4).join(' · ')}
-            </p>
-          </div>
-        ) : null}
-      </div>
+      <AstronomyVisual entities={entities} language={language} compact={size === 'small'} />
     </BaseCard>
   );
 }
@@ -409,7 +400,9 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   if (definition.kind === 'modes')
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
   if (definition.kind === 'lunar')
-    return withDetail(<LunarCard size={size} title={copy.lunarCalendar} language={language} />);
+    return withDetail(
+      <LunarCard size={size} title={copy.lunarCalendar} language={language} entities={entities} />
+    );
   const matched = entities.filter(
     (entity) =>
       !entity.ignored &&

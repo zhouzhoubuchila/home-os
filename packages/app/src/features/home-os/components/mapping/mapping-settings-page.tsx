@@ -91,8 +91,29 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       manual: resolved.filter((item) => item.source === 'manual').length,
       ignored: resolved.filter((item) => item.ignored).length,
       diagnostic: resolved.filter((item) => item.reviewDisposition === 'diagnostic').length,
+      pve: resolved.filter((item) => item.roles.some((role) => role.startsWith('homelab.pve.')))
+        .length,
+      router: resolved.filter((item) =>
+        item.roles.some((role) => role.startsWith('network.router.'))
+      ).length,
+      internet: resolved.filter((item) =>
+        item.roles.some((role) => role.startsWith('network.internet.'))
+      ).length,
+      lightingCircuits: (config.functionalDevices ?? []).filter((item) => item.kind === 'light')
+        .length,
+      environmentTemperature: resolved.filter((item) =>
+        item.roles.includes('environment.temperature')
+      ).length,
+      refrigerationTemperature: resolved.filter((item) =>
+        item.roles.includes('appliance.refrigeration_temperature')
+      ).length,
+      pveTemperature: resolved.filter((item) => item.roles.includes('homelab.pve.temperature'))
+        .length,
+      internalTemperature: resolved.filter((item) =>
+        item.roles.includes('device.internal_temperature')
+      ).length,
     }),
-    [resolved]
+    [config.functionalDevices, resolved]
   );
 
   const batchUpdate = async (ignored: boolean) => {
@@ -291,6 +312,19 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         </span>
         <span>
           {copy.diagnostic}: {diagnostics.diagnostic}
+        </span>
+        <span>PVE: {diagnostics.pve}</span>
+        <span>
+          {copy.router}: {diagnostics.router}
+        </span>
+        <span>Internet: {diagnostics.internet}</span>
+        <span>
+          {copy.lightingCircuits}: {diagnostics.lightingCircuits}
+        </span>
+        <span>
+          {copy.temperatureDiagnostics}: {diagnostics.environmentTemperature} /{' '}
+          {diagnostics.refrigerationTemperature} / {diagnostics.pveTemperature} /{' '}
+          {diagnostics.internalTemperature}
         </span>
       </div>
       {selectedIds.size ? (

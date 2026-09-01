@@ -99,6 +99,23 @@ describe('buildEnergyDashboardModel', () => {
     expect(dashboard.nodes.find((node) => node.id === 'solar')?.todayValue).toBe(6.8);
   });
 
+  it('does not show a fake live load KPI without a realtime power capability', () => {
+    const overview = getMockEnergyOverview('today');
+    overview.totals.currentLoadW = 0;
+    overview.totals.importW = 0;
+    overview.totals.exportW = 0;
+    const dashboard = buildEnergyDashboardModel({
+      overview,
+      range: 'today',
+      trend: [],
+      periodTotals: { today: 8.4, week: 61, month: 220 },
+      sourceConfig: { gridImportEnergyEntityId: 'sensor.grid_energy', devices: [] },
+    });
+    expect(dashboard.dataCoverage.hasLiveLoad).toBe(false);
+    expect(dashboard.summary.find((item) => item.id === 'load')).toBeUndefined();
+    expect(dashboard.summary.some((item) => item.id === 'today-grid')).toBe(true);
+  });
+
   it('returns peak mode summary for heavy grid import', () => {
     const overview = getMockEnergyOverview('today');
     overview.totals.importW = 2200;

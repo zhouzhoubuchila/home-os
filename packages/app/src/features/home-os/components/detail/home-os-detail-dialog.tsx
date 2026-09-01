@@ -8,11 +8,14 @@ import { buildFamilyMembers } from '../../adapters/family-adapter';
 import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
-import { DEFAULT_HOME_OS_ALERT_RULES } from '../../alerts/default-rules';
+import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
+import { AstronomyVisual, getAstronomySnapshot } from '../../astronomy/astronomy-visual';
 import { getMoonPhase } from '../../astronomy/moon-phase';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
+import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import { resolveMetric } from '../../mapping/metric-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 
 function MetricRows({ entities }: { entities: readonly ResolvedSemanticEntity[] }) {
@@ -34,6 +37,78 @@ function MetricRows({ entities }: { entities: readonly ResolvedSemanticEntity[] 
               {String(item.entity.primaryState ?? '—')}
               {typeof unit === 'string' ? ` ${unit}` : ''}
             </strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const DETAIL_ROLES: Partial<Record<HomeOsCardKind, string[]>> = {
+  router: [
+    HOME_OS_ROLES.networkRouterOnline,
+    HOME_OS_ROLES.networkRouterUptime,
+    HOME_OS_ROLES.networkRouterClients,
+    HOME_OS_ROLES.networkRouterCpu,
+    HOME_OS_ROLES.networkRouterMemory,
+    HOME_OS_ROLES.networkRouterUpload,
+    HOME_OS_ROLES.networkRouterDownload,
+  ],
+  internet: [
+    HOME_OS_ROLES.networkInternetOnline,
+    HOME_OS_ROLES.networkInternetLatency,
+    HOME_OS_ROLES.networkInternetPacketLoss,
+    HOME_OS_ROLES.networkInternetJitter,
+    HOME_OS_ROLES.networkInternetDownload,
+    HOME_OS_ROLES.networkInternetUpload,
+  ],
+  gas: [HOME_OS_ROLES.energyGasCurrent],
+  pve: [
+    HOME_OS_ROLES.homelabPveOnline,
+    HOME_OS_ROLES.homelabPveCpu,
+    HOME_OS_ROLES.homelabPveTemperature,
+    HOME_OS_ROLES.homelabPveMemory,
+    HOME_OS_ROLES.homelabPveStorage,
+    HOME_OS_ROLES.homelabPveVmRunning,
+    HOME_OS_ROLES.homelabPveVersion,
+  ],
+};
+
+function DiagnosisRows({
+  roles,
+  entities,
+  copy,
+}: {
+  roles: readonly string[];
+  entities: readonly ResolvedSemanticEntity[];
+  copy: ReturnType<typeof getHomeOsCopy>;
+}) {
+  return (
+    <div className="grid gap-2">
+      {roles.map((role) => {
+        const resolution = resolveMetric(role, entities);
+        const stateCopy = {
+          capability_absent: copy.capabilityAbsent,
+          unmapped: copy.candidateUnmapped,
+          ambiguous: copy.ambiguous,
+          unavailable: copy.metricUnavailable,
+          stale: copy.metricStale,
+        } as const;
+        return (
+          <div key={role} className="rounded-xl border border-current/10 p-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="font-medium">{role}</span>
+              <strong className="tabular-nums">
+                {resolution.state === 'available' || resolution.state === 'stale'
+                  ? `${String(resolution.value)}${resolution.unit ? ` ${resolution.unit}` : ''}`
+                  : stateCopy[resolution.state]}
+              </strong>
+            </div>
+            {resolution.candidates?.length ? (
+              <p className="mt-1 truncate text-xs text-current/55">
+                {resolution.candidates.map(({ entityId }) => entityId).join(' · ')}
+              </p>
+            ) : null}
           </div>
         );
       })}
@@ -86,9 +161,20 @@ export function HomeOsDetailDialog({
     content = members.length ? (
       <div className="grid gap-2">
         {members.map((member) => (
-          <div key={member.id} className="flex justify-between gap-3">
-            <span>{member.name}</span>
-            <span className={surface.textSecondary}>{member.state}</span>
+          <div key={member.id} className="rounded-xl border border-current/10 p-3">
+            <div className="flex justify-between gap-3">
+              <span className="font-medium">{member.name}</span>
+              <span className={surface.textSecondary}>{member.state}</span>
+            </div>
+            <p className={`mt-1 text-xs ${surface.textSecondary}`}>
+              {member.location ?? copy.roomUnknown}
+              {member.battery !== undefined ? ` · ${member.battery}%` : ''}
+            </p>
+            <p className={`mt-2 text-xs ${surface.textMuted}`}>
+              {copy.trackerSources}:{' '}
+              {member.trackerSources.map((tracker) => tracker.name).join(' · ') ||
+                copy.noMappedData}
+            </p>
           </div>
         ))}
       </div>
@@ -140,14 +226,25 @@ export function HomeOsDetailDialog({
       <p>{copy.noMappedData}</p>
     );
   } else if (kind === 'alerts') {
-    const alerts = evaluateAlerts(visible, [...DEFAULT_HOME_OS_ALERT_RULES, ...config.alertRules]);
+    const alerts = evaluateAlerts(visible, [
+      ...getDefaultHomeOsAlertRules(language),
+      ...config.alertRules,
+    ]);
     content = alerts.length ? (
       <div className="grid gap-2">
         {alerts.map((alert) => (
           <div key={alert.id}>
             <p className="font-medium">{alert.message}</p>
+            <p className={`text-sm ${surface.textSecondary}`}>
+              {alert.deviceName} · {alert.room ?? copy.roomUnknown}
+            </p>
             <p className={`text-xs ${surface.textSecondary}`}>
-              {alert.severity} · {alert.entityId}
+              {copy[alert.severity]} · {copy.currentValue}: {String(alert.currentValue)}
+              {alert.unit ? ` ${alert.unit}` : ''} · {copy.duration}:{' '}
+              {Math.max(1, Math.round(alert.durationMs / 60_000))} min
+            </p>
+            <p className={`text-xs ${surface.textMuted}`}>
+              {copy.sourceEntity}: {alert.sourceEntityId}
             </p>
           </div>
         ))}
@@ -157,7 +254,7 @@ export function HomeOsDetailDialog({
     );
   } else if (kind === 'pve') {
     const devices = buildPvePhysicalDevices(visible, config.physicalDevices);
-    content = devices.length ? (
+    content = (
       <div className="grid gap-3">
         {devices.map((device) => (
           <BaseCard
@@ -176,16 +273,17 @@ export function HomeOsDetailDialog({
             ) : null}
           </BaseCard>
         ))}
+        <DiagnosisRows roles={DETAIL_ROLES.pve ?? []} entities={visible} copy={copy} />
       </div>
-    ) : (
-      <p>{copy.noMappedMetrics}</p>
     );
   } else if (kind === 'lunar') {
     const now = new Date();
     const lunar = Solar.fromDate(now).getLunar();
     const moon = getMoonPhase(now);
+    const astronomy = getAstronomySnapshot(visible, now);
     content = (
       <div className="grid gap-4">
+        <AstronomyVisual entities={visible} language={language} now={now} />
         <div className="flex items-center gap-4">
           <span className="text-5xl" aria-hidden="true">
             {moon.icon}
@@ -207,10 +305,27 @@ export function HomeOsDetailDialog({
         <p className={surface.textSecondary}>
           {copy.solarTerm}: {lunar.getJieQi() || lunar.getNextJieQi()?.getName() || '—'}
         </p>
+        <div className={`grid grid-cols-2 gap-2 text-sm ${surface.textSecondary}`}>
+          <span>
+            {copy.sunrise}: {astronomy.sunrise?.toLocaleTimeString() ?? '—'}
+          </span>
+          <span>
+            {copy.sunset}: {astronomy.sunset?.toLocaleTimeString() ?? '—'}
+          </span>
+          <span>
+            {copy.solarAzimuth}: {astronomy.azimuth ?? '—'}°
+          </span>
+          <span>
+            {copy.solarElevation}: {astronomy.elevation ?? '—'}°
+          </span>
+        </div>
       </div>
     );
   } else {
-    content = (
+    const diagnosticRoles = DETAIL_ROLES[kind];
+    content = diagnosticRoles ? (
+      <DiagnosisRows roles={diagnosticRoles} entities={visible} copy={copy} />
+    ) : (
       <MetricRows
         entities={visible.filter((entity) => entity.roles.some((role) => role.startsWith(prefix)))}
       />

@@ -1,0 +1,120 @@
+import type { ResolvedSemanticEntity } from '../core/types';
+import { getMoonPhase } from './moon-phase';
+
+const readDate = (value: unknown) => {
+  if (typeof value !== 'string') return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp) : undefined;
+};
+
+const readNumber = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+export interface AstronomySnapshot {
+  moon: ReturnType<typeof getMoonPhase>;
+  sunrise?: Date;
+  sunset?: Date;
+  nextEvent?: Date;
+  daylightProgress: number;
+  isDay: boolean;
+  elevation?: number;
+  azimuth?: number;
+}
+
+export function getAstronomySnapshot(
+  entities: readonly ResolvedSemanticEntity[],
+  now = new Date()
+): AstronomySnapshot {
+  const sun = entities.find((item) => item.entity.externalId === 'sun.sun')?.entity;
+  const sunrise = readDate(sun?.attributes.nextRising ?? sun?.attributes.next_rising);
+  const sunset = readDate(sun?.attributes.nextSetting ?? sun?.attributes.next_setting);
+  const elevation = readNumber(sun?.attributes.elevation);
+  const azimuth = readNumber(sun?.attributes.azimuth);
+  const isDay = sun
+    ? String(sun.primaryState).toLowerCase() === 'above_horizon'
+    : now.getHours() >= 6 && now.getHours() < 18;
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const daylightProgress = Math.max(0, Math.min(1, (minutes - 360) / 720));
+  return {
+    moon: getMoonPhase(now),
+    sunrise,
+    sunset,
+    nextEvent: [sunrise, sunset]
+      .filter((value): value is Date => Boolean(value && value.getTime() > now.getTime()))
+      .sort((left, right) => left.getTime() - right.getTime())[0],
+    daylightProgress,
+    isDay,
+    elevation,
+    azimuth,
+  };
+}
+
+export function AstronomyVisual({
+  entities,
+  language,
+  now = new Date(),
+  compact = false,
+}: {
+  entities: readonly ResolvedSemanticEntity[];
+  language: string;
+  now?: Date;
+  compact?: boolean;
+}) {
+  const snapshot = getAstronomySnapshot(entities, now);
+  const sunX = 16 + snapshot.daylightProgress * 168;
+  const sunY = 82 - Math.sin(snapshot.daylightProgress * Math.PI) * 58;
+  const moonOffset = (0.5 - snapshot.moon.illumination) * 27;
+  const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+  const time = (value?: Date) =>
+    value?.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) ?? '—';
+
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border border-current/10 p-3 ${
+        snapshot.isDay
+          ? 'bg-linear-to-br from-sky-400/25 to-amber-300/10'
+          : 'bg-linear-to-br from-indigo-950/55 to-slate-950/35'
+      }`}
+      data-astronomy-card="true"
+      data-moon-phase={snapshot.moon.phase.toFixed(3)}
+    >
+      <svg
+        viewBox="0 0 200 104"
+        className={`${compact ? 'h-20' : 'h-28'} w-full`}
+        role="img"
+        aria-label={`${language === 'zh' ? snapshot.moon.name.zh : snapshot.moon.name.en}, ${Math.round(snapshot.moon.illumination * 100)}%`}
+      >
+        <title>
+          {language === 'zh' ? '太阳轨迹与当前月相' : 'Sun path and current moon phase'}
+        </title>
+        <path d="M16 82 Q100 -8 184 82" fill="none" stroke="currentColor" opacity="0.2" />
+        <circle
+          cx={sunX}
+          cy={sunY}
+          r="7"
+          className="fill-amber-300 transition-[cx,cy] duration-700 motion-reduce:transition-none"
+        />
+        <g transform="translate(164 18)">
+          <circle r="14" className="fill-slate-950 stroke-white/30" />
+          <circle cx={moonOffset} r="13" className="fill-slate-100" opacity="0.95" />
+          <circle r="14" fill="none" className="stroke-white/40" />
+        </g>
+        <text x="8" y="100" className="fill-current text-[9px]" opacity="0.65">
+          {time(snapshot.sunrise)}
+        </text>
+        <text x="168" y="100" className="fill-current text-[9px]" opacity="0.65">
+          {time(snapshot.sunset)}
+        </text>
+      </svg>
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="font-medium">
+          {language === 'zh' ? snapshot.moon.name.zh : snapshot.moon.name.en}
+        </span>
+        <span className="tabular-nums text-current/60">
+          {Math.round(snapshot.moon.illumination * 100)}% ·{' '}
+          {snapshot.isDay ? (language === 'zh' ? '昼' : 'Day') : language === 'zh' ? '夜' : 'Night'}
+        </span>
+      </div>
+    </div>
+  );
+}

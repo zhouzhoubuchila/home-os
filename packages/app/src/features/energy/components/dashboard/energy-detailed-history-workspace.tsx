@@ -118,6 +118,14 @@ const RANGE_LABELS: Record<EnergyUsageRange, string> = {
   year: 'Year',
   custom: 'Custom',
 };
+const ZH_RANGE_LABELS: Record<EnergyUsageRange, string> = {
+  live: '实时',
+  today: '日',
+  week: '周',
+  month: '月',
+  year: '年',
+  custom: '自定义',
+};
 const EMPTY_HISTORY_SOURCES: EnergyHistorySource[] = [];
 const EMPTY_HISTORY_CONSUMERS: EnergyConsumer[] = [];
 
@@ -164,6 +172,7 @@ export function EnergyDetailedHistoryWorkspace({
 }) {
   const { theme } = useTheme();
   const { locale } = useI18n();
+  const rangeLabels = locale.startsWith('zh') ? ZH_RANGE_LABELS : RANGE_LABELS;
   const isPhone = useMediaQuery('(max-width: 639px)');
   const currentProviderId = useIntegrationStore(integrationSelectors.currentProviderId);
   const providerKpiMetrics = useProviderEnergyKpiMetrics();
@@ -239,7 +248,9 @@ export function EnergyDetailedHistoryWorkspace({
       minValue: bucket.lowPowerW,
       maxValue: bucket.peakPowerW,
     })) ?? [];
-  const detailLabel = `${RANGE_LABELS[historyRange]} total`;
+  const detailLabel = locale.startsWith('zh')
+    ? `${rangeLabels[historyRange]}合计`
+    : `${rangeLabels[historyRange]} total`;
   const metricEnergyKWh = model?.totalEnergyKWh ?? 0;
   const metricLowPowerW = model?.lowPowerW ?? 0;
   const metricAveragePowerW = model?.averagePowerW ?? 0;
@@ -288,7 +299,7 @@ export function EnergyDetailedHistoryWorkspace({
     : isLoading
       ? 'Loading previous-period comparison…'
       : 'Previous-period comparison unavailable';
-  const periodLabel = RANGE_LABELS[historyRange];
+  const periodLabel = rangeLabels[historyRange];
   const historyPeriodContext = formatHistoryPeriodContext(historyRange, window, locale);
   const historyNavigationUnit = getHistoryNavigationUnit(historyRange);
   const isCurrentHistoryPeriod = isSameHistoryPeriod(historyRange, referenceDateMs, Date.now());
@@ -307,7 +318,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'low',
-      label: 'Low usage',
+      label: locale.startsWith('zh') ? '低负载' : 'Low usage',
       period: periodLabel,
       value: model || livePoints.length > 0 ? formatPowerValue(displayedLowPowerW) : '—',
       detail: lowPowerBucket
@@ -324,7 +335,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'average',
-      label: 'Average usage',
+      label: locale.startsWith('zh') ? '平均负载' : 'Average usage',
       period: periodLabel,
       value: model || livePoints.length > 0 ? formatPowerValue(displayedAveragePowerW) : '—',
       detail: 'Typical demand so far',
@@ -337,7 +348,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'peak',
-      label: 'Peak usage',
+      label: locale.startsWith('zh') ? '峰值负载' : 'Peak usage',
       period: periodLabel,
       value: model || livePoints.length > 0 ? formatPowerValue(displayedPeakPowerW) : '—',
       detail:
@@ -446,7 +457,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'low',
-      label: 'Low usage',
+      label: locale.startsWith('zh') ? '低负载' : 'Low usage',
       period: periodLabel,
       value: lowestEnergyBucket ? `${formatEnergyValue(lowestEnergyBucket.energyKWh)} kWh` : '—',
       detail: lowestEnergyBucket
@@ -463,7 +474,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'average',
-      label: 'Average usage',
+      label: locale.startsWith('zh') ? '平均负载' : 'Average usage',
       period: periodLabel,
       value: model ? `${formatEnergyValue(averageBucketEnergyKWh)} kWh` : '—',
       detail: `${capitalizeFirst(energyBucketUnit)} average`,
@@ -475,7 +486,7 @@ export function EnergyDetailedHistoryWorkspace({
     },
     {
       id: 'peak',
-      label: 'Peak usage',
+      label: locale.startsWith('zh') ? '峰值负载' : 'Peak usage',
       period: periodLabel,
       value: highestEnergyBucket ? `${formatEnergyValue(highestEnergyBucket.energyKWh)} kWh` : '—',
       detail: highestEnergyBucket
@@ -562,7 +573,15 @@ export function EnergyDetailedHistoryWorkspace({
           data-testid="energy-usage-card"
           data-overview-module="usage"
           style={mainCardStyle}
-          title={selectedBucket ? `Selected ${selectedBucketUnit}` : 'Energy usage'}
+          title={
+            selectedBucket
+              ? locale.startsWith('zh')
+                ? `已选${selectedBucketUnit}`
+                : `Selected ${selectedBucketUnit}`
+              : locale.startsWith('zh')
+                ? '能源使用'
+                : 'Energy usage'
+          }
           subtitle={
             isLiveChart
               ? 'Live power demand'
@@ -650,7 +669,7 @@ export function EnergyDetailedHistoryWorkspace({
                 ) : null}
                 <nav
                   className="order-1 flex shrink-0 gap-1 sm:order-2 sm:gap-1.5"
-                  aria-label="Energy usage view"
+                  aria-label={locale.startsWith('zh') ? '能源使用视图' : 'Energy usage view'}
                 >
                   <InteractivePill
                     active={isLiveChart}
@@ -674,7 +693,7 @@ export function EnergyDetailedHistoryWorkspace({
                       setSelectedBucketIndex(null);
                     }}
                   >
-                    {RANGE_LABELS[insightsRange]}
+                    {rangeLabels[insightsRange]}
                   </InteractivePill>
                 </nav>
               </div>
@@ -782,7 +801,9 @@ export function EnergyDetailedHistoryWorkspace({
                     <EnergyHistoryBarChart
                       data={chartData}
                       accentColor={selectedSourceColor}
-                      ariaLabel="Energy usage by period"
+                      ariaLabel={
+                        locale.startsWith('zh') ? '按时段查看能源使用' : 'Energy usage by period'
+                      }
                       className="h-full w-full"
                       selectionDetailsId="energy-selected-period-details"
                       selectedIndex={selectedBucketIndex}

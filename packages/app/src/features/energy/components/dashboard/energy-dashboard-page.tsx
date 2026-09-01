@@ -122,6 +122,13 @@ const ENERGY_INSIGHTS_RANGE_LABELS: Record<EnergyHistoryRange, string> = {
   year: 'Year',
   custom: 'Custom',
 };
+const ENERGY_INSIGHTS_RANGE_LABELS_ZH: Record<EnergyHistoryRange, string> = {
+  today: '日',
+  week: '周',
+  month: '月',
+  year: '年',
+  custom: '自定义',
+};
 const EMPTY_ENERGY_SUMMARY_ITEMS: HomeStatusSummaryItem[] = [];
 interface EnergyCustomRange {
   start: string;
@@ -496,6 +503,8 @@ function EnergyInsightsRangeControl({
   range: EnergyHistoryRange;
 }) {
   const { locale } = useI18n();
+  const isZh = locale.startsWith('zh');
+  const rangeLabels = isZh ? ENERGY_INSIGHTS_RANGE_LABELS_ZH : ENERGY_INSIGHTS_RANGE_LABELS;
   const { theme, accentColor } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const isPhone = useMediaQuery('(max-width: 639px)');
@@ -543,7 +552,7 @@ function EnergyInsightsRangeControl({
             size="small"
             onClick={() => onRangeChange(rangeId)}
           >
-            {ENERGY_INSIGHTS_RANGE_LABELS[rangeId]}
+            {rangeLabels[rangeId]}
           </InteractivePill>
         ))}
         {isPhone ? (
@@ -554,7 +563,7 @@ function EnergyInsightsRangeControl({
             size="small"
             onClick={openCustomRange}
           >
-            Custom
+            {rangeLabels.custom}
           </InteractivePill>
         ) : (
           <Popover.Root
@@ -571,7 +580,7 @@ function EnergyInsightsRangeControl({
                 aria-haspopup="dialog"
                 size="small"
               >
-                Custom
+                {rangeLabels.custom}
               </InteractivePill>
             </Popover.Trigger>
             <Popover.Portal>
@@ -608,18 +617,22 @@ function EnergyInsightsRangeControl({
         <SheetSurface
           isOpen={isCustomRangeOpen}
           onOpenChange={setIsCustomRangeOpen}
-          title="Custom range"
-          description="Choose the dates used across Energy insights."
-          closeLabel="Close custom range"
+          title={isZh ? '自定义范围' : 'Custom range'}
+          description={
+            isZh ? '选择能源洞察使用的日期。' : 'Choose the dates used across Energy insights.'
+          }
+          closeLabel={isZh ? '关闭自定义范围' : 'Close custom range'}
           accentColor={accentColor}
           overlayClassName={`animate-in fade-in bg-black/45 backdrop-blur-[2px] sm:hidden ${surface.dialogBackdrop}`}
           contentClassName={`${surface.panel} ${surface.border}`}
           bodyClassName="pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <SheetSurfaceHeader
-            title="Custom range"
-            description="Choose the dates used across Energy insights."
-            closeLabel="Close custom range"
+            title={isZh ? '自定义范围' : 'Custom range'}
+            description={
+              isZh ? '选择能源洞察使用的日期。' : 'Choose the dates used across Energy insights.'
+            }
+            closeLabel={isZh ? '关闭自定义范围' : 'Close custom range'}
             onClose={closeCustomRange}
             className={cn('border-b', surface.border)}
           />
@@ -648,21 +661,25 @@ function EnergyCustomRangeForm({
   onChange: (range: EnergyCustomRange) => void;
 }) {
   const { theme } = useTheme();
+  const { locale } = useI18n();
+  const isZh = locale.startsWith('zh');
   const surface = getThemeSurfaceTokens(theme);
 
   return (
     <div className="space-y-4">
       {showHeading ? (
         <div>
-          <div className={`text-sm font-semibold ${surface.textPrimary}`}>Custom range</div>
+          <div className={`text-sm font-semibold ${surface.textPrimary}`}>
+            {isZh ? '自定义范围' : 'Custom range'}
+          </div>
           <div className={`mt-0.5 text-xs ${surface.textSecondary}`}>
-            Choose the dates used across Energy insights.
+            {isZh ? '选择能源洞察使用的日期。' : 'Choose the dates used across Energy insights.'}
           </div>
         </div>
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className={`space-y-1.5 text-xs font-medium ${surface.textSecondary}`}>
-          <span>From</span>
+          <span>{isZh ? '开始' : 'From'}</span>
           <input
             type="date"
             value={draftRange.start}
@@ -678,7 +695,7 @@ function EnergyCustomRangeForm({
           />
         </label>
         <label className={`space-y-1.5 text-xs font-medium ${surface.textSecondary}`}>
-          <span>To</span>
+          <span>{isZh ? '结束' : 'To'}</span>
           <input
             type="date"
             value={draftRange.end}
@@ -697,10 +714,10 @@ function EnergyCustomRangeForm({
       </div>
       <div className="flex justify-end gap-2">
         <InteractivePill size="small" onClick={onCancel}>
-          Cancel
+          {isZh ? '取消' : 'Cancel'}
         </InteractivePill>
         <InteractivePill active size="small" disabled={!isValid} onClick={onApply}>
-          Apply
+          {isZh ? '应用' : 'Apply'}
         </InteractivePill>
       </div>
     </div>
@@ -724,7 +741,7 @@ function toDateInputValue(date: Date) {
 function formatCustomRangeLabel(range: EnergyCustomRange, locale: string) {
   const start = parseDateInputValue(range.start);
   const end = parseDateInputValue(range.end);
-  if (!start || !end) return 'Custom range';
+  if (!start || !end) return locale.startsWith('zh') ? '自定义范围' : 'Custom range';
 
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();

@@ -52,6 +52,20 @@ export function evaluateAlerts(
         severity: rule.severity,
         message: rule.message,
         activeSince: since ?? new Date(now).toISOString(),
+        deviceName:
+          (typeof entity.entity.attributes.deviceName === 'string'
+            ? entity.entity.attributes.deviceName
+            : undefined) ?? entity.displayName,
+        room: entity.room,
+        currentValue: entity.entity.primaryState,
+        unit:
+          typeof (entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement) ===
+          'string'
+            ? String(entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement)
+            : undefined,
+        durationMs: Number.isFinite(sinceMs) ? Math.max(0, now - sinceMs) : 0,
+        lastUpdated: entity.entity.lastUpdated,
+        sourceEntityId: entity.entity.externalId,
       });
     }
   }
