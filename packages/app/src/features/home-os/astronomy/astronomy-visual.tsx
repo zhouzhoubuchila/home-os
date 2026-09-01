@@ -70,11 +70,12 @@ export function AstronomyVisual({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-current/10 p-3 ${
-        snapshot.isDay
-          ? 'bg-linear-to-br from-sky-400/25 to-amber-300/10'
-          : 'bg-linear-to-br from-indigo-950/55 to-slate-950/35'
-      }`}
+      className="overflow-hidden rounded-2xl border border-current/10 p-3"
+      style={{
+        background: snapshot.isDay
+          ? 'linear-gradient(135deg, rgb(56 189 248 / 0.25), rgb(252 211 77 / 0.1))'
+          : 'linear-gradient(135deg, rgb(30 27 75 / 0.55), rgb(2 6 23 / 0.35))',
+      }}
       data-astronomy-card="true"
       data-moon-phase={snapshot.moon.phase.toFixed(3)}
     >
@@ -92,17 +93,18 @@ export function AstronomyVisual({
           cx={sunX}
           cy={sunY}
           r="7"
-          className="fill-amber-300 transition-[cx,cy] duration-700 motion-reduce:transition-none"
+          className="transition-all motion-reduce:transition-none"
+          fill="#fcd34d"
         />
         <g transform="translate(164 18)">
-          <circle r="14" className="fill-slate-950 stroke-white/30" />
-          <circle cx={moonOffset} r="13" className="fill-slate-100" opacity="0.95" />
-          <circle r="14" fill="none" className="stroke-white/40" />
+          <circle r="14" fill="#020617" stroke="rgb(255 255 255 / 0.3)" />
+          <circle cx={moonOffset} r="13" fill="#f1f5f9" opacity="0.95" />
+          <circle r="14" fill="none" stroke="rgb(255 255 255 / 0.4)" />
         </g>
-        <text x="8" y="100" className="fill-current text-[9px]" opacity="0.65">
+        <text x="8" y="100" fill="currentColor" fontSize="9" opacity="0.65">
           {time(snapshot.sunrise)}
         </text>
-        <text x="168" y="100" className="fill-current text-[9px]" opacity="0.65">
+        <text x="168" y="100" fill="currentColor" fontSize="9" opacity="0.65">
           {time(snapshot.sunset)}
         </text>
       </svg>
