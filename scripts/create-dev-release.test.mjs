@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  cpSync,
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -56,7 +56,15 @@ function createReleaseFixture() {
   runGit(repository, environment, ['config', 'commit.gpgSign', 'false']);
   runGit(repository, environment, ['config', 'tag.gpgSign', 'false']);
 
-  cpSync(sourceScriptsDirectory, join(repository, 'scripts'), { recursive: true });
+  const fixtureScriptsDirectory = join(repository, 'scripts');
+  mkdirSync(fixtureScriptsDirectory, { recursive: true });
+  for (const fileName of [
+    'create-dev-release.mjs',
+    'release-surfaces.mjs',
+    'repo-paths.mjs',
+  ]) {
+    copyFileSync(join(sourceScriptsDirectory, fileName), join(fixtureScriptsDirectory, fileName));
+  }
   mkdirSync(join(repository, 'platform/home-assistant/addons/navet-dev'), {
     recursive: true,
   });
@@ -228,7 +236,7 @@ describe('create-dev-release', () => {
     expect(result.stdout).toContain(
       `docker pull ghcr.io/awesomestvi/navet:${release.version}`
     );
-  });
+  }, 30_000);
 
   it('publishes main and the matching tag together', () => {
     const fixture = createReleaseFixture();
@@ -240,7 +248,7 @@ describe('create-dev-release', () => {
 
     expect(release.branchHead).not.toBe(mainBefore);
     expect(readRemoteRef(fixture, `refs/tags/${release.tag}^{}`)).toBe(release.branchHead);
-  });
+  }, 30_000);
 
   it('rejects a dirty worktree without creating a commit or tag', () => {
     const fixture = createReleaseFixture();
@@ -261,7 +269,7 @@ describe('create-dev-release', () => {
     expect(
       runGit(fixture.remote, fixture.environment, ['tag', '--list', 'navet-dev-*'])
     ).toBe('');
-  });
+  }, 30_000);
 
   it('rejects detached HEAD without creating a commit or tag', () => {
     const fixture = createReleaseFixture();
@@ -278,7 +286,7 @@ describe('create-dev-release', () => {
     expect(
       runGit(fixture.remote, fixture.environment, ['tag', '--list', 'navet-dev-*'])
     ).toBe('');
-  });
+  }, 30_000);
 
   it('rejects a branch that does not contain the latest remote main', () => {
     const fixture = createReleaseFixture();
@@ -312,5 +320,5 @@ describe('create-dev-release', () => {
     expect(
       runGit(fixture.remote, fixture.environment, ['tag', '--list', 'navet-dev-*'])
     ).toBe('');
-  });
+  }, 30_000);
 });

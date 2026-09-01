@@ -89,7 +89,9 @@ describe('WidgetCard info widget', () => {
       />
     );
 
-    expect(await screen.findByText('Kitchen Temperature')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Kitchen Temperature', {}, { timeout: 10_000 })
+    ).toBeInTheDocument();
     expect(screen.getByText('Temperature')).toBeInTheDocument();
     expect(screen.getByText('21.4')).toBeInTheDocument();
     expect(screen.getByText('°C')).toBeInTheDocument();

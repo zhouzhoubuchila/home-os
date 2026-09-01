@@ -19,6 +19,59 @@ function explicitCandidates(entity: NavetEntity): SemanticCandidate[] {
     .map((role) => candidate(role, 1, 'explicit_metadata', 'explicit Home OS metadata'));
 }
 
+function metadataText(entity: NavetEntity) {
+  const attributes = entity.attributes;
+  return [
+    entity.externalId,
+    entity.name,
+    entity.room,
+    attributes.integration,
+    attributes.platform,
+    attributes.deviceName,
+    attributes.device_name,
+    attributes.model,
+    attributes.manufacturer,
+    attributes.viaDeviceName,
+    attributes.via_device_name,
+  ]
+    .map(readString)
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function pveRole(name: string, deviceClass: string, unit: string) {
+  if (deviceClass === 'temperature' || unit === '°c' || /temperature|temp(?:erature)?\b/.test(name))
+    return HOME_OS_ROLES.homelabPveTemperature;
+  if (/backup.*progress|progress.*backup/.test(name)) return HOME_OS_ROLES.homelabPveBackupProgress;
+  if (/version/.test(name)) return HOME_OS_ROLES.homelabPveVersion;
+  if (/uptime|running time/.test(name)) return HOME_OS_ROLES.homelabPveUptime;
+  if (/lxc.*running|container.*running/.test(name)) return HOME_OS_ROLES.homelabPveContainerRunning;
+  if (/lxc.*total|container.*total/.test(name)) return HOME_OS_ROLES.homelabPveContainerTotal;
+  if (/vm.*running|qemu.*running/.test(name)) return HOME_OS_ROLES.homelabPveVmRunning;
+  if (/vm.*total|qemu.*total/.test(name)) return HOME_OS_ROLES.homelabPveVmTotal;
+  if (/memory.*used|used.*memory|ram.*used/.test(name)) return HOME_OS_ROLES.homelabPveMemoryUsed;
+  if (/memory.*total|total.*memory|ram.*total/.test(name))
+    return HOME_OS_ROLES.homelabPveMemoryTotal;
+  if (/memory|\bram\b/.test(name)) return HOME_OS_ROLES.homelabPveMemory;
+  if (/storage.*used|disk.*used|used.*storage/.test(name))
+    return HOME_OS_ROLES.homelabPveStorageUsed;
+  if (/storage.*total|disk.*total|total.*storage/.test(name))
+    return HOME_OS_ROLES.homelabPveStorageTotal;
+  if (/storage|disk|filesystem/.test(name)) return HOME_OS_ROLES.homelabPveStorage;
+  if (/load/.test(name)) return HOME_OS_ROLES.homelabPveLoad;
+  if (/cpu|processor/.test(name)) return HOME_OS_ROLES.homelabPveCpu;
+  if (/status|state/.test(name)) return HOME_OS_ROLES.homelabPveStatus;
+  return HOME_OS_ROLES.homelabPveOnline;
+}
+
+function isApplianceInternalTemperature(name: string, entityCategory: string) {
+  return (
+    entityCategory === 'diagnostic' ||
+    /freezer|refrigerator|fridge|冷冻|冷藏|冰箱|compressor|device internal|内部温度/.test(name)
+  );
+}
+
 export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   const explicit = explicitCandidates(entity);
   if (explicit.length) return explicit;
@@ -31,8 +84,29 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   const unit = readString(
     entity.attributes.unit ?? entity.attributes.unit_of_measurement
   ).toLowerCase();
-  const name = `${entity.externalId} ${entity.name}`.toLowerCase();
+  const name = metadataText(entity);
+  const entityCategory = readString(
+    entity.attributes.entityCategory ?? entity.attributes.entity_category
+  ).toLowerCase();
   const result: SemanticCandidate[] = [];
+
+  // Stable device and integration context is authoritative over generic metric semantics.
+  const pveContext =
+    integration.includes('proxmox') ||
+    integration.includes('pve') ||
+    /\bproxmox\b|\bpve\b|proxmoxve/.test(name);
+  if (pveContext) {
+    result.push(
+      candidate(
+        pveRole(name, deviceClass, unit),
+        integration.includes('proxmox') ? 0.99 : 0.94,
+        integration ? 'integration' : 'device_metadata',
+        integration ? `integration=${integration}` : 'device context=PVE',
+        deviceClass ? `device_class=${deviceClass}` : 'metric inferred from stable device context'
+      )
+    );
+    return result;
+  }
 
   if (domain === 'person') {
     result.push(candidate(HOME_OS_ROLES.familyPerson, 0.99, 'domain', 'domain=person'));
@@ -55,7 +129,6 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   }
 
   const deviceClassRoles: Record<string, string> = {
-    temperature: HOME_OS_ROLES.environmentTemperature,
     humidity: HOME_OS_ROLES.environmentHumidity,
     door: HOME_OS_ROLES.securityDoor,
     garage_door: HOME_OS_ROLES.securityDoor,
@@ -69,21 +142,22 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     pm25: HOME_OS_ROLES.environmentPm25,
     carbon_dioxide: HOME_OS_ROLES.environmentCo2,
   };
+  if (deviceClass === 'temperature') {
+    result.push(
+      candidate(
+        isApplianceInternalTemperature(name, entityCategory)
+          ? HOME_OS_ROLES.applianceInternalTemperature
+          : HOME_OS_ROLES.environmentTemperature,
+        entityCategory === 'diagnostic' ? 0.99 : 0.96,
+        'device_metadata',
+        `device_class=${deviceClass}`,
+        entityCategory ? `entity_category=${entityCategory}` : 'environmental sensor context'
+      )
+    );
+  }
   const roleFromClass = deviceClassRoles[deviceClass];
   if (roleFromClass) {
     result.push(candidate(roleFromClass, 0.96, 'device_metadata', `device_class=${deviceClass}`));
-  }
-
-  if (integration.includes('proxmox')) {
-    const role =
-      deviceClass === 'temperature' || unit === '°c'
-        ? HOME_OS_ROLES.homelabPveTemperature
-        : name.includes('memory')
-          ? HOME_OS_ROLES.homelabPveMemory
-          : name.includes('cpu')
-            ? HOME_OS_ROLES.homelabPveCpu
-            : HOME_OS_ROLES.homelabPveOnline;
-    result.push(candidate(role, 0.94, 'integration', `integration=${integration}`));
   }
 
   if (integration.includes('home_assistant') || integration.includes('systemmonitor')) {

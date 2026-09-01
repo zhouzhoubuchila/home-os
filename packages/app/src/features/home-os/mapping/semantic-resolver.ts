@@ -1,7 +1,7 @@
 import type { NavetEntity } from '@navet/core/types';
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../core/types';
 import { classifyEntity } from './auto-classifier';
-import { needsMappingReview } from './confidence';
+import { shouldSurfaceMappingReview } from './confidence';
 import { findManualMapping } from './manual-overrides';
 
 export function resolveSemanticEntity(
@@ -13,6 +13,25 @@ export function resolveSemanticEntity(
   const roles = mapping?.semanticRoles ?? candidates.map(({ role }) => role);
   const confidence = mapping ? 1 : (candidates[0]?.confidence ?? 0);
   const ignored = mapping?.ignored === true;
+  const entityCategory = String(
+    entity.attributes.entityCategory ?? entity.attributes.entity_category ?? ''
+  ).toLowerCase();
+  const diagnostic =
+    mapping?.displayMode === 'diagnostic' ||
+    entityCategory === 'diagnostic' ||
+    (roles.length > 0 && roles.every((role) => role.startsWith('diagnostic.')));
+  const needsReview = !mapping && shouldSurfaceMappingReview({ confidence, roles, diagnostic });
+  const reviewDisposition = ignored
+    ? 'ignored'
+    : diagnostic
+      ? 'diagnostic'
+      : mapping
+        ? 'mapped'
+        : needsReview
+          ? 'review'
+          : roles.length
+            ? 'mapped'
+            : 'unmapped';
   return {
     entity,
     candidates,
@@ -25,10 +44,12 @@ export function resolveSemanticEntity(
     room: mapping?.roomOverride?.trim() || entity.room,
     displayMode: ignored
       ? 'hidden'
-      : (mapping?.displayMode ?? (mapping?.hidden ? 'hidden' : 'primary')),
+      : (mapping?.displayMode ??
+        (mapping?.hidden ? 'hidden' : diagnostic ? 'diagnostic' : 'primary')),
     controlPolicy: mapping?.controlPolicy ?? 'direct',
     ignored,
-    needsReview: !mapping && needsMappingReview(confidence, roles.length > 0),
+    needsReview,
+    reviewDisposition,
   };
 }
 

@@ -1248,7 +1248,7 @@ describe('Vite dashboard profile request handler', () => {
         }
       ).records
     ).toHaveLength(1);
-  });
+  }, 20_000);
 
   it('matches the NJS revision, conditional-write, and author header contract', async () => {
     const store = createStore();

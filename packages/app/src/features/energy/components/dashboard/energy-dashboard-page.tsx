@@ -495,6 +495,7 @@ function EnergyInsightsRangeControl({
   onRangeChange: (range: EnergyHistoryRange) => void;
   range: EnergyHistoryRange;
 }) {
+  const { locale } = useI18n();
   const { theme, accentColor } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const isPhone = useMediaQuery('(max-width: 639px)');
@@ -594,11 +595,11 @@ function EnergyInsightsRangeControl({
         {range === 'custom' ? (
           <InteractivePill
             active
-            aria-label={`Clear custom range ${formatCustomRangeLabel(customRange)}`}
+            aria-label={`Clear custom range ${formatCustomRangeLabel(customRange, locale)}`}
             size="small"
             onClick={onClearCustomRange}
           >
-            <span>{formatCustomRangeLabel(customRange)}</span>
+            <span>{formatCustomRangeLabel(customRange, locale)}</span>
             <X className="h-4 w-4" aria-hidden="true" />
           </InteractivePill>
         ) : null}
@@ -720,7 +721,7 @@ function toDateInputValue(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatCustomRangeLabel(range: EnergyCustomRange) {
+function formatCustomRangeLabel(range: EnergyCustomRange, locale: string) {
   const start = parseDateInputValue(range.start);
   const end = parseDateInputValue(range.end);
   if (!start || !end) return 'Custom range';
@@ -728,10 +729,10 @@ function formatCustomRangeLabel(range: EnergyCustomRange) {
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();
   const currentYear = new Date().getFullYear();
-  const monthDay = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  const monthDay = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' });
 
   if (sameMonth) {
-    const month = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(start);
+    const month = new Intl.DateTimeFormat(locale, { month: 'short' }).format(start);
     const year = sameYear && start.getFullYear() !== currentYear ? `, ${start.getFullYear()}` : '';
     return `${month} ${start.getDate()}–${end.getDate()}${year}`;
   }

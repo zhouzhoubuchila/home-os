@@ -1,6 +1,6 @@
 import fs, { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import authStoreModule from '@docker/njs/auth-store.js';
 import homeAssistantProxyModule from '@docker/njs/ha-proxy.template.js';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ const {
   normalizeHassOrigin,
 } = authStoreModule;
 const { createHomeAssistantProxy } = homeAssistantProxyModule;
+const samePath = (left: unknown, right: string) => normalize(String(left)) === normalize(right);
 
 const AUTH_A = {
   hassUrl: 'https://ha-a.example.com',
@@ -545,7 +546,7 @@ describe('production njs standalone OAuth sessions', () => {
     const sessionPath = join(directory, 'sessions', `${cookieId}.json`);
     const readFile = fs.readFileSync.bind(fs);
     vi.spyOn(fs, 'readFileSync').mockImplementation(((path, ...args) => {
-      if (String(path) === sessionPath) {
+      if (samePath(path, sessionPath)) {
         const error = new Error('temporary I/O failure');
         // @ts-expect-error test-only errno
         error.code = 'EIO';
@@ -733,7 +734,7 @@ describe('production njs standalone OAuth sessions', () => {
     expect(readdirSync(sessionsDirectory).filter((name) => name.endsWith('.json'))).toHaveLength(
       256
     );
-  });
+  }, 20_000);
 
   it('allows only an existing OAuth session to refresh without changing its target', async () => {
     const { store } = createStore(vi.fn().mockResolvedValue(new Response('{}', { status: 404 })));

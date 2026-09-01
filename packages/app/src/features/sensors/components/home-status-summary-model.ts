@@ -45,7 +45,7 @@ export interface StatusSummaryOptions {
 }
 
 const NON_AMBIENT_CLIMATE_SENSOR_PATTERN =
-  /\b(boiler|water_heater|water heater|hot water|tank|cylinder|supply|return|flow temp|outside|outdoor|exterior|weather|processor|cpu|system monitor|system_monitor|device temperature|internal)\b/;
+  /\b(boiler|water_heater|water heater|hot water|tank|cylinder|supply|return|flow temp|outside|outdoor|exterior|weather|processor|cpu|pve|proxmox|freezer|refrigerator|fridge|system monitor|system_monitor|device temperature|internal)\b|冷冻|冷藏|冰箱|内部温度/;
 const AMBIENT_FAHRENHEIT_INFERENCE_THRESHOLD = 45;
 
 function getNumber(value: unknown): number | null {

@@ -1,10 +1,12 @@
 import { Button, Input, ModalSurface, Select } from '@navet/app/components/primitives';
-import { useI18n } from '@navet/app/hooks';
+import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
+import { useI18n, useTheme } from '@navet/app/hooks';
 import type { NavetEntity } from '@navet/core/types';
 import { useEffect, useState } from 'react';
 import { HOME_OS_ROLES, type SemanticRole } from '../../core/semantic-roles';
 import type { ControlPolicy, DisplayMode, ManualEntityMapping } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import { classifyEntity } from '../../mapping/auto-classifier';
 
 const ROLE_OPTIONS = Object.values(HOME_OS_ROLES);
 
@@ -25,6 +27,8 @@ export function MappingEditorDialog({
 }: MappingEditorDialogProps) {
   const { language } = useI18n();
   const copy = getHomeOsCopy(language);
+  const { theme } = useTheme();
+  const surface = getThemeSurfaceTokens(theme);
   const [role, setRole] = useState<SemanticRole>('');
   const [displayName, setDisplayName] = useState('');
   const [roomOverride, setRoomOverride] = useState('');
@@ -45,7 +49,8 @@ export function MappingEditorDialog({
 
   if (!entity) return null;
 
-  const labelClassName = 'grid gap-1.5 text-sm font-medium';
+  const automatic = classifyEntity(entity)[0];
+  const labelClassName = `grid gap-1.5 text-sm font-medium ${surface.textPrimary}`;
   return (
     <ModalSurface
       isOpen
@@ -81,6 +86,17 @@ export function MappingEditorDialog({
           });
         }}
       >
+        <div className={`rounded-2xl border p-3 text-sm ${surface.border} ${surface.subtleBg}`}>
+          <p className={`font-medium ${surface.textPrimary}`}>
+            {copy.autoRole}: {automatic?.role ?? copy.unmapped}
+          </p>
+          <p className={`mt-1 ${surface.textSecondary}`}>
+            {copy.confidence}: {Math.round((automatic?.confidence ?? 0) * 100)}%
+          </p>
+          <p className={`mt-1 ${surface.textMuted}`}>
+            {copy.reason}: {automatic?.reasons.join(' · ') || copy.noClassificationReason}
+          </p>
+        </div>
         <label className={labelClassName} htmlFor="home-os-role">
           {copy.semanticRole}
           <Select id="home-os-role" value={role} onChange={(event) => setRole(event.target.value)}>
