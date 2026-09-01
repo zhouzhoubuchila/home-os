@@ -1,6 +1,6 @@
 import type { HomeOsAlertRuleConfig } from '../config/schema';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
-import { HOME_OS_COPY } from '../i18n/home-os-copy';
+import { getHomeOsCopy, HOME_OS_COPY } from '../i18n/home-os-copy';
 
 export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
   {
@@ -46,3 +46,18 @@ export const DEFAULT_HOME_OS_ALERT_RULES: readonly HomeOsAlertRuleConfig[] = [
     message: HOME_OS_COPY.pveTemperatureHigh,
   },
 ];
+
+export function getDefaultHomeOsAlertRules(language: string): readonly HomeOsAlertRuleConfig[] {
+  const copy = getHomeOsCopy(language);
+  const messages: Record<string, string> = {
+    'water-leak': copy.waterLeakDetected,
+    smoke: copy.smokeDetected,
+    'door-open': copy.doorOpen,
+    'battery-low': copy.batteryLow,
+    'pve-temperature': copy.pveTemperatureHigh,
+  };
+  return DEFAULT_HOME_OS_ALERT_RULES.map((rule) => ({
+    ...rule,
+    message: messages[rule.id] ?? rule.message,
+  }));
+}

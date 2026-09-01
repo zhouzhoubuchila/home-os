@@ -4,6 +4,7 @@ import {
   getAppBuildChannelLabel,
 } from '@navet/app/constants/app-build-metadata';
 import { APP_VERSION } from '@navet/app/constants/app-version';
+import { HOME_OS_VERSION } from '@navet/app/features/home-os/core/version';
 import { useI18n } from '@navet/app/hooks';
 import { ExternalLink, FileText, Info, Scale } from 'lucide-react';
 import type { ReactNode, SVGProps } from 'react';
@@ -134,7 +135,7 @@ export function SettingsProjectSection({ controller }: SettingsProjectSectionPro
               }
               styles={styles}
             />
-            <CompactMetaRow label="Home OS" value="2.0.1" styles={styles} />
+            <CompactMetaRow label="Home OS" value={HOME_OS_VERSION} styles={styles} />
             <CompactMetaRow
               label="Home OS build"
               value={

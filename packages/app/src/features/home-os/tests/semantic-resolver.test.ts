@@ -77,7 +77,7 @@ describe('semantic resolver', () => {
       })
     );
     expect(room.roles).toContain(HOME_OS_ROLES.environmentTemperature);
-    expect(freezer.roles).toContain(HOME_OS_ROLES.applianceInternalTemperature);
+    expect(freezer.roles).toContain(HOME_OS_ROLES.applianceRefrigerationTemperature);
     expect(freezer.roles).not.toContain(HOME_OS_ROLES.environmentTemperature);
   });
 

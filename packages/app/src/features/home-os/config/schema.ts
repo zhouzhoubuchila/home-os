@@ -1,4 +1,4 @@
-import type { ManualEntityMapping } from '../core/types';
+import type { HomeOsFunctionalDevice, ManualEntityMapping } from '../core/types';
 
 export const HOME_OS_CONFIG_SCHEMA_VERSION = 2 as const;
 
@@ -30,6 +30,7 @@ export interface HomeOsConfig {
   updatedAt: string;
   mappings: ManualEntityMapping[];
   physicalDevices: HomeOsPhysicalDeviceConfig[];
+  functionalDevices?: HomeOsFunctionalDevice[];
   alertRules: HomeOsAlertRuleConfig[];
   cardPreferences: Record<string, { hidden?: boolean; size?: 'small' | 'medium' | 'large' }>;
 }
@@ -41,6 +42,7 @@ export function createDefaultHomeOsConfig(now = new Date().toISOString()): HomeO
     updatedAt: now,
     mappings: [],
     physicalDevices: [],
+    functionalDevices: [],
     alertRules: [],
     cardPreferences: {},
   };
@@ -103,6 +105,35 @@ function isPhysicalDevice(value: unknown): value is HomeOsPhysicalDeviceConfig {
   );
 }
 
+function isFunctionalDevice(value: unknown): value is HomeOsFunctionalDevice {
+  if (!isRecord(value) || !isRecord(value.metrics)) return false;
+  const controls = value.controls;
+  return (
+    typeof value.id === 'string' &&
+    [
+      'light',
+      'router',
+      'pve',
+      'energy_meter',
+      'gas_account',
+      'person',
+      'vacuum',
+      'appliance',
+    ].includes(String(value.kind)) &&
+    typeof value.name === 'string' &&
+    isOptionalString(value.room) &&
+    isOptionalString(value.stateEntityId) &&
+    isStringArray(value.sourceEntityIds) &&
+    Object.values(value.metrics).every((entry) => typeof entry === 'string') &&
+    (controls === undefined ||
+      (isRecord(controls) &&
+        ['on', 'off', 'toggle', 'brightness', 'colorTemperature', 'color'].every((key) =>
+          isOptionalString(controls[key])
+        ))) &&
+    (value.manual === undefined || typeof value.manual === 'boolean')
+  );
+}
+
 function isAlertRule(value: unknown): value is HomeOsAlertRuleConfig {
   if (!isRecord(value) || !isRecord(value.condition)) return false;
   const condition = value.condition;
@@ -134,6 +165,12 @@ export function isHomeOsConfig(value: unknown): value is HomeOsConfig {
   if (!Number.isInteger(value.revision) || typeof value.updatedAt !== 'string') return false;
   if (!Array.isArray(value.mappings) || !Array.isArray(value.physicalDevices)) return false;
   if (!Array.isArray(value.alertRules) || !isRecord(value.cardPreferences)) return false;
+  if (
+    value.functionalDevices !== undefined &&
+    (!Array.isArray(value.functionalDevices) || !value.functionalDevices.every(isFunctionalDevice))
+  ) {
+    return false;
+  }
   if (!value.mappings.every(isManualMapping) || !value.physicalDevices.every(isPhysicalDevice)) {
     return false;
   }

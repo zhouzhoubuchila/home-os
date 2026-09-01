@@ -6,7 +6,16 @@ export const clampConfidence = (value: number) => Math.max(0, Math.min(1, value)
 export const needsMappingReview = (confidence: number, hasRoles: boolean) =>
   !hasRoles || confidence < AUTO_ACCEPT_CONFIDENCE;
 
-const IMPORTANT_REVIEW_PREFIXES = ['lighting.', 'family.', 'energy.', 'homelab.', 'security.'];
+const IMPORTANT_REVIEW_PREFIXES = [
+  'lighting.',
+  'family.',
+  'energy.',
+  'homelab.',
+  'security.',
+  'environment.',
+  'appliance.',
+  'device.',
+];
 
 export function shouldSurfaceMappingReview({
   confidence,

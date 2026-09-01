@@ -65,10 +65,44 @@ function pveRole(name: string, deviceClass: string, unit: string) {
   return HOME_OS_ROLES.homelabPveOnline;
 }
 
-function isApplianceInternalTemperature(name: string, entityCategory: string) {
-  return (
-    entityCategory === 'diagnostic' ||
-    /freezer|refrigerator|fridge|冷冻|冷藏|冰箱|compressor|device internal|内部温度/.test(name)
+const REFRIGERATION_HINTS =
+  /freezer|refrigerator|fridge|refrigeration|冷冻|冷藏|冰箱|制冷室|冷冻室|冷藏室|compressor/;
+const INTERNAL_DEVICE_HINTS =
+  /router|gateway|openwrt|immortalwrt|chip|board|mcu|soc|路由|网关|芯片|板载|device internal|内部温度/;
+const ENVIRONMENT_HINTS =
+  /living|bedroom|study|balcony|room|ambient|outdoor|indoor|客厅|卧室|书房|次卧|阳台|室内|室外|环境/;
+const LIGHTING_NEGATIVE_HINTS = /down.?light|light|lamp|灯|筒灯|照明/;
+
+function temperatureCandidate(
+  name: string,
+  entityCategory: string,
+  hasRoomContext: boolean
+): SemanticCandidate {
+  if (REFRIGERATION_HINTS.test(name)) {
+    return candidate(
+      HOME_OS_ROLES.applianceRefrigerationTemperature,
+      0.99,
+      'device_metadata',
+      'device_class=temperature',
+      'refrigeration device context'
+    );
+  }
+  if (entityCategory === 'diagnostic' || INTERNAL_DEVICE_HINTS.test(name)) {
+    return candidate(
+      HOME_OS_ROLES.deviceInternalTemperature,
+      0.97,
+      'device_metadata',
+      'device_class=temperature',
+      entityCategory === 'diagnostic' ? 'entity_category=diagnostic' : 'internal device context'
+    );
+  }
+  const environmentalContext = hasRoomContext || ENVIRONMENT_HINTS.test(name);
+  return candidate(
+    HOME_OS_ROLES.environmentTemperature,
+    environmentalContext ? 0.96 : 0.68,
+    'device_metadata',
+    'device_class=temperature',
+    environmentalContext ? 'residential environment context' : 'environment context not confirmed'
   );
 }
 
@@ -143,21 +177,23 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     carbon_dioxide: HOME_OS_ROLES.environmentCo2,
   };
   if (deviceClass === 'temperature') {
-    result.push(
-      candidate(
-        isApplianceInternalTemperature(name, entityCategory)
-          ? HOME_OS_ROLES.applianceInternalTemperature
-          : HOME_OS_ROLES.environmentTemperature,
-        entityCategory === 'diagnostic' ? 0.99 : 0.96,
-        'device_metadata',
-        `device_class=${deviceClass}`,
-        entityCategory ? `entity_category=${entityCategory}` : 'environmental sensor context'
-      )
-    );
+    result.push(temperatureCandidate(name, entityCategory, Boolean(entity.room?.trim())));
   }
   const roleFromClass = deviceClassRoles[deviceClass];
   if (roleFromClass) {
-    result.push(candidate(roleFromClass, 0.96, 'device_metadata', `device_class=${deviceClass}`));
+    const hasLightingConflict =
+      roleFromClass === HOME_OS_ROLES.securityDoor && LIGHTING_NEGATIVE_HINTS.test(name);
+    result.push(
+      candidate(
+        roleFromClass,
+        hasLightingConflict ? 0.65 : 0.96,
+        'device_metadata',
+        `device_class=${deviceClass}`,
+        hasLightingConflict
+          ? 'negative evidence: lighting device context conflicts with door semantics'
+          : 'device context has no semantic conflict'
+      )
+    );
   }
 
   if (integration.includes('home_assistant') || integration.includes('systemmonitor')) {
@@ -176,7 +212,15 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
       ? HOME_OS_ROLES.networkRouterClients
       : name.includes('uptime')
         ? HOME_OS_ROLES.networkRouterUptime
-        : HOME_OS_ROLES.networkRouterOnline;
+        : name.includes('cpu')
+          ? HOME_OS_ROLES.networkRouterCpu
+          : name.includes('memory') || name.includes('ram')
+            ? HOME_OS_ROLES.networkRouterMemory
+            : name.includes('upload') || name.includes('上传')
+              ? HOME_OS_ROLES.networkRouterUpload
+              : name.includes('download') || name.includes('下载')
+                ? HOME_OS_ROLES.networkRouterDownload
+                : HOME_OS_ROLES.networkRouterOnline;
     result.push(candidate(role, 0.92, 'integration', `integration=${integration}`));
   }
 

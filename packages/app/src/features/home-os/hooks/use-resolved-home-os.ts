@@ -2,6 +2,7 @@ import { useIntegrationStore } from '@navet/app/hooks';
 import { integrationSelectors } from '@navet/app/stores/selectors';
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { buildHomeOsIndexes } from '../mapping/home-os-indexes';
 import { resolveSemanticEntities } from '../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../stores/home-os-config-store';
 
@@ -11,6 +12,7 @@ let cachedEntityRecord: ReturnType<
 let cachedMappings: ReturnType<typeof useHomeOsConfigStore.getState>['config']['mappings'] | null =
   null;
 let cachedResolved: ReturnType<typeof resolveSemanticEntities> = [];
+let cachedIndexes = buildHomeOsIndexes(cachedResolved);
 
 function resolveSharedModel(
   entitiesById: ReturnType<typeof integrationSelectors.providerEntitiesByCanonicalId>,
@@ -20,6 +22,7 @@ function resolveSharedModel(
   cachedEntityRecord = entitiesById;
   cachedMappings = mappings;
   cachedResolved = resolveSemanticEntities(Object.values(entitiesById), mappings);
+  cachedIndexes = buildHomeOsIndexes(cachedResolved);
   return cachedResolved;
 }
 
@@ -35,4 +38,9 @@ export function useResolvedHomeOsEntities() {
     () => resolveSharedModel(entitiesById, config.mappings),
     [config.mappings, entitiesById]
   );
+}
+
+export function useHomeOsIndexes() {
+  useResolvedHomeOsEntities();
+  return cachedIndexes;
 }

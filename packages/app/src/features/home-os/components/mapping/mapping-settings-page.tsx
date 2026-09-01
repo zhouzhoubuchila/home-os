@@ -12,6 +12,7 @@ import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-impo
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { upsertManualMapping } from '../../mapping/manual-overrides';
+import { buildHomeOsMappingSearchIndex } from '../../mapping/search-index';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
@@ -57,6 +58,8 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const [confirmReset, setConfirmReset] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [batchPhysicalDeviceId, setBatchPhysicalDeviceId] = useState('');
+  const [circuitName, setCircuitName] = useState('');
+  const [circuitRoom, setCircuitRoom] = useState('');
   const [batchDisplayMode, setBatchDisplayMode] =
     useState<ManualEntityMapping['displayMode']>('detail');
   const [visibleLimit, setVisibleLimit] = useState(160);
@@ -69,17 +72,10 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     () => resolveSemanticEntities(Object.values(entitiesById), config.mappings),
     [config.mappings, entitiesById]
   );
+  const searchIndex = useMemo(() => buildHomeOsMappingSearchIndex(resolved), [resolved]);
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return resolved.filter(
-      (item) =>
-        matchesFilter(item, filter) &&
-        (!needle ||
-          item.displayName.toLowerCase().includes(needle) ||
-          item.entity.externalId.toLowerCase().includes(needle) ||
-          item.roles.some((role) => role.toLowerCase().includes(needle)))
-    );
-  }, [filter, query, resolved]);
+    return searchIndex.search(query).filter((item) => matchesFilter(item, filter));
+  }, [filter, query, searchIndex]);
   const existing = editing
     ? config.mappings.find((mapping) => mapping.entityId === editing.externalId)
     : undefined;
@@ -95,8 +91,29 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       manual: resolved.filter((item) => item.source === 'manual').length,
       ignored: resolved.filter((item) => item.ignored).length,
       diagnostic: resolved.filter((item) => item.reviewDisposition === 'diagnostic').length,
+      pve: resolved.filter((item) => item.roles.some((role) => role.startsWith('homelab.pve.')))
+        .length,
+      router: resolved.filter((item) =>
+        item.roles.some((role) => role.startsWith('network.router.'))
+      ).length,
+      internet: resolved.filter((item) =>
+        item.roles.some((role) => role.startsWith('network.internet.'))
+      ).length,
+      lightingCircuits: (config.functionalDevices ?? []).filter((item) => item.kind === 'light')
+        .length,
+      environmentTemperature: resolved.filter((item) =>
+        item.roles.includes('environment.temperature')
+      ).length,
+      refrigerationTemperature: resolved.filter((item) =>
+        item.roles.includes('appliance.refrigeration_temperature')
+      ).length,
+      pveTemperature: resolved.filter((item) => item.roles.includes('homelab.pve.temperature'))
+        .length,
+      internalTemperature: resolved.filter((item) =>
+        item.roles.includes('device.internal_temperature')
+      ).length,
     }),
-    [resolved]
+    [config.functionalDevices, resolved]
   );
 
   const batchUpdate = async (ignored: boolean) => {
@@ -123,6 +140,45 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     }, config.mappings);
     await useHomeOsConfigStore.getState().save({ ...config, mappings });
     setSelectedIds(new Set());
+  };
+
+  const createLightingCircuit = async () => {
+    const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
+    const byDomain = (domain: string) =>
+      selected.find((item) => item.entity.externalId.startsWith(`${domain}.`))?.entity.externalId;
+    const namedButton = (pattern: RegExp) =>
+      selected.find(
+        (item) =>
+          item.entity.externalId.startsWith('button.') &&
+          pattern.test(`${item.entity.externalId} ${item.displayName}`.toLowerCase())
+      )?.entity.externalId;
+    const stateEntityId = byDomain('binary_sensor') ?? byDomain('light') ?? byDomain('switch');
+    const toggle = byDomain('light') ?? byDomain('switch') ?? namedButton(/toggle|\u5207\u6362/);
+    const on = namedButton(/(?:^|[._ ])on(?:$|[._ ])|\u5f00\u542f|\u6253\u5f00/);
+    const off = namedButton(/(?:^|[._ ])off(?:$|[._ ])|\u5173\u95ed/);
+    const brightness = byDomain('number');
+    const name = circuitName.trim() || selected[0]?.displayName || copy.newLightingCircuit;
+    const id = `light-circuit-${Date.now().toString(36)}`;
+    await useHomeOsConfigStore.getState().save({
+      ...config,
+      functionalDevices: [
+        ...(config.functionalDevices ?? []),
+        {
+          id,
+          kind: 'light',
+          name,
+          room: circuitRoom.trim() || selected.find((item) => item.room)?.room,
+          stateEntityId,
+          controls: { on, off, toggle, brightness },
+          metrics: {},
+          sourceEntityIds: selected.map((item) => item.entity.externalId),
+          manual: true,
+        },
+      ],
+    });
+    setSelectedIds(new Set());
+    setCircuitName('');
+    setCircuitRoom('');
   };
 
   const ignore = async (item: ResolvedSemanticEntity) => {
@@ -257,9 +313,22 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         <span>
           {copy.diagnostic}: {diagnostics.diagnostic}
         </span>
+        <span>PVE: {diagnostics.pve}</span>
+        <span>
+          {copy.router}: {diagnostics.router}
+        </span>
+        <span>Internet: {diagnostics.internet}</span>
+        <span>
+          {copy.lightingCircuits}: {diagnostics.lightingCircuits}
+        </span>
+        <span>
+          {copy.temperatureDiagnostics}: {diagnostics.environmentTemperature} /{' '}
+          {diagnostics.refrigerationTemperature} / {diagnostics.pveTemperature} /{' '}
+          {diagnostics.internalTemperature}
+        </span>
       </div>
       {selectedIds.size ? (
-        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
           <Input
             value={batchPhysicalDeviceId}
             onChange={(event) => setBatchPhysicalDeviceId(event.target.value)}
@@ -293,6 +362,26 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
             onClick={() => void batchUpdate(true)}
           >
             {copy.ignoreBatch}
+          </Button>
+          <Input
+            value={circuitName}
+            onChange={(event) => setCircuitName(event.target.value)}
+            placeholder={copy.lightingCircuitName}
+            aria-label={copy.lightingCircuitName}
+          />
+          <Input
+            value={circuitRoom}
+            onChange={(event) => setCircuitRoom(event.target.value)}
+            placeholder={copy.lightingCircuitRoom}
+            aria-label={copy.lightingCircuitRoom}
+          />
+          <Button
+            size="small"
+            variant="secondary"
+            loading={saving}
+            onClick={() => void createLightingCircuit()}
+          >
+            {copy.createLightingCircuit} ({selectedIds.size})
           </Button>
         </div>
       ) : null}

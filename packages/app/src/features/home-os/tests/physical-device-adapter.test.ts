@@ -76,4 +76,39 @@ describe('physical device adapter', () => {
     expect(device?.freshness).toBe('stale');
     expect(device?.health).toBe('warning');
   });
+
+  it('groups PVE metrics by stable device context without manual configuration', () => {
+    const devices = buildPhysicalDevices(
+      resolveSemanticEntities([
+        homeOsEntity({
+          externalId: 'sensor.pve_cpu',
+          primaryState: 18,
+          attributes: { integration: 'proxmoxve', deviceName: 'PVE Node 1' },
+        }),
+        homeOsEntity({
+          externalId: 'sensor.pve_memory',
+          primaryState: 42,
+          attributes: { integration: 'proxmoxve', deviceName: 'PVE Node 1' },
+        }),
+        homeOsEntity({
+          externalId: 'sensor.pve_temperature',
+          primaryState: 55,
+          attributes: {
+            integration: 'proxmoxve',
+            deviceName: 'PVE Node 1',
+            deviceClass: 'temperature',
+          },
+        }),
+      ])
+    );
+    expect(devices).toHaveLength(1);
+    expect(devices[0]?.name).toBe('PVE Node 1');
+    expect(Object.keys(devices[0]?.semanticMetrics ?? {})).toEqual(
+      expect.arrayContaining([
+        HOME_OS_ROLES.homelabPveCpu,
+        HOME_OS_ROLES.homelabPveMemory,
+        HOME_OS_ROLES.homelabPveTemperature,
+      ])
+    );
+  });
 });

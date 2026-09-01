@@ -731,14 +731,15 @@ function buildSummary(
         ? 'warn'
         : 'default';
 
-  const summary: EnergyDashboardModel['summary'] = [
-    {
+  const summary: EnergyDashboardModel['summary'] = [];
+  if (dataCoverage.hasLiveLoad) {
+    summary.push({
       id: 'load',
       label: t('energy.model.summary.liveHomeLoad'),
       value: formatEnergyValue(overview.totals.currentLoadW / 1000),
       caption: t('energy.model.caption.live'),
-    },
-  ];
+    });
+  }
 
   if (dataCoverage.hasGridImport || dataCoverage.hasGridExport) {
     summary.push({
