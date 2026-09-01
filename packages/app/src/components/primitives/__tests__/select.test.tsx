@@ -18,6 +18,8 @@ describe('Select', () => {
     );
 
     const select = screen.getByRole('combobox', { name: 'Room' });
+    expect(select).toHaveClass('[&>option]:bg-zinc-900', '[&>option]:text-white');
+    expect(select).toHaveStyle({ colorScheme: 'dark' });
     const originalMatches = select.matches.bind(select);
 
     select.matches = ((selector: string) =>

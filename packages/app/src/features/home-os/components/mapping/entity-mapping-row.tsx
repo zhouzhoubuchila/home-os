@@ -9,6 +9,8 @@ interface EntityMappingRowProps {
   resolved: ResolvedSemanticEntity;
   styles: SettingsSectionStyles;
   saving: boolean;
+  selected: boolean;
+  onSelectionChange: (selected: boolean) => void;
   onEdit: () => void;
   onIgnore: () => void;
   onRestoreAuto: () => void;
@@ -18,6 +20,8 @@ export function EntityMappingRow({
   resolved,
   styles,
   saving,
+  selected,
+  onSelectionChange,
   onEdit,
   onIgnore,
   onRestoreAuto,
@@ -29,11 +33,22 @@ export function EntityMappingRow({
   return (
     <article className={cn('grid gap-3 px-4 py-4 md:px-5', styles.hoverBg)}>
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className={cn('truncate text-sm font-semibold', styles.textColor)}>
-            {resolved.displayName}
-          </h3>
-          <p className={cn('truncate text-xs', styles.subtleColor)}>{resolved.entity.externalId}</p>
+        <div className="flex min-w-0 items-start gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => onSelectionChange(event.target.checked)}
+            aria-label={`${copy.selectedCount}: ${resolved.displayName}`}
+            className="mt-1 size-4 shrink-0 accent-blue-500"
+          />
+          <div className="min-w-0">
+            <h3 className={cn('truncate text-sm font-semibold', styles.textColor)}>
+              {resolved.displayName}
+            </h3>
+            <p className={cn('truncate text-xs', styles.subtleColor)}>
+              {resolved.entity.externalId}
+            </p>
+          </div>
         </div>
         <span
           className={cn(

@@ -15,6 +15,7 @@ export type MappingSource =
 
 export type DisplayMode = 'primary' | 'detail' | 'diagnostic' | 'hidden';
 export type ControlPolicy = 'direct' | 'confirm' | 'dangerous' | 'readonly';
+export type MappingReviewDisposition = 'mapped' | 'review' | 'unmapped' | 'diagnostic' | 'ignored';
 
 export interface StableEntityRef {
   canonicalId?: string;
@@ -61,6 +62,7 @@ export interface ResolvedSemanticEntity {
   controlPolicy: ControlPolicy;
   ignored: boolean;
   needsReview: boolean;
+  reviewDisposition: MappingReviewDisposition;
 }
 
 export interface HomeOsMetric {
@@ -79,6 +81,9 @@ export interface HomeOsPhysicalDevice {
   category: string;
   room?: string;
   state: 'online' | 'offline' | 'unknown';
+  freshness: 'fresh' | 'stale' | 'unavailable';
+  health: 'normal' | 'warning' | 'critical' | 'unknown';
+  lastMeaningfulUpdate?: string;
   semanticMetrics: Partial<Record<SemanticRole, HomeOsMetric>>;
   capabilities: NavetCapabilityId[];
   entityIds: string[];

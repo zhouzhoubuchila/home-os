@@ -134,7 +134,17 @@ export function SettingsProjectSection({ controller }: SettingsProjectSectionPro
               }
               styles={styles}
             />
-            <CompactMetaRow label="Home OS" value="V2.0.0" styles={styles} />
+            <CompactMetaRow label="Home OS" value="2.0.1" styles={styles} />
+            <CompactMetaRow
+              label="Home OS build"
+              value={
+                <span className="font-mono text-[0.82rem]">
+                  {APP_BUILD_METADATA.gitShaShort} · {buildDate}
+                </span>
+              }
+              styles={styles}
+            />
+            <CompactMetaRow label="Navet base" value={APP_VERSION} styles={styles} />
           </div>
         </SettingsItem>
 

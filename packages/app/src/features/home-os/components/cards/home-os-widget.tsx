@@ -3,6 +3,7 @@ import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { useI18n, useTheme } from '@navet/app/hooks';
+import { useNavigationStore } from '@navet/app/stores';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -20,17 +21,20 @@ import {
   Zap,
 } from 'lucide-react';
 import { Solar } from 'lunar-javascript';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
 import { buildHomeOsLights } from '../../adapters/lighting-adapter';
+import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { DEFAULT_HOME_OS_ALERT_RULES } from '../../alerts/default-rules';
+import { getMoonPhase } from '../../astronomy/moon-phase';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
+import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 
 export interface HomeOsWidgetData {
   kind?: HomeOsCardKind;
@@ -267,8 +271,10 @@ function ModesCard({
   );
 }
 
-function LunarCard({ size, title }: { size: CardSize; title: string }) {
-  const lunar = Solar.fromDate(new Date()).getLunar();
+function LunarCard({ size, title, language }: { size: CardSize; title: string; language: string }) {
+  const now = new Date();
+  const lunar = Solar.fromDate(now).getLunar();
+  const moon = getMoonPhase(now);
   return (
     <BaseCard size={size} title={title} headerLeading={<Moon className="h-5 w-5" />}>
       <div className="flex h-full flex-col justify-between gap-2">
@@ -276,6 +282,9 @@ function LunarCard({ size, title }: { size: CardSize; title: string }) {
         <p className="text-sm text-current/60">
           {lunar.getYearShengXiao()} ·{' '}
           {lunar.getJieQi() || lunar.getNextJieQi()?.getName() || '平日'}
+        </p>
+        <p className="text-sm font-medium">
+          {moon.icon} {language === 'zh' ? moon.name.zh : moon.name.en}
         </p>
         {size !== 'small' ? (
           <div className="text-xs">
@@ -316,6 +325,9 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
+  const physicalDevices = useHomeOsConfigStore((state) => state.config.physicalDevices);
+  const setActiveSection = useNavigationStore((state) => state.setActiveSection);
+  const [detailOpen, setDetailOpen] = useState(false);
   const definition = getHomeOsCardDefinition(data?.kind);
   if (!definition) {
     return (
@@ -324,8 +336,62 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
       </BaseCard>
     );
   }
-  if (definition.kind === 'household')
+  const openDetail = () => {
+    if (!definition.detail || isEditMode) return;
+    if (definition.detail.presentation === 'page' && definition.detail.routeSection) {
+      setActiveSection(definition.detail.routeSection);
+      return;
+    }
+    setDetailOpen(true);
+  };
+  const withDetail = (content: ReactNode) => {
+    const interactive = Boolean(definition.detail) && !isEditMode;
+    if (!interactive) {
+      return (
+        <div
+          className="h-full rounded-[24px]"
+          data-home-os-summary-only={definition.summaryOnly ? 'true' : undefined}
+        >
+          {content}
+        </div>
+      );
+    }
     return (
+      <>
+        {/* biome-ignore lint/a11y/useSemanticElements: card content may include independent controls, so a nested button would be invalid HTML. */}
+        <div
+          className="h-full cursor-pointer rounded-[24px] outline-none transition-transform active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-orange-400/60"
+          role="button"
+          tabIndex={0}
+          aria-label={`${language === 'zh' ? definition.name.zh : definition.name.en} ${copy.openDetails}`}
+          data-home-os-detail={definition.detail?.presentation}
+          data-home-os-summary-only={definition.summaryOnly ? 'true' : undefined}
+          onClick={(event) => {
+            if ((event.target as Element).closest('button,a,input,select,textarea')) return;
+            openDetail();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openDetail();
+            }
+          }}
+        >
+          {content}
+        </div>
+        {definition.detail?.presentation === 'dialog' ? (
+          <HomeOsDetailDialog
+            kind={definition.kind}
+            entities={entities}
+            isOpen={detailOpen}
+            onOpenChange={setDetailOpen}
+          />
+        ) : null}
+      </>
+    );
+  };
+  if (definition.kind === 'household')
+    return withDetail(
       <HouseholdCard
         size={size}
         entities={entities}
@@ -334,12 +400,15 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
       />
     );
   if (definition.kind === 'lighting')
-    return <LightingCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
+    return withDetail(
+      <LightingCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />
+    );
   if (definition.kind === 'alerts')
-    return <AlertsCard size={size} entities={entities} copy={copy} />;
+    return withDetail(<AlertsCard size={size} entities={entities} copy={copy} />);
   if (definition.kind === 'modes')
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
-  if (definition.kind === 'lunar') return <LunarCard size={size} title={copy.lunarCalendar} />;
+  if (definition.kind === 'lunar')
+    return withDetail(<LunarCard size={size} title={copy.lunarCalendar} language={language} />);
   const matched = entities.filter(
     (entity) =>
       !entity.ignored &&
@@ -350,7 +419,39 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   );
   const Icon = ICONS[definition.kind];
   const name = language === 'zh' ? definition.name.zh : definition.name.en;
-  return (
+  if (definition.kind === 'pve') {
+    const device = buildPvePhysicalDevices(matched, physicalDevices)[0];
+    const metricEntities = device
+      ? matched.filter((item) => device.entityIds.includes(item.entity.externalId))
+      : matched;
+    return withDetail(
+      <BaseCard
+        size={size}
+        title={name.replace('Home OS · ', '')}
+        headerLeading={<Icon className="h-5 w-5" />}
+      >
+        <div className="flex h-full min-h-0 flex-col justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span
+              className={
+                device?.state === 'online'
+                  ? 'h-2 w-2 rounded-full bg-emerald-400'
+                  : device?.state === 'offline'
+                    ? 'h-2 w-2 rounded-full bg-red-400'
+                    : 'h-2 w-2 rounded-full bg-current/30'
+              }
+            />
+            <span>{device ? copy[device.state] : copy.notConfigured}</span>
+            {device?.freshness === 'stale' ? (
+              <span className="text-amber-400">{copy.dataStale}</span>
+            ) : null}
+          </div>
+          <Metrics entities={metricEntities} size={size} empty={copy.noMappedData} />
+        </div>
+      </BaseCard>
+    );
+  }
+  return withDetail(
     <BaseCard
       size={size}
       title={name.replace('Home OS · ', '')}

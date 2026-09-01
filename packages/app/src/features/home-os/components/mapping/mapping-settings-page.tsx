@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-import';
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import { upsertManualMapping } from '../../mapping/manual-overrides';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
@@ -19,6 +20,9 @@ import { MappingEditorDialog } from './mapping-editor-dialog';
 type Filter =
   | 'all'
   | 'review'
+  | 'mapped'
+  | 'unmapped'
+  | 'diagnostic'
   | 'manual'
   | 'ignored'
   | 'lighting'
@@ -27,8 +31,11 @@ type Filter =
   | 'energy';
 
 const matchesFilter = (resolved: ResolvedSemanticEntity, filter: Filter) => {
-  if (filter === 'all') return true;
+  if (filter === 'all') return resolved.reviewDisposition !== 'diagnostic' && !resolved.ignored;
   if (filter === 'review') return resolved.needsReview;
+  if (filter === 'mapped') return resolved.reviewDisposition === 'mapped';
+  if (filter === 'unmapped') return resolved.reviewDisposition === 'unmapped';
+  if (filter === 'diagnostic') return resolved.reviewDisposition === 'diagnostic';
   if (filter === 'manual') return resolved.source === 'manual';
   if (filter === 'ignored') return resolved.ignored;
   return resolved.roles.some((role) => role.startsWith(`${filter}.`));
@@ -48,6 +55,11 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [batchPhysicalDeviceId, setBatchPhysicalDeviceId] = useState('');
+  const [batchDisplayMode, setBatchDisplayMode] =
+    useState<ManualEntityMapping['displayMode']>('detail');
+  const [visibleLimit, setVisibleLimit] = useState(160);
 
   useEffect(() => {
     void load();
@@ -71,6 +83,47 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const existing = editing
     ? config.mappings.find((mapping) => mapping.entityId === editing.externalId)
     : undefined;
+
+  useEffect(() => {
+    setVisibleLimit(160);
+  }, [filter, query]);
+
+  const diagnostics = useMemo(
+    () => ({
+      mapped: resolved.filter((item) => item.reviewDisposition === 'mapped').length,
+      review: resolved.filter((item) => item.needsReview).length,
+      manual: resolved.filter((item) => item.source === 'manual').length,
+      ignored: resolved.filter((item) => item.ignored).length,
+      diagnostic: resolved.filter((item) => item.reviewDisposition === 'diagnostic').length,
+    }),
+    [resolved]
+  );
+
+  const batchUpdate = async (ignored: boolean) => {
+    const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
+    const updatedAt = new Date().toISOString();
+    const mappings = selected.reduce((currentMappings, item) => {
+      const current = item.mapping;
+      const next: ManualEntityMapping = {
+        schemaVersion: 2,
+        entityId: item.entity.externalId,
+        stableRef: current?.stableRef ?? {
+          canonicalId: item.entity.canonicalId,
+          providerId: item.entity.providerId,
+        },
+        ...current,
+        semanticRoles: current?.semanticRoles ?? item.roles,
+        physicalDeviceId: batchPhysicalDeviceId.trim() || current?.physicalDeviceId,
+        displayMode: batchDisplayMode,
+        ignored,
+        source: 'manual',
+        updatedAt,
+      };
+      return upsertManualMapping(currentMappings, next);
+    }, config.mappings);
+    await useHomeOsConfigStore.getState().save({ ...config, mappings });
+    setSelectedIds(new Set());
+  };
 
   const ignore = async (item: ResolvedSemanticEntity) => {
     const current = item.mapping;
@@ -128,6 +181,9 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         <Select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
           <option value="all">{copy.allEntities}</option>
           <option value="review">{copy.needsReview}</option>
+          <option value="mapped">{copy.mapped}</option>
+          <option value="unmapped">{copy.unmapped}</option>
+          <option value="diagnostic">{copy.diagnostic}</option>
           <option value="manual">{copy.manual}</option>
           <option value="ignored">{copy.ignored}</option>
           <option value="lighting">{copy.lighting}</option>
@@ -177,6 +233,69 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       {recovered ? (
         <p className="px-5 py-3 text-sm text-amber-500">{copy.recoveredBackup}</p>
       ) : null}
+      <div
+        className={cn(
+          'mx-4 grid grid-cols-2 gap-2 rounded-xl border p-3 text-xs sm:grid-cols-5 md:mx-5',
+          controller.styles.insetBorderColor
+        )}
+      >
+        <strong className={cn('col-span-2 sm:col-span-5', controller.styles.textColor)}>
+          {copy.diagnosticsSummary}
+        </strong>
+        <span>
+          {copy.mapped}: {diagnostics.mapped}
+        </span>
+        <span>
+          {copy.needsReview}: {diagnostics.review}
+        </span>
+        <span>
+          {copy.manual}: {diagnostics.manual}
+        </span>
+        <span>
+          {copy.ignored}: {diagnostics.ignored}
+        </span>
+        <span>
+          {copy.diagnostic}: {diagnostics.diagnostic}
+        </span>
+      </div>
+      {selectedIds.size ? (
+        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+          <Input
+            value={batchPhysicalDeviceId}
+            onChange={(event) => setBatchPhysicalDeviceId(event.target.value)}
+            placeholder={copy.batchPhysicalDevice}
+            aria-label={copy.batchPhysicalDevice}
+          />
+          <Select
+            value={batchDisplayMode}
+            onChange={(event) =>
+              setBatchDisplayMode(event.target.value as ManualEntityMapping['displayMode'])
+            }
+            aria-label={copy.displayMode}
+          >
+            <option value="primary">{copy.primary}</option>
+            <option value="detail">{copy.detail}</option>
+            <option value="diagnostic">{copy.diagnostic}</option>
+            <option value="hidden">{copy.hidden}</option>
+          </Select>
+          <Button
+            size="small"
+            variant="secondary"
+            loading={saving}
+            onClick={() => void batchUpdate(false)}
+          >
+            {copy.applyBatch} ({selectedIds.size})
+          </Button>
+          <Button
+            size="small"
+            variant="ghost"
+            disabled={saving}
+            onClick={() => void batchUpdate(true)}
+          >
+            {copy.ignoreBatch}
+          </Button>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between px-5 py-3 text-xs">
         <span className={controller.styles.subtleColor}>
           {visible.length} / {resolved.length} {copy.mappingCount} · {copy.revision}{' '}
@@ -187,12 +306,21 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         </span>
       </div>
       {visible.length ? (
-        visible.map((item) => (
+        visible.slice(0, visibleLimit).map((item) => (
           <EntityMappingRow
             key={item.entity.canonicalId}
             resolved={item}
             styles={controller.styles}
             saving={saving}
+            selected={selectedIds.has(item.entity.externalId)}
+            onSelectionChange={(selected) =>
+              setSelectedIds((current) => {
+                const next = new Set(current);
+                if (selected) next.add(item.entity.externalId);
+                else next.delete(item.entity.externalId);
+                return next;
+              })
+            }
             onEdit={() => setEditing(item.entity)}
             onIgnore={() => void ignore(item)}
             onRestoreAuto={() => void removeMapping(item.entity.externalId)}
@@ -203,6 +331,13 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
           {copy.noMatchingEntities}
         </p>
       )}
+      {visible.length > visibleLimit ? (
+        <div className="px-5 py-4 text-center">
+          <Button variant="secondary" onClick={() => setVisibleLimit((current) => current + 160)}>
+            {copy.showMore} ({visible.length - visibleLimit})
+          </Button>
+        </div>
+      ) : null}
       <MappingEditorDialog
         entity={editing}
         existing={existing}

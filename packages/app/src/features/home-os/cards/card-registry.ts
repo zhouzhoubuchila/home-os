@@ -1,4 +1,5 @@
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import type { Section } from '@navet/app/navigation/sections';
 
 export type HomeOsCardKind =
   | 'household'
@@ -27,6 +28,11 @@ export interface HomeOsCardDefinition {
   defaultSize: CardSize;
   supportedSizes: CardSize[];
   semanticRolePrefixes: string[];
+  detail?: {
+    presentation: 'page' | 'dialog';
+    routeSection?: Section;
+  };
+  summaryOnly?: true;
 }
 
 const card = (
@@ -34,7 +40,8 @@ const card = (
   name: HomeOsCardDefinition['name'],
   description: HomeOsCardDefinition['description'],
   semanticRolePrefixes: string[],
-  defaultSize: CardSize = 'medium'
+  defaultSize: CardSize = 'medium',
+  detail: HomeOsCardDefinition['detail'] | null = { presentation: 'dialog' }
 ): HomeOsCardDefinition => ({
   kind,
   templateId: `home-os:${kind}`,
@@ -43,6 +50,7 @@ const card = (
   defaultSize,
   supportedSizes: ['small', 'medium', 'large'],
   semanticRolePrefixes,
+  ...(detail ? { detail } : { summaryOnly: true as const }),
 });
 
 export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
@@ -101,7 +109,9 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
     'electricity',
     { en: 'Home OS · Electricity', zh: 'Home OS · 国家电网' },
     { en: 'Electricity usage and balance summary.', zh: '用电量与余额摘要。' },
-    ['energy.electricity.']
+    ['energy.electricity.'],
+    'medium',
+    { presentation: 'page', routeSection: 'energy' }
   ),
   card(
     'gas',
@@ -134,7 +144,9 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
       en: 'Provider-neutral Home, Away, Sleep, and other scenes.',
       zh: '回家、离家、睡眠等场景模式。',
     },
-    ['home.mode']
+    ['home.mode'],
+    'medium',
+    null
   ),
   card(
     'cleaning',

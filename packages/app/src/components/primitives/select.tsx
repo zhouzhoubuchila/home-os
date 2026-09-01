@@ -58,12 +58,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ? 'border-transparent bg-transparent text-gray-700'
         : 'border-transparent bg-transparent text-white/78'
       : theme === 'light'
-        ? 'border-gray-200 bg-gray-100 text-gray-900'
+        ? 'border-gray-200 bg-gray-100 text-gray-900 [&>option]:bg-white [&>option]:text-gray-900'
         : theme === 'black'
-          ? 'border-white/16 bg-black text-white'
+          ? 'border-white/16 bg-black text-white [&>option]:bg-black [&>option]:text-white'
           : theme === 'glass'
-            ? 'border-white/16 bg-white/8 text-white'
-            : 'border-zinc-800 bg-zinc-900 text-white';
+            ? 'border-white/16 bg-white/8 text-white [&>option]:bg-slate-900 [&>option]:text-white'
+            : 'border-zinc-800 bg-zinc-900 text-white [&>option]:bg-zinc-900 [&>option]:text-white';
 
   return (
     <div className={cn('relative', containerClassName)}>
@@ -89,6 +89,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           selectClassName
         )}
         style={{
+          colorScheme: theme === 'light' ? 'light' : 'dark',
           ...getControlFocusStyles({
             isFocused,
             accentColor: resolvedAccentColor,

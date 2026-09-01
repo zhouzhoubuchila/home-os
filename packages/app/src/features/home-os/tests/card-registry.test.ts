@@ -22,4 +22,10 @@ describe('Home OS card registry', () => {
     const ids = HOME_OS_CARD_REGISTRY.map(({ templateId }) => templateId);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('declares detail behavior or an explicit summary-only contract for every card', () => {
+    for (const definition of HOME_OS_CARD_REGISTRY) {
+      expect(Boolean(definition.detail) !== Boolean(definition.summaryOnly)).toBe(true);
+    }
+  });
 });
