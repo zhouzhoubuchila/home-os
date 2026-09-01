@@ -24,7 +24,7 @@ import { Solar } from 'lunar-javascript';
 import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
-import { buildHomeOsLights } from '../../adapters/lighting-adapter';
+import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
 import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { DEFAULT_HOME_OS_ALERT_RULES } from '../../alerts/default-rules';
@@ -134,7 +134,8 @@ function LightingCard({
   isEditMode: boolean;
   copy: ReturnType<typeof getHomeOsCopy>;
 }) {
-  const lights = buildHomeOsLights(entities);
+  const functionalDevices = useHomeOsConfigStore((state) => state.config.functionalDevices ?? []);
+  const lights = buildHomeOsLights(entities, functionalDevices);
   const on = lights.filter((light) => light.state === 'on');
   const controllable = lights.filter((light) => light.controllable);
   const [busy, setBusy] = useState(false);
@@ -147,10 +148,10 @@ function LightingCard({
     setBusy(true);
     try {
       const results = await Promise.allSettled(
-        controllable.map((light) =>
+        getWholeHomeLightActions(controllable).map((action) =>
           dispatchEntityCommand(
-            { type: 'turn_off', entityId: light.sourceEntityId },
-            light.providerId
+            { type: action.command, entityId: action.entityId },
+            action.providerId
           )
         )
       );

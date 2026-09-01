@@ -34,6 +34,7 @@ function emptyConfig() {
     updatedAt: new Date().toISOString(),
     mappings: [],
     physicalDevices: [],
+    functionalDevices: [],
     alertRules: [],
     cardPreferences: {},
   };
@@ -50,6 +51,7 @@ function validConfig(value) {
     typeof value.updatedAt === 'string' &&
     Array.isArray(value.mappings) &&
     Array.isArray(value.physicalDevices) &&
+    (value.functionalDevices === undefined || Array.isArray(value.functionalDevices)) &&
     Array.isArray(value.alertRules) &&
     value.cardPreferences &&
     typeof value.cardPreferences === 'object' &&

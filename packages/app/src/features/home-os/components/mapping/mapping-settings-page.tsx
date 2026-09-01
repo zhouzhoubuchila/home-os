@@ -58,6 +58,8 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const [confirmReset, setConfirmReset] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [batchPhysicalDeviceId, setBatchPhysicalDeviceId] = useState('');
+  const [circuitName, setCircuitName] = useState('');
+  const [circuitRoom, setCircuitRoom] = useState('');
   const [batchDisplayMode, setBatchDisplayMode] =
     useState<ManualEntityMapping['displayMode']>('detail');
   const [visibleLimit, setVisibleLimit] = useState(160);
@@ -117,6 +119,45 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     }, config.mappings);
     await useHomeOsConfigStore.getState().save({ ...config, mappings });
     setSelectedIds(new Set());
+  };
+
+  const createLightingCircuit = async () => {
+    const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
+    const byDomain = (domain: string) =>
+      selected.find((item) => item.entity.externalId.startsWith(`${domain}.`))?.entity.externalId;
+    const namedButton = (pattern: RegExp) =>
+      selected.find(
+        (item) =>
+          item.entity.externalId.startsWith('button.') &&
+          pattern.test(`${item.entity.externalId} ${item.displayName}`.toLowerCase())
+      )?.entity.externalId;
+    const stateEntityId = byDomain('binary_sensor') ?? byDomain('light') ?? byDomain('switch');
+    const toggle = byDomain('light') ?? byDomain('switch') ?? namedButton(/toggle|\u5207\u6362/);
+    const on = namedButton(/(?:^|[._ ])on(?:$|[._ ])|\u5f00\u542f|\u6253\u5f00/);
+    const off = namedButton(/(?:^|[._ ])off(?:$|[._ ])|\u5173\u95ed/);
+    const brightness = byDomain('number');
+    const name = circuitName.trim() || selected[0]?.displayName || copy.newLightingCircuit;
+    const id = `light-circuit-${Date.now().toString(36)}`;
+    await useHomeOsConfigStore.getState().save({
+      ...config,
+      functionalDevices: [
+        ...(config.functionalDevices ?? []),
+        {
+          id,
+          kind: 'light',
+          name,
+          room: circuitRoom.trim() || selected.find((item) => item.room)?.room,
+          stateEntityId,
+          controls: { on, off, toggle, brightness },
+          metrics: {},
+          sourceEntityIds: selected.map((item) => item.entity.externalId),
+          manual: true,
+        },
+      ],
+    });
+    setSelectedIds(new Set());
+    setCircuitName('');
+    setCircuitRoom('');
   };
 
   const ignore = async (item: ResolvedSemanticEntity) => {
@@ -253,7 +294,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         </span>
       </div>
       {selectedIds.size ? (
-        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
           <Input
             value={batchPhysicalDeviceId}
             onChange={(event) => setBatchPhysicalDeviceId(event.target.value)}
@@ -287,6 +328,26 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
             onClick={() => void batchUpdate(true)}
           >
             {copy.ignoreBatch}
+          </Button>
+          <Input
+            value={circuitName}
+            onChange={(event) => setCircuitName(event.target.value)}
+            placeholder={copy.lightingCircuitName}
+            aria-label={copy.lightingCircuitName}
+          />
+          <Input
+            value={circuitRoom}
+            onChange={(event) => setCircuitRoom(event.target.value)}
+            placeholder={copy.lightingCircuitRoom}
+            aria-label={copy.lightingCircuitRoom}
+          />
+          <Button
+            size="small"
+            variant="secondary"
+            loading={saving}
+            onClick={() => void createLightingCircuit()}
+          >
+            {copy.createLightingCircuit} ({selectedIds.size})
           </Button>
         </div>
       ) : null}

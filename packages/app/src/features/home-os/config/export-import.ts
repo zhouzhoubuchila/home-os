@@ -10,6 +10,7 @@ export function exportHomeOsConfig(config: HomeOsConfig): string {
     updatedAt: config.updatedAt,
     mappings: config.mappings,
     physicalDevices: config.physicalDevices,
+    functionalDevices: config.functionalDevices ?? [],
     alertRules: config.alertRules,
     cardPreferences: config.cardPreferences,
   };

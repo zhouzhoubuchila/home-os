@@ -1,4 +1,5 @@
-import { BaseCard, ModalSurface } from '@navet/app/components/primitives';
+import { dispatchEntityCommand } from '@navet/app/commands';
+import { BaseCard, Button, ModalSurface } from '@navet/app/components/primitives';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { useI18n, useTheme } from '@navet/app/hooks';
 import { Solar } from 'lunar-javascript';
@@ -95,13 +96,43 @@ export function HomeOsDetailDialog({
       <p>{copy.noMappedData}</p>
     );
   } else if (kind === 'lighting') {
-    const lights = buildHomeOsLights(visible);
+    const lights = buildHomeOsLights(visible, config.functionalDevices ?? []);
     content = lights.length ? (
       <div className="grid gap-2">
         {lights.map((light) => (
-          <div key={light.id} className="flex justify-between gap-3">
-            <span>{light.name}</span>
-            <span className={surface.textSecondary}>{light.state}</span>
+          <div key={light.id} className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block font-medium">{light.name}</span>
+              <span className={`block text-xs ${surface.textSecondary}`}>
+                {light.room ?? copy.roomUnknown} · {light.state}
+              </span>
+            </span>
+            {light.controllable ? (
+              <Button
+                size="small"
+                variant="secondary"
+                onClick={() => {
+                  const target =
+                    light.state === 'on'
+                      ? (light.controls.off ?? light.controls.toggle)
+                      : (light.controls.on ?? light.controls.toggle);
+                  if (!target) return;
+                  void dispatchEntityCommand(
+                    {
+                      type: target.startsWith('button.')
+                        ? 'trigger'
+                        : light.state === 'on'
+                          ? 'turn_off'
+                          : 'turn_on',
+                      entityId: target,
+                    },
+                    light.providerId
+                  );
+                }}
+              >
+                {light.state === 'on' ? copy.turnOff : copy.turnOn}
+              </Button>
+            ) : null}
           </div>
         ))}
       </div>

@@ -31,10 +31,18 @@ export function buildPhysicalDevices(
     const deviceId = readString(
       resolved.entity.attributes.deviceId ?? resolved.entity.attributes.device_id
     );
+    const deviceName = readString(
+      resolved.entity.attributes.deviceName ?? resolved.entity.attributes.device_name
+    );
+    const semanticDeviceId =
+      resolved.roles.some((role) => role.startsWith('homelab.pve.')) && deviceName
+        ? `pve:${resolved.entity.providerId}:${deviceName.trim().toLowerCase()}`
+        : undefined;
     const groupId =
       resolved.mapping?.physicalDeviceId ??
       configured?.id ??
       deviceId ??
+      semanticDeviceId ??
       resolved.entity.canonicalId;
     groups.set(groupId, [...(groups.get(groupId) ?? []), resolved]);
   }
@@ -88,7 +96,13 @@ export function buildPhysicalDevices(
       : 'unavailable';
     return {
       id,
-      name: config?.name ?? members[0]?.displayName ?? id,
+      name:
+        config?.name ??
+        readString(
+          members[0]?.entity.attributes.deviceName ?? members[0]?.entity.attributes.device_name
+        ) ??
+        members[0]?.displayName ??
+        id,
       category: config?.category ?? members[0]?.roles[0]?.split('.')[0] ?? 'device',
       room: config?.room ?? members.find(({ room }) => room)?.room,
       state,
