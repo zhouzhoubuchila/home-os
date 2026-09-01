@@ -37,9 +37,18 @@ if (tier.files.length > 0) {
 const passthroughArgs = extraArgs[0] === '--' ? extraArgs.slice(1) : extraArgs;
 args.push(...passthroughArgs);
 
-const result = spawnSync('pnpm', ['exec', ...args], {
+const pnpmEntrypoint = process.env.npm_execpath;
+const executable = pnpmEntrypoint ? process.execPath : 'pnpm';
+const executableArgs = pnpmEntrypoint
+  ? [pnpmEntrypoint, 'exec', ...args]
+  : ['exec', ...args];
+const result = spawnSync(executable, executableArgs, {
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: false,
 });
+
+if (result.error) {
+  console.error(`Could not start pnpm: ${result.error.message}`);
+}
 
 process.exit(result.status ?? 1);
