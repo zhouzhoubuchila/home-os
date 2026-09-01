@@ -22,6 +22,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve build metadata
+        id: build
+        shell: bash
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - uses: docker/metadata-action@v5
         id: meta
         with:
@@ -30,6 +34,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=sha
+            type=raw,value=v2.0.3,enable=${{ github.ref == 'refs/heads/main' }}
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -40,3 +45,6 @@ jobs:
           build-args: |
             NAVET_RELEASE_CHANNEL=home-os
             NAVET_GIT_SHA=${{ github.sha }}
+            NAVET_BUILD_DATE=${{ steps.build.outputs.date }}
+            NAVET_VERSION=2.0.3
+            NAVET_BUILD_VERSION=2.0.3

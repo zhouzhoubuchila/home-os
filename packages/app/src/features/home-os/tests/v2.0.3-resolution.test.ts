@@ -86,6 +86,7 @@ describe('Home OS V2.0.3 real environment resolution', () => {
   });
 
   it('indexes and searches 600 entities without re-resolving', () => {
+    const startedAt = performance.now();
     const many = resolveSemanticEntities(
       Array.from({ length: 600 }, (_, index) =>
         homeOsEntity({
@@ -98,5 +99,6 @@ describe('Home OS V2.0.3 real environment resolution', () => {
     const index = buildHomeOsMappingSearchIndex(many);
     expect(index.size).toBe(600);
     expect(index.search('冰箱设备')).toHaveLength(1);
+    expect(performance.now() - startedAt).toBeLessThan(250);
   });
 });

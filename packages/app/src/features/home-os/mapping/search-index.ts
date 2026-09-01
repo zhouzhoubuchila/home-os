@@ -23,7 +23,7 @@ const SAFE_ATTRIBUTE_KEYS = [
 export function buildHomeOsMappingSearchIndex(
   entities: readonly ResolvedSemanticEntity[]
 ): HomeOsMappingSearchIndex {
-  const indexed = entities.map((item) => {
+  const base = entities.map((item) => {
     const attributes = item.entity.attributes;
     const searchable = [
       item.entity.externalId,
@@ -37,8 +37,21 @@ export function buildHomeOsMappingSearchIndex(
       .filter(Boolean)
       .join('\u0000')
       .toLocaleLowerCase();
-    return { item, searchable };
+    const deviceKey = text(attributes.deviceId ?? attributes.device_id);
+    return { item, searchable, deviceKey };
   });
+  const deviceContexts = new Map<string, string>();
+  for (const entry of base) {
+    if (!entry.deviceKey) continue;
+    deviceContexts.set(
+      entry.deviceKey,
+      `${deviceContexts.get(entry.deviceKey) ?? ''}\u0000${entry.searchable}`
+    );
+  }
+  const indexed = base.map((entry) => ({
+    item: entry.item,
+    searchable: `${entry.searchable}\u0000${deviceContexts.get(entry.deviceKey) ?? ''}`,
+  }));
 
   return {
     size: indexed.length,

@@ -56,9 +56,9 @@ docker compose --env-file .env -f deploy/compose.yaml exec home-os \
 更新前可备份 `home-os-data` 数据卷。回滚到已知版本时指定旧镜像并保留同一数据卷：
 
 ```bash
-HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:<旧版本标签> \
+HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:sha-<main-commit-short-sha> \
   docker compose --env-file .env -f deploy/compose.yaml pull home-os
-HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:<旧版本标签> \
+HOME_OS_IMAGE=ghcr.io/zhouzhoubuchila/home-os:sha-<main-commit-short-sha> \
   docker compose --env-file .env -f deploy/compose.yaml up -d home-os
 ```
 
