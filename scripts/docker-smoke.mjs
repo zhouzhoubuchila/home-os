@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { get } from 'node:http';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawnSync } from 'node:child_process';
@@ -23,15 +24,31 @@ function run(command, args, options = {}) {
   return result.stdout?.trim() ?? '';
 }
 
+function requestHtml(url) {
+  return new Promise((resolve) => {
+    const request = get(url, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        resolve(Boolean(response.statusCode && response.statusCode < 400 && /<html/i.test(body)));
+      });
+    });
+
+    request.setTimeout(2000, () => {
+      request.destroy(new Error('HTTP readiness probe timed out.'));
+    });
+    request.on('error', () => resolve(false));
+  });
+}
+
 async function waitForHttpReady(url) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    try {
-      const response = await fetch(url);
-      const body = await response.text();
-      if (response.ok && /<html/i.test(body)) {
-        return;
-      }
-    } catch {}
+    if (await requestHtml(url)) {
+      return;
+    }
 
     await delay(1000);
   }
