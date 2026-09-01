@@ -75,6 +75,60 @@ export interface HomeOsMetric {
   sourceEntityId: string;
 }
 
+export type MetricResolutionState =
+  | 'available'
+  | 'capability_absent'
+  | 'unmapped'
+  | 'ambiguous'
+  | 'unavailable'
+  | 'stale';
+
+export interface MetricResolutionCandidate {
+  entityId: string;
+  confidence: number;
+  reasons: string[];
+}
+
+export interface MetricResolution {
+  role: SemanticRole;
+  state: MetricResolutionState;
+  mappedEntityId?: string;
+  candidates?: MetricResolutionCandidate[];
+  reason?: string;
+  value?: NavetEntity['primaryState'];
+  unit?: string;
+  updatedAt?: string;
+}
+
+export type HomeOsFunctionalDeviceKind =
+  | 'light'
+  | 'router'
+  | 'pve'
+  | 'energy_meter'
+  | 'gas_account'
+  | 'person'
+  | 'vacuum'
+  | 'appliance';
+
+export interface HomeOsFunctionalDevice {
+  id: string;
+  kind: HomeOsFunctionalDeviceKind;
+  name: string;
+  room?: string;
+  stateEntityId?: string;
+  controls?: {
+    on?: string;
+    off?: string;
+    toggle?: string;
+    brightness?: string;
+    colorTemperature?: string;
+    color?: string;
+  };
+  metrics: Record<string, string>;
+  sourceEntityIds: string[];
+  manual?: boolean;
+}
+
 export interface HomeOsPhysicalDevice {
   id: string;
   name: string;

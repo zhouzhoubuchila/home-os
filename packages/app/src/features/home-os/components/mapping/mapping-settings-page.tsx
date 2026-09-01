@@ -12,6 +12,7 @@ import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-impo
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { upsertManualMapping } from '../../mapping/manual-overrides';
+import { buildHomeOsMappingSearchIndex } from '../../mapping/search-index';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
@@ -69,17 +70,10 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     () => resolveSemanticEntities(Object.values(entitiesById), config.mappings),
     [config.mappings, entitiesById]
   );
+  const searchIndex = useMemo(() => buildHomeOsMappingSearchIndex(resolved), [resolved]);
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return resolved.filter(
-      (item) =>
-        matchesFilter(item, filter) &&
-        (!needle ||
-          item.displayName.toLowerCase().includes(needle) ||
-          item.entity.externalId.toLowerCase().includes(needle) ||
-          item.roles.some((role) => role.toLowerCase().includes(needle)))
-    );
-  }, [filter, query, resolved]);
+    return searchIndex.search(query).filter((item) => matchesFilter(item, filter));
+  }, [filter, query, searchIndex]);
   const existing = editing
     ? config.mappings.find((mapping) => mapping.entityId === editing.externalId)
     : undefined;
