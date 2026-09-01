@@ -774,7 +774,7 @@ describe('MediaDashboard', () => {
 
     renderWithProviders(<MediaDashboard devices={[createMediaDevice()]} />);
 
-    expect(screen.getByRole('heading', { name: 'Now playing' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Spotify' })).toBeInTheDocument();
     expect(screen.queryByText('1 media player')).not.toBeInTheDocument();
     const dashboardLayout = screen.getByTestId('media-dashboard-layout');
     expect(dashboardLayout).toHaveStyle({

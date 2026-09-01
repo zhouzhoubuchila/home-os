@@ -718,10 +718,15 @@ describe('EnergyDashboardPage', () => {
     fireEvent.click(solarMetric);
     fireEvent.click(within(dialog).getByRole('button', { name: /Energy used/ }));
 
-    expect(within(dialog).queryByRole('button', { name: /^Reorder / })).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: /^Move .* (earlier|later)$/ })
+    ).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Order' }));
     expect(within(dialog).getByText('Order dashboard KPIs')).toBeInTheDocument();
-    expect(within(dialog).getAllByRole('button', { name: /^Reorder / })).toHaveLength(4);
+    expect(
+      await within(dialog).findAllByRole('button', { name: /^Move .* earlier$/ })
+    ).toHaveLength(4);
+    expect(within(dialog).getAllByRole('button', { name: /^Move .* later$/ })).toHaveLength(4);
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }));
 

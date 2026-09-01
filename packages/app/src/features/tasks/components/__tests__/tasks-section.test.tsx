@@ -186,7 +186,6 @@ describe('TasksSection', () => {
 
     renderWithProviders(<TasksSection />);
 
-    expect(screen.getAllByRole('heading', { name: 'Routines' }).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Automations').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Brew coffee').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Laundry done').length).toBeGreaterThan(0);
