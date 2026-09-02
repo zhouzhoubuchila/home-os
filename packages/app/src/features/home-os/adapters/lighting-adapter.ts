@@ -2,6 +2,7 @@ import { hasCapability } from '../core/capabilities';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../core/types';
 import { resolveFunctionalDevices } from './functional-device-adapter';
+import { HomeOsLightCircuitBuilder } from './light-circuit-builder';
 
 export interface HomeOsLight {
   id: string;
@@ -24,20 +25,34 @@ export function buildHomeOsLights(
   entities: readonly ResolvedSemanticEntity[],
   functionalDevices: readonly HomeOsFunctionalDevice[] = []
 ): HomeOsLight[] {
-  const circuits = resolveFunctionalDevices(
+  const manualCircuits = resolveFunctionalDevices(
     functionalDevices.filter((device) => device.kind === 'light'),
     entities
   );
+  const manualSourceIds = new Set(manualCircuits.flatMap((circuit) => circuit.sourceEntityIds));
+  const automaticConfigs = new HomeOsLightCircuitBuilder().build(
+    entities.filter((item) => !manualSourceIds.has(item.entity.externalId))
+  );
+  const circuits = [...manualCircuits, ...resolveFunctionalDevices(automaticConfigs, entities)];
   const circuitSourceIds = new Set(circuits.flatMap((circuit) => circuit.sourceEntityIds));
   const entityLights = entities
-    .filter(
-      (entity) =>
+    .filter((entity) => {
+      const text =
+        `${entity.entity.externalId} ${entity.displayName} ${entity.entity.name}`.toLowerCase();
+      const excludedButton =
+        entity.entity.externalId.startsWith('button.') &&
+        /doorbell|wake.?screen|screen.?wake|fridge|refrigerator|internal light|indicator|vacuum|backlight|diagnostic|status led|指示灯|唤醒屏幕|冰箱|扫地|背光/.test(
+          text
+        );
+      return (
+        !excludedButton &&
         !entity.ignored &&
         entity.displayMode !== 'hidden' &&
         !circuitSourceIds.has(entity.entity.externalId) &&
         (entity.roles.includes(HOME_OS_ROLES.lightingLight) ||
           entity.roles.includes(HOME_OS_ROLES.lightingSwitch))
-    )
+      );
+    })
     .map(({ entity, displayName, room, controlPolicy, source }) => ({
       id: entity.canonicalId,
       sourceEntityId: entity.externalId,
@@ -96,7 +111,7 @@ export function buildHomeOsLights(
         typeof stateEntity?.entity.attributes.colorTemperature === 'number'
           ? stateEntity.entity.attributes.colorTemperature
           : undefined,
-      controllable: Boolean(fallbackControlId),
+      controllable: Boolean(fallbackControlId && Object.keys(circuit.controls ?? {}).length),
       sourceEntityIds: circuit.sourceEntityIds,
       controls: circuit.controls ?? {},
       manual: circuit.manual === true,

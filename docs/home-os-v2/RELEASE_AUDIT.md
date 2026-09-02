@@ -21,26 +21,24 @@ This document records the release gate and is completed with actual command resu
 
 ## Verification matrix
 
-Audited on 2026-09-01 from `codex/home-os-v2` against `origin/main` at `6c992149`.
+Audited on 2026-09-02 from `codex/home-os-v2.0.3.3` against `origin/main` at `7161cf8c`.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Biome and TypeScript | PASS | `pnpm check`; `pnpm typecheck` |
-| Home OS unit scope | PASS | 9 files, 19 tests; the broader focused run before final localization covered 13 files and 80 tests |
-| Tier 2 | PASS | 22 files, 155 tests |
-| Home Assistant integration | PASS | 17 Python tests |
-| Standalone production build | PASS | 3,038 modules, PWA generated, 33 precache entries |
-| Demo production build | PASS | 3,024 modules |
-| Bundle budget | PASS | eager JavaScript 701.4 KB; authenticated transition 138.2 KB |
-| Storybook standards/UI-kit/release surfaces | PASS | 182 story files; UI-kit boundaries; release surfaces 0.15.1 |
-| Storybook Vite bundle | PASS | Storybook bundle completed; the following Windows post-build headers script hit the existing website CSP baseline error |
-| Responsive browser audit | PASS | 1440×900, 768×1024, and 390×844; no horizontal overflow; Homelab route and empty states rendered correctly |
-| Home OS i18n scope | PASS | zero Home OS hardcoded-string findings after English/Chinese copy extraction |
-| Docker image/runtime | NOT RUN | Docker CLI/daemon is unavailable on this host; static runtime check therefore cannot execute |
+| Biome lint and TypeScript | PASS | 1,971 files linted; `tsc --noEmit` |
+| Home OS + Security semantic scope | PASS | 16 files, 103 tests |
+| Repository unit suite | PASS | 484 files, 3,051 tests |
+| Standalone production build | PASS | 3,056 modules, PWA generated, 33 precache entries; 159 built JavaScript files passed syntax validation |
+| Bundle budget | PASS | eager JavaScript 701.9 KB; authenticated transition JavaScript 138.3 KB |
+| V2.0.3.3 fixture matrix | PASS | PVE temperature/DIMM/voltage/load; router WAN IPv4; light circuit and negative button; camera map/dedup; media statuses; display formatting |
+| Sun/Moon source adaptation | PASS | pinned MIT upstream, thin `HomeOsHassFacade`, sun/night arcs, daylight fallback, entity moon and SVG animation retained |
+| Recorder trend integrity | PASS | existing Recorder-backed `TrendSparkline` is rendered only when statistics history exists |
+| Home OS i18n scope | PASS | Good/idle/state aliases, clear-night, Celsius and spaced weather units covered without adding hardcoded dashboard strings |
+| GHCR multi-architecture image | PENDING CI | `Home OS image` publishes `main`, `v2.0.3.3`, and immutable `sha-*` after merge |
 
 ## Upstream baseline exceptions
 
-The repository-wide release gate is not globally green before or after this Home OS change. The observed failures are outside the V2 diff: 97 existing i18n findings in Dashboard/Energy, existing provider-boundary allowlist debt, Windows/NJS filesystem-spy failures and concurrency timeouts in tier 1/3, and the Storybook post-build website CSP lookup. No Home OS test, typecheck, production build, bundle budget, or responsive route failed.
+The repository-wide diagnostic checks retain two known `main`-branch baselines outside this hotfix: 78 i18n findings concentrated in Dashboard/Energy and the existing provider-boundary allowlist debt. V2.0.3.3 adds no findings to either list. No Home OS test, TypeScript check, lint, production build, or bundle budget failed.
 
 ## Decision
 

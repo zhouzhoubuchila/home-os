@@ -6,6 +6,18 @@
 - Pinned commit: `730a1e145e064a0ccc885c795f74c81d61859a28`
 - Adapted source: `src/sun-position-card.js`
 - Home OS adapter: `packages/app/src/features/home-os/astronomy/sun-position-card-adapter.ts`
+- Home OS facade: `packages/app/src/features/home-os/astronomy/home-os-hass-facade.ts`
+- Home OS rendering: `packages/app/src/features/home-os/astronomy/astronomy-visual.tsx`
+
+The Home OS implementation ports and modifies the upstream sun path, night path,
+daylight-duration, daypart and moon-display behavior. It does not include the
+upstream custom element, `ha-card`, editor, or Home Assistant-only UI.
+
+## Audited visual references (no source copied)
+
+- ApexCharts Card (`RomRider/apexcharts-card`), commit `6d3f1e9843f2d58ff73098128e78be8f57a5272b`, MIT. Home OS retains its existing Recorder-backed `TrendSparkline` instead of adding an iframe or chart runtime.
+- Homelable (`Pouzor/homelable`), commit `e988427bb2d26ebf57e201e4368356c4a0109be1`, MIT; topology concepts reviewed only.
+- Homelable HACS (`Pouzor/homelable-hacs`), commit `a807cbe4ba10530c53261c52232488af13a0b8db`, MIT; packaging concepts reviewed only.
 
 MIT License
 

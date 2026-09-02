@@ -290,6 +290,46 @@ export function HomeOsDetailDialog({
     );
   } else if (kind === 'pve') {
     const devices = buildPvePhysicalDevices(visible, config.physicalDevices);
+    const sections: Array<{ label: string; roles: string[] }> = [
+      {
+        label: language === 'zh' ? '概览' : 'Overview',
+        roles: [
+          HOME_OS_ROLES.homelabPveOnline,
+          HOME_OS_ROLES.homelabPveStatus,
+          HOME_OS_ROLES.homelabPveUptime,
+          HOME_OS_ROLES.homelabPveVersion,
+        ],
+      },
+      {
+        label: language === 'zh' ? '性能' : 'Performance',
+        roles: [
+          HOME_OS_ROLES.homelabPveCpu,
+          HOME_OS_ROLES.homelabPveLoad,
+          HOME_OS_ROLES.homelabPveTemperature,
+          HOME_OS_ROLES.homelabPveMemory,
+          HOME_OS_ROLES.homelabPveStorage,
+          HOME_OS_ROLES.homelabPveIoWait,
+        ],
+      },
+      {
+        label: language === 'zh' ? '虚拟化' : 'Virtualization',
+        roles: [
+          HOME_OS_ROLES.homelabPveVmRunning,
+          HOME_OS_ROLES.homelabPveVmTotal,
+          HOME_OS_ROLES.homelabPveContainerRunning,
+          HOME_OS_ROLES.homelabPveContainerTotal,
+          HOME_OS_ROLES.homelabPveBackupProgress,
+        ],
+      },
+      {
+        label: language === 'zh' ? '诊断' : 'Diagnostics',
+        roles: [
+          HOME_OS_ROLES.diagnosticHardwareVoltage,
+          HOME_OS_ROLES.diagnosticMemoryModule,
+          HOME_OS_ROLES.diagnosticTask,
+        ],
+      },
+    ];
     content = (
       <div className="grid gap-3">
         {devices.map((device) => (
@@ -299,12 +339,23 @@ export function HomeOsDetailDialog({
             title={device.name}
             subtitle={`${copy.connectivity}: ${copy[device.state]} · ${copy.freshness}: ${copy[device.freshness]}`}
           >
-            <MetricRows
-              entities={visible.filter((entity) =>
-                device.entityIds.includes(entity.entity.externalId)
-              )}
-              t={t}
-            />
+            <div className="grid gap-4">
+              {sections.map((section) => {
+                const metrics = visible.filter(
+                  (entity) =>
+                    device.entityIds.includes(entity.entity.externalId) &&
+                    entity.roles.some((role) => section.roles.includes(role))
+                );
+                return metrics.length ? (
+                  <section key={section.label} className="grid gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-current/55">
+                      {section.label}
+                    </h3>
+                    <MetricRows entities={metrics} t={t} />
+                  </section>
+                ) : null;
+              })}
+            </div>
             {device.freshness === 'stale' ? (
               <p className="mt-3 text-sm text-amber-400">{copy.dataStale}</p>
             ) : null}

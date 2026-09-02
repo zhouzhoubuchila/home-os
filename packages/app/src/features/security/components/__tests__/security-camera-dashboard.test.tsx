@@ -408,7 +408,7 @@ describe('SecurityCameraDashboard', () => {
   it('renders a manually ordered mix of security entity types', () => {
     selectOverviewEntities(['lock.front', 'camera.a', 'binary_sensor.smoke']);
     renderDashboard({
-      cameras: [camera({ id: 'camera.a', name: 'A Camera' })],
+      cameras: [camera({ id: 'camera.a', name: 'Security Camera' })],
       locks: [lock({ id: 'lock.front', name: 'Front Door Lock' })],
       sensors: [sensor({ id: 'binary_sensor.smoke', name: 'Smoke', securityKind: 'smoke' })],
     });
@@ -416,7 +416,11 @@ describe('SecurityCameraDashboard', () => {
     const cards = within(screen.getByTestId('security-overview-grid')).getAllByTestId(
       /^detail-card:/
     );
-    expect(cards.map((item) => item.textContent)).toEqual(['Front Door Lock', 'A Camera', 'Smoke']);
+    expect(cards.map((item) => item.textContent)).toEqual([
+      'Front Door Lock',
+      'Security Camera',
+      'Smoke',
+    ]);
   });
 
   it('keeps alarm controls prominent before camera feeds on mobile', () => {

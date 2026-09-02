@@ -110,15 +110,31 @@ const ATTENTION_SEVERITY_ORDER: Record<SecuritySeverity, number> = {
 const SECURE_MOTION_GROUP_ID = 'security.aggregate.motion.secure';
 const ATTENTION_GROUP_ID_PREFIX = 'security.aggregate.attention.';
 
-const STILL_IMAGE_UTILITY_KEYWORDS = ['map', 'floor', 'saved map', 'vacuum', 'robot'];
+const STILL_IMAGE_UTILITY_KEYWORDS = [
+  'map',
+  'floor',
+  'floorplan',
+  'cleaning map',
+  'saved map',
+  'vacuum',
+  'robot',
+  'dreame',
+  'roborock',
+];
 const SECURITY_CAMERA_KEYWORDS = [
-  'camera',
-  'cam',
   'doorbell',
+  'security',
+  'surveillance',
+  'ipc',
+  'nvr',
+  'onvif',
+  'rtsp',
+  'homekit',
   'front door',
   'back door',
   'entrance',
   'garage',
+  'gate',
   'driveway',
   'porch',
   'patio',
@@ -126,6 +142,14 @@ const SECURITY_CAMERA_KEYWORDS = [
   'yard',
   'hallway',
 ];
+
+export type CameraSemanticRole =
+  | 'security.camera'
+  | 'security.doorbell_camera'
+  | 'vacuum.map_camera'
+  | 'appliance.camera'
+  | 'media.camera'
+  | 'diagnostic.camera';
 
 function normalizeText(value: string | undefined): string {
   return (value ?? '').replace(/[_-]/g, ' ').toLowerCase();
@@ -145,9 +169,31 @@ function getCameraGroupingKey(camera: CameraDevice): string {
     return `${camera.providerId}:${camera.sourceDeviceId}`;
   }
 
+  const mediaIdentity = normalizeCameraMediaIdentity(camera.entityPicture);
+  if (mediaIdentity) return `${camera.providerId ?? ''}:media:${mediaIdentity}`;
+
   return `${camera.providerId ?? ''}:${readCameraVariantBaseId(camera)}:${normalizeText(
     camera.room
   )}:${normalizeText(camera.name)}`;
+}
+
+function normalizeCameraMediaIdentity(value: string | undefined) {
+  if (!value) return '';
+  return value
+    .replace(/[?&](?:_t|cache|timestamp|token)=[^&]*/gi, '')
+    .replace(/[?&]$/, '')
+    .toLowerCase();
+}
+
+export function classifyCameraSemanticRole(camera: CameraDevice): CameraSemanticRole {
+  const text = normalizeText(`${camera.id} ${camera.nativeId} ${camera.name} ${camera.room}`);
+  if (includesAnyKeyword(text, STILL_IMAGE_UTILITY_KEYWORDS)) return 'vacuum.map_camera';
+  if (/doorbell|front door bell|门铃/.test(text)) return 'security.doorbell_camera';
+  if (includesAnyKeyword(text, SECURITY_CAMERA_KEYWORDS)) return 'security.camera';
+  if (/baby monitor|pet feeder|refrigerator|fridge|oven|appliance/.test(text))
+    return 'appliance.camera';
+  if (/media|album|artwork|thumbnail|preview/.test(text)) return 'media.camera';
+  return 'diagnostic.camera';
 }
 
 function compareByNameAndId(
@@ -328,6 +374,11 @@ export function isStillImageUtilityCamera(camera: CameraDevice): boolean {
   );
 }
 
+export function isSecurityCamera(camera: CameraDevice): boolean {
+  const role = classifyCameraSemanticRole(camera);
+  return role === 'security.camera' || role === 'security.doorbell_camera';
+}
+
 function getSecurityGroupKey(device: DeviceWithType): SecurityGroupKey | null {
   const securityKind = device.securityKind;
 
@@ -419,7 +470,7 @@ function toTypedDevices<TType extends keyof DeviceCollection>(
 function buildSecurityDashboardCandidates(
   devices: SecurityDashboardDeviceCollection
 ): DeviceWithType[] {
-  const dedupedCameras = collapseCameraVariants(devices.cameras);
+  const dedupedCameras = collapseCameraVariants(devices.cameras.filter(isSecurityCamera));
   return collapseOverlappingSecurityDevices([
     ...toTypedDevices(dedupedCameras, 'cameras'),
     ...toTypedDevices(devices.covers ?? [], 'covers'),

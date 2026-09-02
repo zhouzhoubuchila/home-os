@@ -15,6 +15,8 @@ export type HomeOsFreshnessClass = 'static' | 'slow' | 'telemetry' | 'connectivi
 const STATIC_METRIC_ROLES = new Set<SemanticRole>([
   'homelab.pve.version',
   'homelab.home_assistant.version',
+  'network.router.wan_ipv4',
+  'network.router.lan_ipv4',
 ]);
 
 const SLOW_METRIC_ROLES = new Set<SemanticRole>([

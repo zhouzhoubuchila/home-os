@@ -1,6 +1,8 @@
 import type { ResolvedSemanticEntity } from '../core/types';
+import { HomeOsHassFacade } from './home-os-hass-facade';
 import { getMoonPhase, getMoonPhaseFromEntity } from './moon-phase';
 import {
+  calculateAstronomicalDaylightDuration,
   calculateDaylightDuration,
   calculateNightArcPosition,
   calculateSunArcPosition,
@@ -39,7 +41,8 @@ export function getAstronomySnapshot(
   entities: readonly ResolvedSemanticEntity[],
   now = new Date()
 ): AstronomySnapshot {
-  const sun = entities.find((item) => item.entity.externalId === 'sun.sun')?.entity;
+  const facade = new HomeOsHassFacade(entities);
+  const sun = facade.getState('sun.sun');
   const moonEntity = entities.find((item) => {
     const entity = item.entity;
     const text = [
@@ -60,11 +63,19 @@ export function getAstronomySnapshot(
     );
   })?.entity;
   const entityMoon = getMoonPhaseFromEntity(moonEntity?.primaryState);
-  const sunrise = readDate(sun?.attributes.nextRising ?? sun?.attributes.next_rising);
-  const sunset = readDate(sun?.attributes.nextSetting ?? sun?.attributes.next_setting);
+  const sunrise = readDate(
+    facade.getState('sensor.sun_next_rising')?.state ??
+      sun?.attributes.nextRising ??
+      sun?.attributes.next_rising
+  );
+  const sunset = readDate(
+    facade.getState('sensor.sun_next_setting')?.state ??
+      sun?.attributes.nextSetting ??
+      sun?.attributes.next_setting
+  );
   const elevation = readNumber(sun?.attributes.elevation);
   const azimuth = readNumber(sun?.attributes.azimuth);
-  const isDay = String(sun?.primaryState).toLowerCase() === 'above_horizon' || (elevation ?? 0) > 0;
+  const isDay = String(sun?.state).toLowerCase() === 'above_horizon' || (elevation ?? 0) > 0;
   const sunArcPoint =
     sunrise && sunset ? calculateSunArcPosition(now, sunrise, sunset, isDay) : undefined;
   const nightArcPoint =
@@ -79,7 +90,12 @@ export function getAstronomySnapshot(
       .filter((value): value is Date => Boolean(value && value.getTime() > now.getTime()))
       .sort((left, right) => left.getTime() - right.getTime())[0],
     daylightProgress: sunArcPoint?.progress,
-    daylightDurationMs: calculateDaylightDuration(sunrise, sunset),
+    daylightDurationMs:
+      calculateDaylightDuration(sunrise, sunset) ??
+      calculateAstronomicalDaylightDuration(
+        now,
+        readNumber(sun?.attributes.latitude ?? facade.getState('zone.home')?.attributes.latitude)
+      ),
     sunArcPoint,
     nightArcPoint,
     daypart: resolveSunDaypart(azimuth, elevation),

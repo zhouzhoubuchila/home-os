@@ -3,7 +3,12 @@ import { uniqueCapabilities } from '../core/capabilities';
 import type { HomeOsMetric, HomeOsPhysicalDevice, ResolvedSemanticEntity } from '../core/types';
 
 const readString = (value: unknown) => (typeof value === 'string' ? value : undefined);
-const STATIC_ROLES = new Set(['homelab.pve.version', 'homelab.home_assistant.version']);
+const STATIC_ROLES = new Set([
+  'homelab.pve.version',
+  'homelab.home_assistant.version',
+  'network.router.wan_ipv4',
+  'network.router.lan_ipv4',
+]);
 const SLOW_ROLES = new Set([
   'energy.electricity.balance',
   'energy.electricity.month',
@@ -40,8 +45,13 @@ export function buildPhysicalDevices(
     const deviceName = readString(
       resolved.entity.attributes.deviceName ?? resolved.entity.attributes.device_name
     );
+    const pveContext =
+      resolved.roles.some((role) => role.startsWith('homelab.pve.')) ||
+      /proxmox|\bpve\b/.test(
+        `${readString(resolved.entity.attributes.integration) ?? ''} ${readString(resolved.entity.attributes.platform) ?? ''} ${deviceName ?? ''}`.toLowerCase()
+      );
     const semanticDeviceId =
-      resolved.roles.some((role) => role.startsWith('homelab.pve.')) && deviceName
+      pveContext && deviceName
         ? `pve:${resolved.entity.providerId}:${deviceName.trim().toLowerCase()}`
         : undefined;
     const groupId =
@@ -141,7 +151,17 @@ export function buildPvePhysicalDevices(
   options: { now?: number; staleThresholdMs?: number } = {}
 ) {
   return buildPhysicalDevices(
-    entities.filter((entity) => entity.roles.some((role) => role.startsWith('homelab.pve.'))),
+    entities.filter((entity) => {
+      if (entity.roles.some((role) => role.startsWith('homelab.pve.'))) return true;
+      const diagnostic = entity.roles.some((role) =>
+        ['diagnostic.hardware.voltage', 'diagnostic.memory_module', 'diagnostic.task'].includes(
+          role
+        )
+      );
+      const context =
+        `${readString(entity.entity.attributes.integration) ?? ''} ${readString(entity.entity.attributes.platform) ?? ''} ${readString(entity.entity.attributes.deviceName ?? entity.entity.attributes.device_name) ?? ''}`.toLowerCase();
+      return diagnostic && /proxmox|\bpve\b/.test(context);
+    }),
     configs,
     options
   );
