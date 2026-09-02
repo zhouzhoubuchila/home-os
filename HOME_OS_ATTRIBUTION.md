@@ -8,7 +8,10 @@ Home OS 新增层位于 `packages/app/src/features/home-os/`，通过标准化 `
 
 ## Sun Position Card
 
-Home OS 的太阳弧线时间定位逻辑参考并改写自
+Home OS 的太阳轨迹、昼夜弧线定位、昼长和时段判定逻辑源码级适配自
 [Sun Position Card](https://github.com/jayjojayson/Sun-Position-Card)（提交
 `730a1e145e064a0ccc885c795f74c81d61859a28`），Copyright (c) 2025/2026 jayjojayson，
-按 MIT License 使用。Home OS 仅复用其基于日出、日落计算昼间弧线进度的源码思路，UI、数据契约与组件实现均已按本项目架构重写；未嵌入 iframe，也未复制其图片素材。
+按 MIT License 使用。适配后的核心源码位于
+`packages/app/src/features/home-os/astronomy/sun-position-card-adapter.ts`，完整许可见
+`THIRD_PARTY_NOTICES.md`。Lovelace 外壳、卡片编辑器和 Home Assistant 前端专用依赖均未引入；
+Home OS 直接消费标准化 `sun.sun` / Moon 数据，并使用 Navet 卡片外壳呈现。

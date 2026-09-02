@@ -7,11 +7,41 @@ import type {
 } from '../core/types';
 
 export const HOME_OS_FRESHNESS_THRESHOLD_MS = 15 * 60_000;
+export const HOME_OS_CONNECTIVITY_FRESHNESS_THRESHOLD_MS = 5 * 60_000;
+export const HOME_OS_SLOW_FRESHNESS_THRESHOLD_MS = 7 * 86_400_000;
+
+export type HomeOsFreshnessClass = 'static' | 'slow' | 'telemetry' | 'connectivity';
 
 const STATIC_METRIC_ROLES = new Set<SemanticRole>([
   'homelab.pve.version',
   'homelab.home_assistant.version',
 ]);
+
+const SLOW_METRIC_ROLES = new Set<SemanticRole>([
+  'energy.electricity.balance',
+  'energy.electricity.month',
+  'energy.electricity.year',
+  'energy.gas.current',
+]);
+
+export function getMetricFreshnessClass(role: SemanticRole): HomeOsFreshnessClass {
+  if (
+    STATIC_METRIC_ROLES.has(role) ||
+    /(?:version|firmware|manufacturer|model|hardware)/.test(role)
+  )
+    return 'static';
+  if (SLOW_METRIC_ROLES.has(role) || /(?:balance|yearly|annual|month)/.test(role)) return 'slow';
+  if (/(?:online|connectivity|latency|packet_loss|jitter)$/.test(role)) return 'connectivity';
+  return 'telemetry';
+}
+
+export function getMetricFreshnessThresholdMs(role: SemanticRole) {
+  const freshnessClass = getMetricFreshnessClass(role);
+  if (freshnessClass === 'static') return Number.POSITIVE_INFINITY;
+  if (freshnessClass === 'slow') return HOME_OS_SLOW_FRESHNESS_THRESHOLD_MS;
+  if (freshnessClass === 'connectivity') return HOME_OS_CONNECTIVITY_FRESHNESS_THRESHOLD_MS;
+  return HOME_OS_FRESHNESS_THRESHOLD_MS;
+}
 
 const entityUnit = (entity: NavetEntity) => {
   const value = entity.attributes.unit ?? entity.attributes.unit_of_measurement;
@@ -36,7 +66,7 @@ export function resolveMetric(
   role: SemanticRole,
   entities: readonly ResolvedSemanticEntity[],
   now = Date.now(),
-  freshnessThresholdMs = HOME_OS_FRESHNESS_THRESHOLD_MS
+  freshnessThresholdMs?: number
 ): MetricResolution {
   const visible = entities.filter((item) => !item.ignored && item.displayMode !== 'hidden');
   const mapped = visible.filter(
@@ -88,6 +118,7 @@ export function resolveMetric(
   const entity = selected.entity;
   const updatedAt = entity.lastUpdated;
   const updatedMs = updatedAt ? Date.parse(updatedAt) : Number.NaN;
+  const effectiveFreshnessThresholdMs = freshnessThresholdMs ?? getMetricFreshnessThresholdMs(role);
   const unavailable =
     entity.availability !== 'available' ||
     entity.primaryState === null ||
@@ -102,11 +133,7 @@ export function resolveMetric(
       updatedAt,
     };
   }
-  if (
-    !STATIC_METRIC_ROLES.has(role) &&
-    Number.isFinite(updatedMs) &&
-    now - updatedMs > freshnessThresholdMs
-  ) {
+  if (Number.isFinite(updatedMs) && now - updatedMs > effectiveFreshnessThresholdMs) {
     return {
       role,
       state: 'stale',

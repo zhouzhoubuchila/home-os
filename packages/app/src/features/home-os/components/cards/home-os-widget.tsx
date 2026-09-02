@@ -2,7 +2,8 @@ import { dispatchEntityCommand } from '@navet/app/commands';
 import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
-import { useI18n, useTheme } from '@navet/app/hooks';
+import { useI18n, useProviderWeatherDevices, useTheme } from '@navet/app/hooks';
+import type { TranslateFn } from '@navet/app/i18n';
 import { useNavigationStore } from '@navet/app/stores';
 import {
   AlertTriangle,
@@ -31,7 +32,14 @@ import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
+import { formatHomeOsDisplayState } from '../../i18n/display-state';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import {
+  type ResolvedWeatherSource,
+  resolveAirQualitySources,
+  resolveWeatherSource,
+} from '../../mapping/data-source-resolver';
+import { getMetricFreshnessThresholdMs } from '../../mapping/metric-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 
@@ -46,39 +54,25 @@ interface HomeOsWidgetProps {
 }
 
 const sizeLimit = (size: CardSize) => (size === 'small' ? 2 : size === 'medium' ? 4 : 8);
-const localizedState = (value: unknown, language: string) => {
-  if (language !== 'zh' || typeof value !== 'string') return String(value ?? '—');
-  const translations: Record<string, string> = {
-    detected: '已检测',
-    clear: '正常',
-    problem: '异常',
-    away: '离家',
-    home: '在家',
-    on: '开启',
-    off: '关闭',
-    unavailable: '不可用',
-    unknown: '未知',
-  };
-  return translations[value.toLowerCase()] ?? value;
-};
-const stateText = (entity: ResolvedSemanticEntity, language: string) => {
+const stateText = (entity: ResolvedSemanticEntity, t: TranslateFn) => {
   const value = entity.entity.primaryState;
   const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
-  return `${localizedState(value, language)}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
+  return `${formatHomeOsDisplayState(value, t)}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
 };
-const freshnessText = (updatedAt: string | undefined, language: string) => {
+const freshnessText = (updatedAt: string | undefined, language: string, role: string) => {
   const timestamp = updatedAt ? Date.parse(updatedAt) : Number.NaN;
   if (!Number.isFinite(timestamp))
     return language === 'zh' ? '更新时间未知' : 'Update time unknown';
   const minutes = Math.max(0, Math.round((Date.now() - timestamp) / 60_000));
+  const stale = Date.now() - timestamp > getMetricFreshnessThresholdMs(role);
   if (minutes < 1) return language === 'zh' ? '刚刚更新' : 'Updated now';
   if (minutes < 60)
     return language === 'zh'
-      ? `${minutes} 分钟前${minutes >= 15 ? ' · 已过期' : ''}`
-      : `${minutes}m ago${minutes >= 15 ? ' · stale' : ''}`;
+      ? `${minutes} 分钟前${stale ? ' · 已过期' : ''}`
+      : `${minutes}m ago${stale ? ' · stale' : ''}`;
   return language === 'zh'
-    ? `${Math.round(minutes / 60)} 小时前 · 已过期`
-    : `${Math.round(minutes / 60)}h ago · stale`;
+    ? `${Math.round(minutes / 60)} 小时前${stale ? ' · 已过期' : ''}`
+    : `${Math.round(minutes / 60)}h ago${stale ? ' · stale' : ''}`;
 };
 
 function Metrics({
@@ -86,11 +80,13 @@ function Metrics({
   size,
   empty,
   language,
+  t,
 }: {
   entities: ResolvedSemanticEntity[];
   size: CardSize;
   empty: string;
   language: string;
+  t: TranslateFn;
 }) {
   if (!entities.length) return <p className="text-sm text-current/55">{empty}</p>;
   return (
@@ -100,13 +96,123 @@ function Metrics({
           <span className="min-w-0">
             <span className="block truncate text-current/65">{item.displayName}</span>
             <span className="block truncate text-[0.65rem] text-current/40">
-              {freshnessText(item.entity.lastUpdated, language)}
+              {freshnessText(item.entity.lastUpdated, language, item.roles[0] ?? '')}
             </span>
           </span>
-          <strong className="shrink-0 tabular-nums">{stateText(item, language)}</strong>
+          <strong className="shrink-0 tabular-nums">{stateText(item, t)}</strong>
         </div>
       ))}
     </div>
+  );
+}
+
+function WeatherEnhancedCard({
+  size,
+  name,
+  source,
+  copy,
+}: {
+  size: CardSize;
+  name: string;
+  source?: ResolvedWeatherSource;
+  copy: ReturnType<typeof getHomeOsCopy>;
+}) {
+  const current = source?.current;
+  const metrics = current
+    ? [
+        [copy.humidity, current.humidity, '%'],
+        [copy.wind, current.windSpeed, current.windSpeedUnit],
+        [copy.pressure, current.pressure, current.pressureUnit],
+        [copy.visibility, current.visibility, 'km'],
+        [copy.dewPoint, current.dewPoint, current.temperatureUnit],
+      ].filter(([, value]) => value !== undefined)
+    : [];
+  return (
+    <BaseCard size={size} title={name} headerLeading={<CloudSun className="h-5 w-5" />}>
+      <div className="flex h-full min-h-0 flex-col justify-between gap-3">
+        {current && (current.condition || current.temperature !== undefined) ? (
+          <>
+            <div>
+              <strong className="text-3xl tabular-nums">
+                {current.temperature ?? '—'}
+                {current.temperatureUnit ?? ''}
+              </strong>
+              <p className="text-sm text-current/65">{current.condition ?? '—'}</p>
+              {current.feelsLikeTemperature !== undefined ? (
+                <p className="text-xs text-current/50">
+                  {copy.feelsLike} {current.feelsLikeTemperature}
+                  {current.feelsLikeTemperatureUnit ?? current.temperatureUnit ?? ''}
+                </p>
+              ) : null}
+            </div>
+            {size !== 'small' ? (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-current/60">
+                {metrics.slice(0, 4).map(([label, value, unit]) => (
+                  <span key={String(label)}>
+                    {label}:{' '}
+                    <strong className="text-current">
+                      {String(value)}
+                      {String(unit ?? '')}
+                    </strong>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <p className="truncate text-[10px] text-current/45">
+              {copy.weatherSource}:{' '}
+              {source?.sourceType === 'provider' ? copy.dataSourceProvider : copy.dataSourceEntity}{' '}
+              · {source?.id}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-current/55">{copy.noMappedData}</p>
+        )}
+      </div>
+    </BaseCard>
+  );
+}
+
+function AirQualityCard({
+  size,
+  name,
+  entities,
+  language,
+  t,
+  copy,
+  onConfigure,
+}: {
+  size: CardSize;
+  name: string;
+  entities: ResolvedSemanticEntity[];
+  language: string;
+  t: TranslateFn;
+  copy: ReturnType<typeof getHomeOsCopy>;
+  onConfigure: () => void;
+}) {
+  const resolution = resolveAirQualitySources(entities);
+  return (
+    <BaseCard size={size} title={name} headerLeading={<Wind className="h-5 w-5" />}>
+      <div className="flex h-full min-h-0 flex-col justify-between gap-3">
+        {resolution.state === 'capability_absent' ? (
+          <>
+            <p className="text-sm text-current/60">{copy.noAirQualitySensors}</p>
+            <Button size="small" variant="secondary" onClick={onConfigure}>
+              {copy.configureEntityMapping}
+            </Button>
+          </>
+        ) : resolution.state === 'unavailable' ? (
+          <p className="text-sm text-current/60">{copy.unavailable}</p>
+        ) : (
+          <Metrics
+            entities={resolution.metrics}
+            size={size}
+            empty={copy.noAirQualitySensors}
+            language={language}
+            t={t}
+          />
+        )}
+      </div>
+    </BaseCard>
   );
 }
 
@@ -115,13 +221,13 @@ function HouseholdCard({
   entities,
   title,
   status,
-  language,
+  t,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   title: string;
   status: string;
-  language: string;
+  t: TranslateFn;
 }) {
   const members = buildFamilyMembers(entities);
   const homeCount = members.filter((member) => member.state === 'home').length;
@@ -138,15 +244,7 @@ function HouseholdCard({
           {members.slice(0, sizeLimit(size)).map((member) => (
             <div key={member.id} className="flex justify-between gap-2">
               <span className="truncate">{member.name}</span>
-              <span className="text-current/60">
-                {language === 'zh'
-                  ? member.state === 'home'
-                    ? '在家'
-                    : member.state === 'away'
-                      ? '离家'
-                      : '未知'
-                  : member.state}
-              </span>
+              <span className="text-current/60">{formatHomeOsDisplayState(member.state, t)}</span>
             </div>
           ))}
         </div>
@@ -345,15 +443,18 @@ const ICONS: Record<HomeOsCardKind, typeof Server> = {
 };
 
 export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
-  const { language } = useI18n();
+  const { language, t } = useI18n();
   const copy = getHomeOsCopy(language);
+  const definition = getHomeOsCardDefinition(data?.kind);
+  const providerWeather = useProviderWeatherDevices(undefined, {
+    enabled: definition?.kind === 'weather',
+  });
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
   const physicalDevices = useHomeOsConfigStore((state) => state.config.physicalDevices);
   const setActiveSection = useNavigationStore((state) => state.setActiveSection);
   const [detailOpen, setDetailOpen] = useState(false);
-  const definition = getHomeOsCardDefinition(data?.kind);
   if (!definition) {
     return (
       <BaseCard size={size}>
@@ -410,6 +511,11 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
             entities={entities}
             isOpen={detailOpen}
             onOpenChange={setDetailOpen}
+            weatherSource={
+              definition.kind === 'weather'
+                ? resolveWeatherSource(providerWeather, entities)
+                : undefined
+            }
           />
         ) : null}
       </>
@@ -422,7 +528,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
         entities={entities}
         title={copy.household}
         status={copy.peopleAtHome}
-        language={language}
+        t={t}
       />
     );
   if (definition.kind === 'lighting')
@@ -447,6 +553,29 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   );
   const Icon = ICONS[definition.kind];
   const name = language === 'zh' ? definition.name.zh : definition.name.en;
+  if (definition.kind === 'weather') {
+    return withDetail(
+      <WeatherEnhancedCard
+        size={size}
+        name={name.replace('Home OS · ', '')}
+        source={resolveWeatherSource(providerWeather, entities)}
+        copy={copy}
+      />
+    );
+  }
+  if (definition.kind === 'air-quality') {
+    return withDetail(
+      <AirQualityCard
+        size={size}
+        name={name.replace('Home OS · ', '')}
+        entities={entities}
+        language={language}
+        t={t}
+        copy={copy}
+        onConfigure={() => setActiveSection('settings')}
+      />
+    );
+  }
   if (definition.kind === 'pve') {
     const device = buildPvePhysicalDevices(matched, physicalDevices)[0];
     const metricEntities = device
@@ -479,6 +608,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
             size={size}
             empty={copy.noMappedData}
             language={language}
+            t={t}
           />
         </div>
       </BaseCard>
@@ -507,7 +637,13 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
               : copy.notConfigured}
           </span>
         </div>
-        <Metrics entities={matched} size={size} empty={copy.noMappedData} language={language} />
+        <Metrics
+          entities={matched}
+          size={size}
+          empty={copy.noMappedData}
+          language={language}
+          t={t}
+        />
       </div>
     </BaseCard>
   );
