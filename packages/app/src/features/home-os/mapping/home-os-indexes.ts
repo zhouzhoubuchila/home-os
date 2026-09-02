@@ -1,7 +1,9 @@
 import type { ResolvedSemanticEntity } from '../core/types';
+import { buildDataSourceIndexes } from './data-source-resolver';
 import { buildHomeOsMappingSearchIndex } from './search-index';
 
 export function buildHomeOsIndexes(entities: readonly ResolvedSemanticEntity[]) {
+  const dataSources = buildDataSourceIndexes(entities);
   const semanticRoleIndex = new Map<string, ResolvedSemanticEntity[]>();
   const deviceIndex = new Map<string, ResolvedSemanticEntity[]>();
   const physicalDeviceIndex = new Map<string, ResolvedSemanticEntity[]>();
@@ -23,6 +25,7 @@ export function buildHomeOsIndexes(entities: readonly ResolvedSemanticEntity[]) 
     }
   }
   return {
+    ...dataSources,
     search: buildHomeOsMappingSearchIndex(entities),
     semanticRoleIndex,
     deviceIndex,

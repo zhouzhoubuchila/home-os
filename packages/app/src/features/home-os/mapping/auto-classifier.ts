@@ -33,6 +33,9 @@ function metadataText(entity: NavetEntity) {
     attributes.manufacturer,
     attributes.viaDeviceName,
     attributes.via_device_name,
+    attributes.configEntry,
+    attributes.config_entry,
+    attributes.identifiers,
   ]
     .map(readString)
     .filter(Boolean)
@@ -76,6 +79,49 @@ const INTERNAL_DEVICE_HINTS =
 const ENVIRONMENT_HINTS =
   /living|bedroom|study|balcony|room|ambient|outdoor|indoor|客厅|卧室|书房|次卧|阳台|室内|室外|环境/;
 const LIGHTING_NEGATIVE_HINTS = /down.?light|light|lamp|灯|筒灯|照明/;
+const ROUTER_POSITIVE_INTEGRATIONS =
+  /openwrt|immortalwrt|tplink|tp_link|asuswrt|fritz|unifi|opnsense|pfsense|mikrotik|routeros/;
+const ROUTER_POSITIVE_CONTEXT =
+  /\brouter\b|openwrt|immortalwrt|tp[-_ ]?link|archer|deco|unifi|opnsense|pfsense|mikrotik|routeros|主路由|软路由|路由器|\bwan\b|\blan\b|client.?count|routing|internet traffic/;
+const ROUTER_NEGATIVE_CONTEXT =
+  /zigbee|bluetooth|\bble\b|matter|homekit|thread border router|smart home hub|gateway hub|mi gateway|xiaomi gateway|sensor hub|\bbridge\b|米家网关|智能家居网关/;
+
+function airQualityCandidate(name: string, deviceClass: string, unit: string) {
+  if (deviceClass === 'aqi' || /(?:^|[._ -])aqi(?:$|[._ -])|air quality|空气质量/.test(name))
+    return candidate(HOME_OS_ROLES.environmentAirQuality, 0.96, 'device_metadata', 'AQI metadata');
+  if (deviceClass === 'pm25' || /pm\s*2[._ ]?5|pm25/.test(name))
+    return candidate(HOME_OS_ROLES.environmentPm25, 0.97, 'device_metadata', 'PM2.5 metadata');
+  if (deviceClass === 'pm10' || /pm\s*10/.test(name))
+    return candidate(HOME_OS_ROLES.environmentPm10, 0.97, 'device_metadata', 'PM10 metadata');
+  if (
+    deviceClass === 'carbon_dioxide' ||
+    /(?:^|[._ -])co2(?:$|[._ -])|carbon dioxide|二氧化碳/.test(name)
+  )
+    return candidate(HOME_OS_ROLES.environmentCo2, 0.97, 'device_metadata', 'CO2 metadata');
+  if (/formaldehyde|hcho|甲醛/.test(name))
+    return candidate(
+      HOME_OS_ROLES.environmentHcho,
+      0.96,
+      'device_metadata',
+      'formaldehyde metadata'
+    );
+  if (/\btvoc\b|total volatile organic|总挥发性有机物/.test(name))
+    return candidate(HOME_OS_ROLES.environmentTvoc, 0.96, 'device_metadata', 'TVOC metadata');
+  if (
+    deviceClass === 'volatile_organic_compounds' ||
+    deviceClass === 'volatile_organic_compounds_parts' ||
+    /(?:^|[._ -])voc(?:$|[._ -])|volatile organic|挥发性有机物/.test(name)
+  )
+    return candidate(HOME_OS_ROLES.environmentVoc, 0.95, 'device_metadata', 'VOC metadata');
+  if (/µg\/m³|ug\/m3|μg\/m³|ppm|ppb/.test(unit) && /air|空气|quality|颗粒物/.test(name))
+    return candidate(
+      HOME_OS_ROLES.environmentAirQuality,
+      0.72,
+      'device_metadata',
+      `air metric unit=${unit}`
+    );
+  return undefined;
+}
 
 function temperatureCandidate(
   name: string,
@@ -129,17 +175,33 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   const result: SemanticCandidate[] = [];
 
   // Stable device and integration context is authoritative over generic metric semantics.
-  const pveContext =
-    integration.includes('proxmox') ||
-    integration.includes('pve') ||
-    /\bproxmox\b|\bpve\b|proxmoxve/.test(name);
+  const pveIntegration = integration.includes('proxmox') || integration.includes('pve');
+  const pvePattern = /(?:^|[._ -])(?:proxmox|pve|proxmoxve)(?:$|[._ -])/;
+  const pveDeviceContext = pvePattern.test(
+    [
+      entity.attributes.deviceName,
+      entity.attributes.device_name,
+      entity.attributes.manufacturer,
+      entity.attributes.model,
+      entity.attributes.configEntry,
+      entity.attributes.config_entry,
+    ]
+      .map(readString)
+      .join(' ')
+      .toLowerCase()
+  );
+  const pveContext = pveIntegration || pveDeviceContext || pvePattern.test(name);
   if (pveContext) {
     result.push(
       candidate(
         pveRole(name, deviceClass, unit),
-        integration.includes('proxmox') ? 0.99 : 0.94,
-        integration ? 'integration' : 'device_metadata',
-        integration ? `integration=${integration}` : 'device context=PVE',
+        pveIntegration ? 0.99 : pveDeviceContext ? 0.94 : 0.82,
+        pveIntegration ? 'integration' : pveDeviceContext ? 'device_metadata' : 'regex_fallback',
+        pveIntegration
+          ? `integration=${integration}`
+          : pveDeviceContext
+            ? 'device context=PVE'
+            : 'PVE name candidate requires mapping review',
         deviceClass ? `device_class=${deviceClass}` : 'metric inferred from stable device context'
       )
     );
@@ -209,6 +271,12 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     );
   }
 
+  if (domain === 'sensor') {
+    const airCandidate = airQualityCandidate(name, deviceClass, unit);
+    if (airCandidate && !result.some(({ role }) => role === airCandidate.role))
+      result.push(airCandidate);
+  }
+
   if (integration.includes('home_assistant') || integration.includes('systemmonitor')) {
     const role = name.includes('version')
       ? HOME_OS_ROLES.homelabHomeAssistantVersion
@@ -220,12 +288,11 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
   }
 
+  const routerNegative =
+    ROUTER_NEGATIVE_CONTEXT.test(name) || ROUTER_NEGATIVE_CONTEXT.test(integration);
+  const routerIntegration = ROUTER_POSITIVE_INTEGRATIONS.test(integration);
   const routerContext =
-    integration.includes('openwrt') ||
-    integration.includes('immortalwrt') ||
-    integration.includes('tplink') ||
-    integration.includes('tp_link') ||
-    /\brouter\b|\bgateway\b|openwrt|immortalwrt|tp[-_ ]?link|路由器|网关/.test(name);
+    !routerNegative && (routerIntegration || ROUTER_POSITIVE_CONTEXT.test(name));
   if (routerContext) {
     const role = name.includes('client')
       ? HOME_OS_ROLES.networkRouterClients
@@ -243,9 +310,10 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(
       candidate(
         role,
-        integration ? 0.92 : 0.88,
-        integration ? 'integration' : 'device_metadata',
-        integration ? `integration=${integration}` : 'device context=router'
+        routerIntegration ? 0.97 : 0.9,
+        routerIntegration ? 'integration' : 'device_metadata',
+        routerIntegration ? `router integration=${integration}` : 'strong network router context',
+        'negative smart-home gateway evidence absent'
       )
     );
   }

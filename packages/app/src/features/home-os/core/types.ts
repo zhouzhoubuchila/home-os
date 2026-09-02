@@ -87,8 +87,23 @@ export type MetricResolutionReasonCode =
   | 'no_candidate_found'
   | 'candidate_unmapped'
   | 'candidate_ambiguous'
+  | 'mapped_available'
   | 'mapped_unavailable'
-  | 'mapped_stale';
+  | 'mapped_stale'
+  | 'provider_available'
+  | 'provider_unavailable';
+
+export interface DataSourceCandidate {
+  sourceType: 'provider' | 'ha_entity' | 'semantic_mapping' | 'manual';
+  sourceId: string;
+  role?: string;
+  confidence: number;
+  deviceId?: string;
+  integration?: string;
+  areaId?: string;
+  reasons: string[];
+  negativeEvidence?: string[];
+}
 
 export interface MetricResolutionCandidate {
   entityId: string;

@@ -2,15 +2,17 @@ import { Button, Input, Select } from '@navet/app/components/primitives';
 import { cn } from '@navet/app/components/ui/utils';
 import { SettingsSectionShell } from '@navet/app/features/settings/components/settings-section-shell';
 import type { SettingsSectionController } from '@navet/app/features/settings/hooks/use-settings-section-controller';
-import { useI18n, useIntegrationStore } from '@navet/app/hooks';
+import { useI18n, useIntegrationStore, useProviderWeatherDevices } from '@navet/app/hooks';
 import { integrationSelectors } from '@navet/app/stores/selectors';
 import type { NavetEntity } from '@navet/core/types';
 import { SlidersHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-import';
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import { resolveAirQualitySources, resolveWeatherSource } from '../../mapping/data-source-resolver';
 import { upsertManualMapping } from '../../mapping/manual-overrides';
 import { buildHomeOsMappingSearchIndex } from '../../mapping/search-index';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
@@ -45,6 +47,7 @@ const matchesFilter = (resolved: ResolvedSemanticEntity, filter: Filter) => {
 export function MappingSettingsPage({ controller }: { controller: SettingsSectionController }) {
   const { language } = useI18n();
   const copy = getHomeOsCopy(language);
+  const providerWeather = useProviderWeatherDevices();
   const entitiesById = useIntegrationStore(
     useShallow(integrationSelectors.providerEntitiesByCanonicalId)
   );
@@ -84,8 +87,22 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     setVisibleLimit(160);
   }, [filter, query]);
 
-  const diagnostics = useMemo(
-    () => ({
+  const diagnostics = useMemo(() => {
+    const weather = resolveWeatherSource(providerWeather, resolved);
+    const air = resolveAirQualitySources(resolved);
+    const sun = resolved.find((item) => item.entity.externalId === 'sun.sun');
+    const moon = resolved.find((item) =>
+      /moon|月相/.test(`${item.entity.externalId} ${item.displayName}`.toLowerCase())
+    );
+    const routerNegatives = resolved.filter((item) => {
+      const text =
+        `${item.entity.externalId} ${item.displayName} ${String(item.entity.attributes.integration ?? '')}`.toLowerCase();
+      return (
+        /xiaomi gateway|mi gateway|gateway hub|zigbee|matter|homekit|bridge/.test(text) &&
+        !item.roles.some((role) => role.startsWith('network.router.'))
+      );
+    });
+    return {
       mapped: resolved.filter((item) => item.reviewDisposition === 'mapped').length,
       review: resolved.filter((item) => item.needsReview).length,
       manual: resolved.filter((item) => item.source === 'manual').length,
@@ -99,8 +116,12 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       internet: resolved.filter((item) =>
         item.roles.some((role) => role.startsWith('network.internet.'))
       ).length,
-      lightingCircuits: (config.functionalDevices ?? []).filter((item) => item.kind === 'light')
-        .length,
+      lightingCircuits: buildHomeOsLights(resolved, config.functionalDevices ?? []).length,
+      weatherSource: weather ? `${weather.sourceType}: ${weather.id}` : '—',
+      airMetrics: air.metrics.flatMap((item) => item.roles).length,
+      sunEntity: sun?.entity.externalId ?? '—',
+      moonSource: moon?.entity.externalId ?? 'calculated',
+      routerNegatives: routerNegatives.length,
       environmentTemperature: resolved.filter((item) =>
         item.roles.includes('environment.temperature')
       ).length,
@@ -112,9 +133,8 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       internalTemperature: resolved.filter((item) =>
         item.roles.includes('device.internal_temperature')
       ).length,
-    }),
-    [config.functionalDevices, resolved]
-  );
+    };
+  }, [config.functionalDevices, providerWeather, resolved]);
 
   const batchUpdate = async (ignored: boolean) => {
     const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
@@ -324,6 +344,21 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         </span>
         <span>
           {copy.lightingCircuits}: {diagnostics.lightingCircuits}
+        </span>
+        <span>
+          {copy.weatherSource}: {diagnostics.weatherSource}
+        </span>
+        <span>
+          {copy.detectedMetrics}: {copy.airQuality} {diagnostics.airMetrics}
+        </span>
+        <span>
+          {copy.sunEntity}: {diagnostics.sunEntity}
+        </span>
+        <span>
+          {copy.moonSource}: {diagnostics.moonSource}
+        </span>
+        <span>
+          {copy.routerNegativeCandidates}: {diagnostics.routerNegatives}
         </span>
         <span>
           {copy.temperatureDiagnostics}: {diagnostics.environmentTemperature} /{' '}

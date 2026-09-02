@@ -13,7 +13,12 @@ import { AstronomyVisual, getAstronomySnapshot } from '../../astronomy/astronomy
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
+import { formatHomeOsDisplayState } from '../../i18n/display-state';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
+import {
+  type ResolvedWeatherSource,
+  resolveAirQualitySources,
+} from '../../mapping/data-source-resolver';
 import { resolveMetric } from '../../mapping/metric-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 
@@ -27,22 +32,13 @@ function formatAlertDuration(durationMs: number, language: string) {
     : `${hours}h${remaining ? ` ${remaining}m` : ''}`;
 }
 
-function formatAlertValue(value: unknown, language: string) {
-  if (language !== 'zh' || typeof value !== 'string') return String(value);
-  const translations: Record<string, string> = {
-    detected: '已检测',
-    clear: '正常',
-    problem: '异常',
-    away: '离家',
-    on: '开启',
-    off: '关闭',
-    unavailable: '不可用',
-    unknown: '未知',
-  };
-  return translations[value.toLowerCase()] ?? value;
-}
-
-function MetricRows({ entities }: { entities: readonly ResolvedSemanticEntity[] }) {
+function MetricRows({
+  entities,
+  t,
+}: {
+  entities: readonly ResolvedSemanticEntity[];
+  t: ReturnType<typeof useI18n>['t'];
+}) {
   if (!entities.length) return <p className="text-sm text-current/60">—</p>;
   return (
     <div className="grid gap-2">
@@ -58,7 +54,7 @@ function MetricRows({ entities }: { entities: readonly ResolvedSemanticEntity[] 
               <span className="block truncate text-xs text-current/50">{item.roles[0]}</span>
             </span>
             <strong className="shrink-0 tabular-nums">
-              {String(item.entity.primaryState ?? '—')}
+              {formatHomeOsDisplayState(item.entity.primaryState, t)}
               {typeof unit === 'string' ? ` ${unit}` : ''}
             </strong>
           </div>
@@ -129,9 +125,17 @@ function DiagnosisRows({
               </strong>
             </div>
             {resolution.candidates?.length ? (
-              <p className="mt-1 truncate text-xs text-current/55">
-                {resolution.candidates.map(({ entityId }) => entityId).join(' · ')}
-              </p>
+              <details className="mt-1 text-xs text-current/55">
+                <summary>
+                  {copy.candidateCount}: {resolution.candidates.length} · {copy.selectedSource}:{' '}
+                  {resolution.mappedEntityId ?? resolution.candidates[0]?.entityId ?? '—'}
+                </summary>
+                {resolution.candidates.map((candidate) => (
+                  <p key={candidate.entityId} className="mt-1 break-words">
+                    {candidate.entityId}: {candidate.reasons.join(' · ')}
+                  </p>
+                ))}
+              </details>
             ) : null}
           </div>
         );
@@ -145,13 +149,15 @@ export function HomeOsDetailDialog({
   entities,
   isOpen,
   onOpenChange,
+  weatherSource,
 }: {
   kind: HomeOsCardKind;
   entities: readonly ResolvedSemanticEntity[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  weatherSource?: ResolvedWeatherSource;
 }) {
-  const { language } = useI18n();
+  const { language, t } = useI18n();
   const { theme } = useTheme();
   const copy = getHomeOsCopy(language);
   const surface = getThemeSurfaceTokens(theme);
@@ -188,7 +194,9 @@ export function HomeOsDetailDialog({
           <div key={member.id} className="rounded-xl border border-current/10 p-3">
             <div className="flex justify-between gap-3">
               <span className="font-medium">{member.name}</span>
-              <span className={surface.textSecondary}>{member.state}</span>
+              <span className={surface.textSecondary}>
+                {formatHomeOsDisplayState(member.state, t)}
+              </span>
             </div>
             <p className={`mt-1 text-xs ${surface.textSecondary}`}>
               {member.location ?? copy.roomUnknown}
@@ -214,7 +222,7 @@ export function HomeOsDetailDialog({
             <span>
               <span className="block font-medium">{light.name}</span>
               <span className={`block text-xs ${surface.textSecondary}`}>
-                {light.room ?? copy.roomUnknown} · {light.state}
+                {light.room ?? copy.roomUnknown} · {formatHomeOsDisplayState(light.state, t)}
               </span>
             </span>
             {light.controllable ? (
@@ -264,7 +272,7 @@ export function HomeOsDetailDialog({
             </p>
             <p className={`text-xs ${surface.textSecondary}`}>
               {copy[alert.severity]} · {copy.currentValue}:{' '}
-              {formatAlertValue(alert.currentValue, language)}
+              {formatHomeOsDisplayState(alert.currentValue, t)}
               {alert.unit ? ` ${alert.unit}` : ''} · {copy.duration}:{' '}
               {formatAlertDuration(alert.durationMs, language)}
             </p>
@@ -295,6 +303,7 @@ export function HomeOsDetailDialog({
               entities={visible.filter((entity) =>
                 device.entityIds.includes(entity.entity.externalId)
               )}
+              t={t}
             />
             {device.freshness === 'stale' ? (
               <p className="mt-3 text-sm text-amber-400">{copy.dataStale}</p>
@@ -326,7 +335,6 @@ export function HomeOsDetailDialog({
             </p>
           </div>
         </div>
-        <MetricRows entities={[]} />
         <p>
           {now.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')} · {lunar.toString()}
         </p>
@@ -349,6 +357,58 @@ export function HomeOsDetailDialog({
         </div>
       </div>
     );
+  } else if (kind === 'weather') {
+    const current = weatherSource?.current;
+    const rows = [
+      [language === 'zh' ? '当前天气' : 'Condition', current?.condition],
+      [
+        language === 'zh' ? '当前温度' : 'Temperature',
+        current?.temperature,
+        current?.temperatureUnit,
+      ],
+      [
+        language === 'zh' ? '体感温度' : 'Feels like',
+        current?.feelsLikeTemperature,
+        current?.feelsLikeTemperatureUnit ?? current?.temperatureUnit,
+      ],
+      [language === 'zh' ? '湿度' : 'Humidity', current?.humidity, '%'],
+      [language === 'zh' ? '风速' : 'Wind speed', current?.windSpeed, current?.windSpeedUnit],
+      [language === 'zh' ? '气压' : 'Pressure', current?.pressure, current?.pressureUnit],
+      [language === 'zh' ? '能见度' : 'Visibility', current?.visibility, 'km'],
+      [language === 'zh' ? '露点' : 'Dew point', current?.dewPoint, current?.temperatureUnit],
+    ].filter(([, value]) => value !== undefined);
+    content = weatherSource ? (
+      <div className="grid gap-3">
+        <p className={`text-xs ${surface.textMuted}`}>
+          {copy.weatherSource}:{' '}
+          {weatherSource.sourceType === 'provider'
+            ? copy.dataSourceProvider
+            : copy.dataSourceEntity}{' '}
+          · {weatherSource.id}
+        </p>
+        {rows.map(([label, value, unit]) => (
+          <div key={String(label)} className="flex justify-between gap-4 text-sm">
+            <span>{label}</span>
+            <strong>
+              {String(value)}
+              {String(unit ?? '')}
+            </strong>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p>{copy.noMappedData}</p>
+    );
+  } else if (kind === 'air-quality') {
+    const air = resolveAirQualitySources(visible);
+    content =
+      air.state === 'capability_absent' ? (
+        <p>{copy.noAirQualitySensors}</p>
+      ) : air.state === 'unavailable' ? (
+        <p>{copy.unavailable}</p>
+      ) : (
+        <MetricRows entities={air.metrics} t={t} />
+      );
   } else {
     const diagnosticRoles = DETAIL_ROLES[kind];
     content = diagnosticRoles ? (
@@ -356,6 +416,7 @@ export function HomeOsDetailDialog({
     ) : (
       <MetricRows
         entities={visible.filter((entity) => entity.roles.some((role) => role.startsWith(prefix)))}
+        t={t}
       />
     );
   }

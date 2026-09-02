@@ -4,6 +4,12 @@ import type { HomeOsMetric, HomeOsPhysicalDevice, ResolvedSemanticEntity } from 
 
 const readString = (value: unknown) => (typeof value === 'string' ? value : undefined);
 const STATIC_ROLES = new Set(['homelab.pve.version', 'homelab.home_assistant.version']);
+const SLOW_ROLES = new Set([
+  'energy.electricity.balance',
+  'energy.electricity.month',
+  'energy.electricity.year',
+  'energy.gas.current',
+]);
 const OFFLINE_STATES = new Set(['off', 'offline', 'disconnected', 'unavailable', 'false', '0']);
 
 function isStale(updatedAt: string | undefined, now: number, thresholdMs: number) {
@@ -59,7 +65,13 @@ export function buildPhysicalDevices(
             member.entity.attributes.unit ?? member.entity.attributes.unit_of_measurement
           ),
           updatedAt: member.entity.lastUpdated,
-          stale: isStale(member.entity.lastUpdated, now, staleThresholdMs),
+          stale: STATIC_ROLES.has(role)
+            ? false
+            : isStale(
+                member.entity.lastUpdated,
+                now,
+                SLOW_ROLES.has(role) ? 7 * 86_400_000 : staleThresholdMs
+              ),
           available: member.entity.availability === 'available',
           sourceEntityId: member.entity.externalId,
         };
