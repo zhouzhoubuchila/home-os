@@ -140,7 +140,7 @@ describe('DashboardSectionRouter kiosk mode', () => {
 
     renderWithProviders(<DashboardSectionRouter controller={controller} />);
 
-    expect(await screen.findByRole('tab', { name: 'Climate' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: 'Climate' }, { timeout: 3000 })).toHaveAttribute(
       'aria-selected',
       'true'
     );

@@ -9,6 +9,63 @@ import {
 } from './dashboard-collection';
 
 describe('dashboard collection contract', () => {
+  it('migrates only the legacy generated Section 1 layout back to flow mode', () => {
+    const fallback = createLegacyDashboardCollection({ homeLayout: null });
+    const generated = createDashboardDefinition({ id: 'home', name: 'Home' });
+    generated.homeLayout = {
+      mode: 'sectioned',
+      showHero: true,
+      cardIds: ['home_assistant:light.hall'],
+      sections: [{ id: 'section-1', title: 'Section 1', x: 0, y: 0, w: 12, h: 1, span: 12 }],
+      cardSectionAssignments: { 'home_assistant:light.hall': 'section-1' },
+    };
+
+    const migrated = sanitizeDashboardCollection(
+      {
+        schemaVersion: 1,
+        defaultDashboardId: 'home',
+        order: ['home'],
+        dashboardsById: { home: generated },
+        dashboardIdByClientId: {},
+      },
+      fallback
+    );
+
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.dashboardsById.home.homeLayout).toMatchObject({
+      mode: 'flow',
+      cardIds: ['home_assistant:light.hall'],
+      sections: [],
+      cardSectionAssignments: {},
+    });
+  });
+
+  it('preserves an intentional Section 1 in an already-current collection', () => {
+    const fallback = createLegacyDashboardCollection({ homeLayout: null });
+    const intentional = createDashboardDefinition({ id: 'home', name: 'Home' });
+    intentional.homeLayout = {
+      mode: 'sectioned',
+      showHero: true,
+      cardIds: ['home_assistant:light.hall'],
+      sections: [{ id: 'section-1', title: 'Section 1', x: 0, y: 0, w: 12, h: 1, span: 12 }],
+      cardSectionAssignments: { 'home_assistant:light.hall': 'section-1' },
+    };
+
+    const current = sanitizeDashboardCollection(
+      {
+        schemaVersion: 2,
+        defaultDashboardId: 'home',
+        order: ['home'],
+        dashboardsById: { home: intentional },
+        dashboardIdByClientId: {},
+      },
+      fallback
+    );
+
+    expect(current.dashboardsById.home.homeLayout.mode).toBe('sectioned');
+    expect(current.dashboardsById.home.homeLayout.sections[0]?.title).toBe('Section 1');
+  });
+
   it('migrates the existing Home layout into one stable dashboard without changing its cards', () => {
     const collection = createLegacyDashboardCollection({
       homeLayout: {

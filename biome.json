@@ -14,7 +14,8 @@
 			"packages/**/*.jsx",
 			"packages/**/*.mjs",
 			"packages/**/*.cjs",
-			"packages/**/*.json"
+			"packages/**/*.json",
+			"!packages/app/src/features/home-os/astronomy/third_party/**"
 		]
 	},
 	"formatter": {

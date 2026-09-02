@@ -1,4 +1,9 @@
+import type {
+  ProjectedLightCircuit,
+  ProjectedLightState,
+} from '@navet/app/features/home-os/projection/product-path-projection';
 import type { DeviceWithType } from '@navet/app/types/device.types';
+import type { ProductProjectionMetadata } from '@navet/app/types/product-projection';
 import type { IntegrationProviderId } from '@navet/app/types/provider';
 import { getDeviceRoomLabel, UNKNOWN_ROOM_LABEL } from '@navet/app/utils/device-location';
 import type { NavetEntity } from '@navet/core/types';
@@ -8,6 +13,7 @@ export interface LightDashboardItem {
   providerId?: IntegrationProviderId;
   name: string;
   room: string;
+  state: ProjectedLightState;
   isOn: boolean;
   available: boolean;
   brightness?: number;
@@ -16,6 +22,10 @@ export interface LightDashboardItem {
   supportsBrightness: boolean;
   supportsColorTemperature: boolean;
   supportsToggle: boolean;
+  stateEntityId?: string;
+  primaryCommandTarget?: string;
+  commandTargets: ProductProjectionMetadata['commandTargets'];
+  projection?: ProductProjectionMetadata;
 }
 
 export interface LightRoomSummary {
@@ -58,6 +68,7 @@ function areItemsEqual(left: LightDashboardItem, right: LightDashboardItem): boo
     left.providerId === right.providerId &&
     left.name === right.name &&
     left.room === right.room &&
+    left.state === right.state &&
     left.isOn === right.isOn &&
     left.available === right.available &&
     left.brightness === right.brightness &&
@@ -65,8 +76,33 @@ function areItemsEqual(left: LightDashboardItem, right: LightDashboardItem): boo
     left.lastUpdated === right.lastUpdated &&
     left.supportsBrightness === right.supportsBrightness &&
     left.supportsColorTemperature === right.supportsColorTemperature &&
-    left.supportsToggle === right.supportsToggle
+    left.supportsToggle === right.supportsToggle &&
+    left.stateEntityId === right.stateEntityId &&
+    left.primaryCommandTarget === right.primaryCommandTarget &&
+    JSON.stringify(left.commandTargets) === JSON.stringify(right.commandTargets)
   );
+}
+
+function fromProjectedLight(light: ProjectedLightCircuit): LightDashboardItem {
+  return {
+    id: light.id,
+    providerId: light.projection.providerId,
+    name: light.name,
+    room: light.room || UNKNOWN_ROOM_LABEL,
+    state: light.state,
+    isOn: light.state === 'on',
+    available: light.state !== 'unavailable',
+    brightness: light.brightness,
+    colorTemperatureKelvin: light.colorTemperatureKelvin,
+    lastUpdated: light.lastUpdated,
+    supportsBrightness: light.supportsBrightness,
+    supportsColorTemperature: light.supportsColorTemperature,
+    supportsToggle: light.supportsToggle,
+    stateEntityId: light.stateEntityId,
+    primaryCommandTarget: light.primaryCommandTarget,
+    commandTargets: light.projection.commandTargets,
+    projection: light.projection,
+  };
 }
 
 function summarizeRoom(room: string, lights: LightDashboardItem[]): LightRoomSummary {
@@ -121,12 +157,14 @@ export function buildLightDashboardModel({
   rooms,
   cardOrders,
   previous,
+  projectedLights,
 }: {
   deviceMap: Map<string, DeviceWithType>;
   entities: Record<string, NavetEntity>;
   rooms: string[];
   cardOrders: Record<string, string[]>;
   previous?: LightDashboardModel;
+  projectedLights?: readonly ProjectedLightCircuit[];
 }): LightDashboardModel {
   const previousItems = new Map(
     previous?.rooms.flatMap((room) => room.lights.map((light) => [light.id, light] as const)) ?? []
@@ -140,7 +178,18 @@ export function buildLightDashboardModel({
   }
   const itemsByRoom = new Map<string, LightDashboardItem[]>();
 
-  for (const device of deviceMap.values()) {
+  if (projectedLights) {
+    for (const projectedLight of projectedLights) {
+      const next = fromProjectedLight(projectedLight);
+      const previousItem = previousItems.get(next.id);
+      const item = previousItem && areItemsEqual(previousItem, next) ? previousItem : next;
+      const roomItems = itemsByRoom.get(item.room) ?? [];
+      roomItems.push(item);
+      itemsByRoom.set(item.room, roomItems);
+    }
+  }
+
+  for (const device of projectedLights ? [] : deviceMap.values()) {
     if (device.type !== 'lights') continue;
     const entity = findEntity(device, entityLookup);
     const room = getDeviceRoomLabel(device) || UNKNOWN_ROOM_LABEL;
@@ -151,6 +200,20 @@ export function buildLightDashboardModel({
       providerId: entity?.providerId ?? device.providerId,
       name: entity?.name ?? device.name,
       room,
+      state:
+        entity?.availability === 'unavailable'
+          ? 'unavailable'
+          : entity?.availability === 'unknown'
+            ? 'unknown'
+            : entity
+              ? entity.primaryState === 'on' || entity.primaryState === true
+                ? 'on'
+                : entity.primaryState === 'off' || entity.primaryState === false
+                  ? 'off'
+                  : 'unknown'
+              : device.state
+                ? 'on'
+                : 'off',
       isOn: entity ? entity.primaryState === 'on' || entity.primaryState === true : device.state,
       available: entity ? entity.availability === 'available' : true,
       brightness,
@@ -165,6 +228,13 @@ export function buildLightDashboardModel({
         entity?.capabilities.includes('color_temperature') ??
         typeof attributes.colorTemperatureKelvin === 'number',
       supportsToggle: entity?.capabilities.includes('toggle') ?? true,
+      stateEntityId: entity?.canonicalId ?? device.id,
+      primaryCommandTarget: entity?.canonicalId ?? device.id,
+      commandTargets: {
+        on: [entity?.canonicalId ?? device.id],
+        off: [entity?.canonicalId ?? device.id],
+        toggle: [entity?.canonicalId ?? device.id],
+      },
     };
     const previousItem = previousItems.get(next.id);
     const item = previousItem && areItemsEqual(previousItem, next) ? previousItem : next;

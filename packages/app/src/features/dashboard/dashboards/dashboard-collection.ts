@@ -9,7 +9,7 @@ import type {
 import { normalizeLayout } from '../utils/layout-migration';
 import { ZONE_ORDERED, type ZoneName } from '../zones/zone-types';
 
-export const DASHBOARD_COLLECTION_SCHEMA_VERSION = 1 as const;
+export const DASHBOARD_COLLECTION_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_DASHBOARD_ID = 'home' as const;
 export const MAX_DASHBOARD_COUNT = 24;
 export const MAX_DASHBOARD_NAME_LENGTH = 64;
@@ -197,6 +197,25 @@ export function normalizeHomeDashboardLayout(value: unknown): HomeDashboardLayou
         sectionId,
       ])
     ),
+  };
+}
+
+function migrateGeneratedFirstSection(layout: HomeDashboardLayoutState) {
+  const section = layout.sections[0];
+  if (
+    layout.mode !== 'sectioned' ||
+    layout.sections.length !== 1 ||
+    section?.title !== 'Section 1' ||
+    !layout.cardIds.every((cardId) => layout.cardSectionAssignments[cardId] === section.id)
+  ) {
+    return layout;
+  }
+
+  return {
+    ...layout,
+    mode: 'flow' as const,
+    sections: [],
+    cardSectionAssignments: {},
   };
 }
 
@@ -394,6 +413,8 @@ export function sanitizeDashboardCollection(
   if (!isRecord(value) || !isRecord(value.dashboardsById)) {
     return clone(fallback);
   }
+  const shouldMigrateGeneratedFirstSection =
+    value.schemaVersion !== DASHBOARD_COLLECTION_SCHEMA_VERSION;
 
   const dashboardsById = Object.fromEntries(
     Object.entries(value.dashboardsById)
@@ -409,7 +430,10 @@ export function sanitizeDashboardCollection(
         if (!id) {
           return [];
         }
-        const homeLayout = normalizeHomeDashboardLayout(rawDefinition.homeLayout);
+        const normalizedHomeLayout = normalizeHomeDashboardLayout(rawDefinition.homeLayout);
+        const homeLayout = shouldMigrateGeneratedFirstSection
+          ? migrateGeneratedFirstSection(normalizedHomeLayout)
+          : normalizedHomeLayout;
         const homeCustomCards = sanitizeCards(rawDefinition.homeCustomCards).map((card) => ({
           ...card,
           room: HOME_WIDGET_ROOM,

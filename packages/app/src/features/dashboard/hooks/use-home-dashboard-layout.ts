@@ -1,4 +1,6 @@
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import { resolveAppLanguage } from '@navet/app/i18n/config';
+import { useSettingsStore } from '@navet/app/stores';
 import { useCallback, useMemo } from 'react';
 import { useDashboardCollectionStore } from '../dashboards/dashboard-collection-store';
 import {
@@ -29,15 +31,14 @@ export type {
   HomeLayoutMode,
 } from '../stores/home-dashboard-layout-store';
 
-const SECTION_TITLE_PREFIX = 'Section';
 const CUSTOM_CARD_ID_PREFIX = 'custom-';
 
 function createSectionId() {
   return `home-section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function getNextSectionTitle(sectionCount: number) {
-  return `${SECTION_TITLE_PREFIX} ${sectionCount + 1}`;
+function getNextSectionTitle(sectionCount: number, language: string) {
+  return `${language === 'zh' ? '分区' : 'Section'} ${sectionCount + 1}`;
 }
 
 function toHomeSection(section: SectionLayoutItem): HomeDashboardSection {
@@ -62,6 +63,7 @@ export function useHomeDashboardLayout(
   validCardIds: string[],
   cardSizes: Record<string, CardSize>
 ) {
+  const language = useSettingsStore((state) => resolveAppLanguage(state.language));
   const validCardIdsKey = JSON.stringify(validCardIds);
   const validIdSet = useMemo(
     () => new Set<string>(JSON.parse(validCardIdsKey) as string[]),
@@ -101,7 +103,7 @@ export function useHomeDashboardLayout(
             : [
                 toHomeSection({
                   id: createSectionId(),
-                  title: getNextSectionTitle(0),
+                  title: getNextSectionTitle(0, language),
                   x: 0,
                   y: 0,
                   w: SECTION_LAYOUT_COLUMNS,
@@ -125,7 +127,7 @@ export function useHomeDashboardLayout(
         };
       });
     },
-    [persistLayout]
+    [language, persistLayout]
   );
 
   const setShowHero = useCallback(
@@ -144,7 +146,7 @@ export function useHomeDashboardLayout(
         ...previous.sections,
         toHomeSection({
           id: sectionId,
-          title: getNextSectionTitle(previous.sections.length),
+          title: getNextSectionTitle(previous.sections.length, language),
           x: 0,
           y: getBottomRow(previous.sections.map(toSectionLayoutItem)),
           w: SECTION_LAYOUT_COLUMNS,
@@ -154,7 +156,7 @@ export function useHomeDashboardLayout(
     }));
 
     return sectionId;
-  }, [persistLayout]);
+  }, [language, persistLayout]);
 
   const addColumnSection = useCallback(
     (targetSectionId?: string) => {
@@ -169,7 +171,7 @@ export function useHomeDashboardLayout(
           items,
           {
             id: sectionId,
-            title: getNextSectionTitle(previous.sections.length),
+            title: getNextSectionTitle(previous.sections.length, language),
           },
           targetSection?.y
         );
@@ -182,7 +184,7 @@ export function useHomeDashboardLayout(
 
       return sectionId;
     },
-    [persistLayout]
+    [language, persistLayout]
   );
 
   const addSectionBelow = useCallback(
@@ -195,13 +197,13 @@ export function useHomeDashboardLayout(
           previous.sections.map(toSectionLayoutItem),
           targetSectionId,
           sectionId,
-          getNextSectionTitle(previous.sections.length)
+          getNextSectionTitle(previous.sections.length, language)
         ).map(toHomeSection),
       }));
 
       return sectionId;
     },
-    [persistLayout]
+    [language, persistLayout]
   );
 
   const renameSection = useCallback(

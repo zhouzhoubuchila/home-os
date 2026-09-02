@@ -34,6 +34,24 @@ const mediaDevices: MediaSectionDevice[] = [
     isMuted: false,
     entityType: 'TV',
     deviceClass: 'tv',
+    providerId: 'home_assistant',
+    underlyingDeviceId: 'living-room-tv',
+    type: 'media',
+  },
+  {
+    id: 'media_player.living_room_tv_cast',
+    name: 'Living room TV',
+    room: 'Living Room',
+    size: 'medium',
+    title: 'Ready to cast',
+    artist: '',
+    state: 'off',
+    volume: 15,
+    isMuted: false,
+    entityType: 'TV',
+    deviceClass: 'tv',
+    providerId: 'home_assistant',
+    underlyingDeviceId: 'living-room-tv',
     type: 'media',
   },
 ];
@@ -78,6 +96,9 @@ describe('MediaSection grouping', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'TVs' }));
     expect(screen.getByTestId('media-group-grid')).toHaveTextContent('media_player.living_room_tv');
+    expect(screen.getByTestId('media-group-grid')).not.toHaveTextContent(
+      'media_player.living_room_tv_cast'
+    );
 
     const groupingTrigger = screen.getByRole('button', { name: 'Group cards by: Type' });
     fireEvent.pointerDown(groupingTrigger, { button: 0, ctrlKey: false });

@@ -1,5 +1,5 @@
 import { dispatchEntityCommand } from '@navet/app/commands';
-import { Input } from '@navet/app/components/primitives';
+import { Button, Input } from '@navet/app/components/primitives';
 import { getDashboardCardFootprint } from '@navet/app/components/shared/card-size';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { STORAGE_KEYS } from '@navet/app/constants/storage-keys';
@@ -36,6 +36,7 @@ import {
   ArrowLeft,
   Bookmark,
   Camera,
+  CircleAlert,
   Clock3,
   DiscAlbum,
   Folder,
@@ -1755,6 +1756,7 @@ export function MediaDashboard({
   const [browseResult, setBrowseResult] = useState<PlatformMediaBrowseResult | null>(null);
   const [browseHistory, setBrowseHistory] = useState<PlatformMediaItem[]>([]);
   const [isBrowsing, setIsBrowsing] = useState(false);
+  const [browseError, setBrowseError] = useState(false);
   const [defaultBrowseViews, setDefaultBrowseViews] = usePersistedState<
     Record<string, MediaDefaultBrowseView>
   >(STORAGE_KEYS.mediaDefaultViews, EMPTY_MEDIA_DEFAULT_BROWSE_VIEWS);
@@ -2066,7 +2068,8 @@ export function MediaDashboard({
       if (!mediaLibraryEntityId || !canBrowseMedia) return;
 
       setIsBrowsing(true);
-      runMediaCommand(async () => {
+      setBrowseError(false);
+      void (async () => {
         let resolvedHistory = nextHistory;
         try {
           let result: PlatformMediaBrowseResult;
@@ -2093,17 +2096,21 @@ export function MediaDashboard({
           if (resolvedHistory) {
             setBrowseHistory(resolvedHistory);
           }
+        } catch {
+          setBrowseResult(null);
+          setBrowseError(true);
         } finally {
           setIsBrowsing(false);
         }
-      }, 'media.feedback.browseMediaFailed');
+      })();
     },
-    [canBrowseMedia, mediaLibraryEntityId, runMediaCommand, setDefaultBrowseViews]
+    [canBrowseMedia, mediaLibraryEntityId, setDefaultBrowseViews]
   );
 
   useEffect(() => {
     setBrowseResult(null);
     setBrowseHistory([]);
+    setBrowseError(false);
     setDirectoryItemCounts({});
     directoryItemCountsRef.current = {};
     directoryCountRequestsRef.current.clear();
@@ -2385,7 +2392,27 @@ export function MediaDashboard({
       ) : null}
 
       {canBrowseMedia ? (
-        playableItems.length > 0 ? (
+        browseError ? (
+          <div
+            className={`${quietPanelClassName} flex min-h-40 items-center justify-center text-center`}
+            data-testid="media-browser-error"
+          >
+            <div>
+              <CircleAlert className={`mx-auto h-8 w-8 ${surface.textMuted}`} />
+              <p className={`mt-3 text-sm ${surface.textSecondary}`}>
+                {t('media.feedback.browseMediaFailed')}
+              </p>
+              <Button
+                className="mt-4"
+                size="compact"
+                variant="secondary"
+                onClick={() => browseMedia()}
+              >
+                {t('household.retry')}
+              </Button>
+            </div>
+          </div>
+        ) : playableItems.length > 0 ? (
           useMediaBrowserTable ? (
             <MediaBrowserVirtualTable
               height={compactBrowserHeight}

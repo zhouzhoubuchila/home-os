@@ -1,18 +1,17 @@
-import { CompactMeterListItem } from '@navet/app/components/patterns';
 import { BaseCard } from '@navet/app/components/primitives';
 import { type ThemeMode, useThemeStore } from '@navet/app/stores/theme-store';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useEffect } from 'react';
 import { expect, within } from 'storybook/test';
-import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { AstronomyVisual } from '../../astronomy/astronomy-visual';
-import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
+import { buildHomeOsProductProjection } from '../../projection/product-path-projection';
 import { REAL_HOME_FIXTURE } from '../../tests/fixtures/real-home';
+import { PveHomeOsCard } from './pve-home-os-card';
 
 const entities = resolveSemanticEntities(REAL_HOME_FIXTURE);
-const lights = buildHomeOsLights(entities);
-const pve = (role: string) => entities.find((entity) => entity.roles.includes(role));
+const projection = buildHomeOsProductProjection({ entities });
+const lights = projection.lighting;
 
 function ContractMatrix({ theme }: { theme: ThemeMode }) {
   useEffect(() => {
@@ -20,42 +19,21 @@ function ContractMatrix({ theme }: { theme: ThemeMode }) {
     useThemeStore.getState().setTheme(theme);
     return () => useThemeStore.getState().setTheme(previous);
   }, [theme]);
-  const reliableOn = lights.filter(
-    (light) => light.stateQuality === 'reliable' && light.state === 'on'
-  );
-  const cpu = pve(HOME_OS_ROLES.homelabPveCpu);
-  const memory = pve(HOME_OS_ROLES.homelabPveMemory);
+  const reliableOn = lights.filter((light) => light.state === 'on');
   return (
-    <main data-testid="home-os-v2034-contract" className="grid max-w-6xl gap-4 p-4 md:grid-cols-2">
+    <main data-testid="home-os-v2035-contract" className="grid max-w-6xl gap-4 p-4 md:grid-cols-2">
       <BaseCard size="medium" title="Lighting · reliable and unknown">
         <p className="text-3xl font-semibold tabular-nums">{reliableOn.length}</p>
         <p className="text-sm text-current/60">Reliable circuits on</p>
         <div className="mt-3 grid gap-1 text-xs">
           {lights.map((light) => (
             <span key={light.id}>
-              {light.name} · {light.stateQuality === 'reliable' ? light.state : 'unknown'}
+              {light.name} · {light.state}
             </span>
           ))}
         </div>
       </BaseCard>
-      <BaseCard size="medium" title="PVE · Navet meters">
-        <div className="grid gap-3">
-          {[cpu, memory].map((metric) =>
-            metric ? (
-              <CompactMeterListItem
-                key={metric.entity.externalId}
-                label={metric.displayName}
-                value={`${String(metric.entity.primaryState)}%`}
-                level={Number(metric.entity.primaryState)}
-                color="rgb(52 211 153)"
-                subtleFill="rgb(127 127 127 / 0.14)"
-                textSecondary="text-current/65"
-                layout="fluid"
-              />
-            ) : null
-          )}
-        </div>
-      </BaseCard>
+      <PveHomeOsCard size="medium" devices={projection.pveDevices} isEditMode={false} />
       <BaseCard size="medium" title="Astronomy · source port">
         <AstronomyVisual
           entities={entities}
@@ -79,7 +57,7 @@ function ContractMatrix({ theme }: { theme: ThemeMode }) {
 }
 
 const meta = {
-  title: 'Cards/Home OS/V2.0.3.4 Contract Matrix',
+  title: 'Cards/Home OS/V2.0.3.5 Product Path Matrix',
   component: ContractMatrix,
   parameters: { layout: 'fullscreen' },
   args: { theme: 'glass' },
@@ -90,9 +68,10 @@ type Story = StoryObj<typeof meta>;
 
 const play: Story['play'] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await expect(canvas.getByTestId('home-os-v2034-contract')).toBeInTheDocument();
+  await expect(canvas.getByTestId('home-os-v2035-contract')).toBeInTheDocument();
   await expect(canvas.getByText('Idle is not now playing')).toBeInTheDocument();
-  await expect(canvasElement.querySelector('[data-moon-disc="separate"]')).not.toBeNull();
+  await expect(canvasElement.querySelector('[data-sun-position-card-image]')).not.toBeNull();
+  await expect(canvasElement.querySelector('[data-home-os-pve-recipe="ups"]')).not.toBeNull();
 };
 
 export const Glass: Story = { args: { theme: 'glass' }, play };

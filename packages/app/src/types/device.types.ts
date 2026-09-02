@@ -9,6 +9,7 @@ import type { SensorIconType } from '../features/sensors';
 import type { PlatformResourceDescriptor } from '../platform/resources';
 import type { WeatherForecastMode } from '../stores/settings-store';
 import type { TemperatureUnit } from '../utils/temperature';
+import type { ProductProjectionMetadata } from './product-projection';
 import type { IntegrationProviderId } from './provider';
 
 export type SecurityKind =
@@ -64,6 +65,7 @@ export interface BaseDevice {
   >;
   securityKind?: SecurityKind;
   securitySeverity?: SecuritySeverity;
+  projection?: ProductProjectionMetadata;
 }
 
 // Light device

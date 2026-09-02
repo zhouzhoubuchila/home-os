@@ -1,6 +1,10 @@
 import { useDashboardEntitiesStore } from '@navet/app/features/dashboard/stores/dashboard-entities-store';
+import { createDefaultHomeOsConfig } from '@navet/app/features/home-os/config/schema';
+import { useHomeOsConfigStore } from '@navet/app/features/home-os/stores/home-os-config-store';
+import { integrationStore } from '@navet/app/stores/integration-store';
 import { renderWithProviders } from '@navet/app/test/render';
 import type { DeviceCollection } from '@navet/app/types/device.types';
+import type { NavetEntity } from '@navet/core/types';
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SecuritySection } from './security-section';
@@ -213,12 +217,119 @@ describe('SecuritySection', () => {
     currentDevicesFixture = devicesFixture;
     securityDashboardMock.mockClear();
     addEntityDialogMock.mockClear();
+    integrationStore.setState({ providerEntitiesByCanonicalId: {} });
+    useHomeOsConfigStore.setState({ config: createDefaultHomeOsConfig(), loaded: true });
     useDashboardEntitiesStore.setState({
       hiddenEntityIds: [],
       shownSensorEntityIds: [],
       lockedCardIds: [],
       onboardingCompleted: false,
     });
+  });
+
+  it('applies semantic compatibility before rendering the actual security page model', () => {
+    const entity = (externalId: string, name: string): NavetEntity => ({
+      id: `home_assistant:${externalId}`,
+      canonicalId: `home_assistant:${externalId}`,
+      providerId: 'home_assistant' as const,
+      externalId,
+      type: externalId.startsWith('camera.') ? 'camera' : 'sensor',
+      name,
+      room: 'Home',
+      primaryState: 'on',
+      availability: 'available' as const,
+      attributes: {},
+      capabilities: [],
+    });
+    const fridge = entity('binary_sensor.fridge_door', 'Fridge door');
+    const vacuum = entity('camera.vacuum_map', 'Vacuum map');
+    const entrance = entity('camera.entrance', 'Entrance camera');
+    integrationStore.setState({
+      providerEntitiesByCanonicalId: {
+        [fridge.canonicalId]: fridge,
+        [vacuum.canonicalId]: vacuum,
+        [entrance.canonicalId]: entrance,
+      },
+    });
+    useHomeOsConfigStore.setState({
+      config: {
+        ...createDefaultHomeOsConfig(),
+        mappings: [
+          {
+            schemaVersion: 2,
+            entityId: fridge.externalId,
+            semanticRoles: ['appliance.door'],
+            source: 'manual',
+            updatedAt: '2026-09-02T00:00:00.000Z',
+          },
+          {
+            schemaVersion: 2,
+            entityId: vacuum.externalId,
+            semanticRoles: ['vacuum.map_camera'],
+            source: 'manual',
+            updatedAt: '2026-09-02T00:00:00.000Z',
+          },
+          {
+            schemaVersion: 2,
+            entityId: entrance.externalId,
+            semanticRoles: ['security.camera'],
+            source: 'manual',
+            updatedAt: '2026-09-02T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+    currentDevicesFixture = {
+      ...devicesFixture,
+      sensors: [
+        {
+          id: fridge.externalId,
+          canonicalId: fridge.canonicalId,
+          name: fridge.name,
+          room: 'Kitchen',
+          size: 'small',
+          value: 'Open',
+          unit: '',
+          status: 'active',
+        },
+      ],
+      cameras: [
+        {
+          id: vacuum.externalId,
+          canonicalId: vacuum.canonicalId,
+          name: vacuum.name,
+          room: 'Living room',
+          size: 'medium',
+          state: 'idle',
+        },
+        {
+          id: entrance.externalId,
+          canonicalId: entrance.canonicalId,
+          name: entrance.name,
+          room: 'Entrance',
+          size: 'medium',
+          state: 'streaming',
+        },
+      ],
+    };
+
+    renderWithProviders(<SecuritySection />);
+
+    const renderedEntities = securityDashboardMock.mock.lastCall?.[0].model.allEntities;
+    expect(renderedEntities).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: fridge.externalId }),
+        expect.objectContaining({ id: vacuum.externalId }),
+      ])
+    );
+    expect(renderedEntities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: entrance.externalId,
+          projection: expect.objectContaining({ semanticSource: 'manual' }),
+        }),
+      ])
+    );
   });
 
   it('passes only visible security entities into the dashboard summary', () => {

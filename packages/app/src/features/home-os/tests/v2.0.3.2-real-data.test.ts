@@ -95,9 +95,9 @@ describe('Home OS V2.0.3.2 real data fixtures', () => {
     expect(snapshot.sunArcPoint).toBeDefined();
   });
 
-  it('F: labels moon calculation fallback when no Moon entity exists', () => {
+  it('F: reports unavailable when no upstream Moon entity exists', () => {
     expect(getAstronomySnapshot([], new Date('2026-09-02T12:00:00+08:00')).moonSource).toBe(
-      'algorithm'
+      'unavailable'
     );
   });
 

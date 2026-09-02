@@ -1,3 +1,4 @@
+import { integrationStore } from '@navet/app/stores/integration-store';
 import { renderWithProviders } from '@navet/app/test/render';
 import type { DeviceWithType } from '@navet/app/types/device.types';
 import type { NavetEntity } from '@navet/core/types';
@@ -96,6 +97,7 @@ function renderDashboard(
 
 describe('LightsDashboard', () => {
   beforeEach(() => {
+    integrationStore.setState({ providerEntitiesByCanonicalId: {} });
     providerModels.value = {};
     setLightsPowerMock.mockReset();
     setLightsPowerMock.mockResolvedValue({ succeeded: 1, failed: 0, skippedUnavailable: 0 });
@@ -106,6 +108,38 @@ describe('LightsDashboard', () => {
     });
     toastErrorMock.mockReset();
     toastWarningMock.mockReset();
+  });
+
+  it('renders a switch-only light through the real semantic product path', async () => {
+    const switchLight: NavetEntity = {
+      id: 'home_assistant:switch.hall_ceiling',
+      canonicalId: 'home_assistant:switch.hall_ceiling',
+      providerId: 'home_assistant',
+      externalId: 'switch.hall_ceiling',
+      type: 'switch',
+      name: 'Hall ceiling light',
+      room: 'Hall',
+      primaryState: 'unavailable',
+      availability: 'unavailable',
+      attributes: { deviceId: 'hall-relay', deviceName: 'Hall ceiling light' },
+      capabilities: ['toggle'],
+    };
+    integrationStore.setState({
+      providerEntitiesByCanonicalId: { [switchLight.canonicalId]: switchLight },
+    });
+
+    const { container } = renderDashboard([], []);
+    const hall = container.querySelector('[data-lights-room-id="Hall"]');
+    const disclosure = hall?.querySelector<HTMLButtonElement>('[data-lights-room-toggle="true"]');
+    if (!disclosure) throw new Error('Expected the projected Hall light room');
+
+    fireEvent.click(disclosure);
+
+    expect(await screen.findByText('Hall ceiling light')).toBeInTheDocument();
+    expect(container.querySelector('[data-light-state="unavailable"]')).toHaveAttribute(
+      'data-projection-id',
+      'light-circuit:home_assistant:device:hall-relay'
+    );
   });
 
   it('starts every room collapsed and uses the room icon as power beside disclosure', async () => {

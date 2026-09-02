@@ -367,11 +367,11 @@ export function HomeOsDetailDialog({
   } else if (kind === 'lunar') {
     const now = new Date();
     const lunar = Solar.fromDate(now).getLunar();
-    const astronomy = getAstronomySnapshot(visible, now);
+    const astronomy = getAstronomySnapshot(entities, now);
     const moon = astronomy.moon;
     content = (
       <div className="grid gap-4">
-        <AstronomyVisual entities={visible} language={language} now={now} />
+        <AstronomyVisual entities={entities} language={language} now={now} />
         <div className="flex items-center gap-4">
           <span className="text-5xl" aria-hidden="true">
             {moon.icon}

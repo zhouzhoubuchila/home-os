@@ -18,7 +18,7 @@ describe('Home OS astronomy visual', () => {
     }),
   ]);
 
-  it('renders the current phase and an SVG sun path', () => {
+  it('renders the pinned upstream Sun Position image instead of a custom SVG path', () => {
     const html = renderToStaticMarkup(
       <AstronomyVisual
         entities={entities}
@@ -28,10 +28,13 @@ describe('Home OS astronomy visual', () => {
     );
     expect(html).toContain('data-astronomy-card="true"');
     expect(html).toContain('data-moon-phase=');
-    expect(html).toContain('<svg');
+    expect(html).toContain('<img');
+    expect(html).toContain('data-sun-position-card-image="mittag.png"');
+    expect(html).toContain('data-upstream-commit="730a1e145e064a0ccc885c795f74c81d61859a28"');
+    expect(html).not.toContain('<svg');
   });
 
-  it('disables sun transition for reduced motion and exposes HA sun metadata', () => {
+  it('exposes HA sun metadata and the selected upstream recipe image', () => {
     const html = renderToStaticMarkup(
       <AstronomyVisual
         entities={entities}
@@ -39,7 +42,7 @@ describe('Home OS astronomy visual', () => {
         now={new Date('2026-09-02T12:00:00+08:00')}
       />
     );
-    expect(html).toContain('motion-reduce:transition-none');
+    expect(html).toContain('data-sun-position-card-image="mittag.png"');
     expect(getAstronomySnapshot(entities).azimuth).toBe(188);
   });
 });

@@ -8,6 +8,7 @@ import { getEnergyChartSurfaceTokens } from '@navet/app/components/shared/theme/
 import { getThemeFocusRingClassName } from '@navet/app/components/system/tokens';
 import { cn } from '@navet/app/components/ui/utils';
 import { useFitDashboardGrid } from '@navet/app/features/dashboard/hooks/use-fit-dashboard-grid';
+import { useHomeOsProductProjection } from '@navet/app/features/home-os/hooks/use-home-os-product-projection';
 import { LightCard } from '@navet/app/features/lighting/components/light-card';
 import type { HomeStatusSummaryItem } from '@navet/app/features/sensors/components/home-status-summary-model';
 import {
@@ -48,6 +49,7 @@ interface LightsDashboardProps {
   scenes: QuickActionRoutine[];
   isEditMode: boolean;
   onRemoveEntity?: (entityId: string) => void;
+  hiddenEntityIds?: string[];
 }
 
 function showBatchIssue(result: LightBatchActionResult, t: ReturnType<typeof useI18n>['t']) {
@@ -81,11 +83,12 @@ const RoomLightCard = memo(function RoomLightCard({
       className={`relative min-w-0 border-b border-dashed last:border-b-0 ${separatorClassName} ${
         isEditMode ? 'pr-10' : 'pr-2'
       }`}
-      data-light-state={light.available ? (light.isOn ? 'on' : 'off') : 'unavailable'}
+      data-light-state={light.state}
+      data-projection-id={light.projection?.projectionId}
     >
-      {light.available ? (
+      {light.available && light.state !== 'unknown' && light.primaryCommandTarget ? (
         <LightCard
-          id={light.id}
+          id={light.primaryCommandTarget}
           name={light.name}
           room={light.room}
           providerId={light.providerId}
@@ -116,7 +119,9 @@ const RoomLightCard = memo(function RoomLightCard({
           <span
             className={`shrink-0 text-xs ${theme === 'light' ? 'text-red-600' : 'text-red-300'}`}
           >
-            {t('lighting.dashboard.unavailable')}
+            {t(
+              light.state === 'unknown' ? 'homeOs.state.unknown' : 'lighting.dashboard.unavailable'
+            )}
           </span>
         </div>
       )}
@@ -271,10 +276,12 @@ export const LightsDashboard = memo(function LightsDashboard({
   scenes,
   isEditMode,
   onRemoveEntity,
+  hiddenEntityIds = [],
 }: LightsDashboardProps) {
   const { t } = useI18n();
   const { theme, accentColor } = useTheme();
   const breakpointCols = useBreakpointCols();
+  const productProjection = useHomeOsProductProjection();
   const { outerRef, innerRef, outerContainerStyle, innerContainerStyle, isAutoScaled, gridStyle } =
     useFitDashboardGrid(breakpointCols);
   const sceneChipClassName =
@@ -292,6 +299,12 @@ export const LightsDashboard = memo(function LightsDashboard({
     [deviceMap]
   );
   const entities = useProviderEntityModels(lightEntityIds);
+  const projectedLights = useMemo(() => {
+    const hidden = new Set(hiddenEntityIds);
+    return productProjection.lighting.filter(
+      (light) => !light.projection.sourceEntityIds.some((id) => hidden.has(id))
+    );
+  }, [hiddenEntityIds, productProjection.lighting]);
   const modelRef = useRef<LightDashboardModel | undefined>(undefined);
   const model = useMemo(() => {
     const next = buildLightDashboardModel({
@@ -300,10 +313,11 @@ export const LightsDashboard = memo(function LightsDashboard({
       rooms,
       cardOrders,
       previous: modelRef.current,
+      projectedLights: projectedLights.length > 0 ? projectedLights : undefined,
     });
     modelRef.current = next;
     return next;
-  }, [cardOrders, deviceMap, entities, rooms]);
+  }, [cardOrders, deviceMap, entities, projectedLights, rooms]);
   const [expandedRooms, setExpandedRooms] = useState<Record<string, boolean>>({});
   const [pendingBatch, setPendingBatch] = useState<'all' | string | null>(null);
   const [runningSceneId, setRunningSceneId] = useState<string | null>(null);

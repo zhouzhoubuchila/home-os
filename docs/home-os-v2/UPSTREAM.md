@@ -2,6 +2,8 @@
 
 ## Baseline
 
+- V2.0.3.5 product-path baseline: `origin/main` at `58bc0d3bc6293e108891b33c3ac97798c4821859`.
+- V2.0.3.5 vendors `jayjojayson/Sun-Position-Card` at exact commit `730a1e145e064a0ccc885c795f74c81d61859a28`, including its source, MIT license, and original raster assets. The shipped astronomy card selects those assets from live `sun.sun`/Moon entity values; it does not draw replacement Sun or Moon geometry.
 - V2.0.3.4 canonical audit: `awesomestvi/navet` main at `a25d85acbd362f7381b06d78cd0fae26cdaf2eb8` (Navet 0.15.4 line).
 - Discovery-only fork `hhellofomo/navet` was not used as an authority or merge source.
 - Sun Position Card source is pinned at `730a1e145e064a0ccc885c795f74c81d61859a28`; MIT notice remains in `THIRD_PARTY_NOTICES.md`.

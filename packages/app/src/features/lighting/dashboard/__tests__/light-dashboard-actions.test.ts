@@ -8,16 +8,20 @@ vi.mock('@navet/app/commands', () => ({ dispatchEntityCommand: vi.fn() }));
 const commandMock = vi.mocked(dispatchEntityCommand);
 
 function light(overrides: Partial<LightDashboardItem> = {}): LightDashboardItem {
+  const id = overrides.id ?? 'light.one';
   return {
-    id: 'light.one',
+    id,
     name: 'One',
     room: 'Kitchen',
+    state: 'on',
     isOn: true,
     available: true,
     brightness: 50,
     supportsBrightness: true,
     supportsColorTemperature: false,
     supportsToggle: true,
+    primaryCommandTarget: id,
+    commandTargets: { on: [id], off: [id], toggle: [id], brightness: [id] },
     ...overrides,
   };
 }
