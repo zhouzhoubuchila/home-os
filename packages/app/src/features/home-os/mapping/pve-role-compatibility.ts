@@ -14,6 +14,25 @@ export interface PveRoleCompatibilityRule {
 const TELEMETRY_DOMAINS = ['sensor', 'binary_sensor'] as const;
 export const PVE_ROLE_COMPATIBILITY_MATRIX: readonly PveRoleCompatibilityRule[] = [
   {
+    role: HOME_OS_ROLES.homelabPveCpuModel,
+    allowedDomains: ['sensor'],
+    valueTypes: ['string'],
+    positiveEvidence: /cpu.*model|processor.*model|处理器型号/,
+  },
+  {
+    role: HOME_OS_ROLES.homelabPveKernelVersion,
+    allowedDomains: ['sensor'],
+    valueTypes: ['string'],
+    positiveEvidence: /kernel.*version|内核版本/,
+  },
+  {
+    role: HOME_OS_ROLES.homelabPveKsmMemory,
+    allowedDomains: ['sensor'],
+    units: ['b', 'kb', 'kib', 'mb', 'mib', 'gb', 'gib'],
+    valueTypes: ['number'],
+    positiveEvidence: /\bksm\b.*(?:memory|sharing)|(?:memory|sharing).*\bksm\b/,
+  },
+  {
     role: HOME_OS_ROLES.diagnosticHardwareVoltage,
     allowedDomains: ['sensor'],
     units: ['v', 'mv'],
@@ -30,6 +49,7 @@ export const PVE_ROLE_COMPATIBILITY_MATRIX: readonly PveRoleCompatibilityRule[] 
     allowedDomains: ['sensor'],
     deviceClasses: ['temperature'],
     units: ['°c', 'c', 'celsius'],
+    valueTypes: ['number'],
     positiveEvidence: /temperature|temp\b|温度/,
   },
   {
@@ -47,6 +67,7 @@ export const PVE_ROLE_COMPATIBILITY_MATRIX: readonly PveRoleCompatibilityRule[] 
     role: HOME_OS_ROLES.homelabPveIoWait,
     allowedDomains: ['sensor'],
     units: ['%'],
+    valueTypes: ['number'],
     positiveEvidence: /io.?wait|iowait/,
   },
   {
@@ -83,45 +104,63 @@ export const PVE_ROLE_COMPATIBILITY_MATRIX: readonly PveRoleCompatibilityRule[] 
   {
     role: HOME_OS_ROLES.homelabPveMemoryUsed,
     allowedDomains: ['sensor'],
+    valueTypes: ['number'],
     positiveEvidence: /(?:memory|ram).*used|used.*(?:memory|ram)/,
     negativeEvidence: /dimm|module/,
   },
   {
     role: HOME_OS_ROLES.homelabPveMemoryTotal,
     allowedDomains: ['sensor'],
+    valueTypes: ['number'],
     positiveEvidence: /(?:memory|ram).*total|total.*(?:memory|ram)/,
     negativeEvidence: /dimm|module/,
   },
   {
     role: HOME_OS_ROLES.homelabPveMemory,
     allowedDomains: ['sensor'],
+    units: ['%'],
+    valueTypes: ['number'],
     positiveEvidence: /memory|\bram\b/,
     negativeEvidence: /dimm|module/,
   },
   {
     role: HOME_OS_ROLES.homelabPveStorageUsed,
     allowedDomains: ['sensor'],
+    valueTypes: ['number'],
     positiveEvidence: /(?:storage|disk).*used|used.*(?:storage|disk)/,
+  },
+  {
+    role: HOME_OS_ROLES.homelabPveStorageFree,
+    allowedDomains: ['sensor'],
+    valueTypes: ['number'],
+    positiveEvidence: /(?:storage|disk).*free|free.*(?:storage|disk)/,
   },
   {
     role: HOME_OS_ROLES.homelabPveStorageTotal,
     allowedDomains: ['sensor'],
+    valueTypes: ['number'],
     positiveEvidence: /(?:storage|disk).*total|total.*(?:storage|disk)/,
   },
   {
     role: HOME_OS_ROLES.homelabPveStorage,
     allowedDomains: ['sensor'],
+    units: ['%'],
+    valueTypes: ['number'],
     positiveEvidence: /storage|disk|filesystem/,
   },
   {
     role: HOME_OS_ROLES.homelabPveLoad,
     allowedDomains: ['sensor'],
+    valueTypes: ['number'],
     positiveEvidence: /(?:^|\s)load(?:\s|$)|load average/,
   },
   {
     role: HOME_OS_ROLES.homelabPveCpu,
     allowedDomains: ['sensor'],
-    positiveEvidence: /cpu|processor/,
+    units: ['%'],
+    valueTypes: ['number'],
+    positiveEvidence: /cpu|processor|处理器/,
+    negativeEvidence: /model|temperature|temp|clock|frequency/,
   },
   {
     role: HOME_OS_ROLES.homelabPveStatus,
@@ -159,7 +198,7 @@ export function resolvePveCompatibleRole(entity: NavetEntity, text: string): str
     if (rule.negativeEvidence?.test(text)) continue;
     const metadataMatches = rule.positiveEvidence.test(text);
     const classMatches = !rule.deviceClasses || rule.deviceClasses.includes(deviceClass);
-    const unitMatches = !rule.units || rule.units.includes(unit);
+    const unitMatches = !rule.units || unit.length === 0 || rule.units.includes(unit);
     const valueMatches = !rule.valueTypes || rule.valueTypes.includes(valueType);
     if (metadataMatches && classMatches && unitMatches && valueMatches) return rule.role;
     if (rule.role === HOME_OS_ROLES.homelabPveTemperature && classMatches && unitMatches)

@@ -210,7 +210,7 @@ describe('MediaDashboard', () => {
     );
   });
 
-  it('remembers an idle media session and replays its media identifier when Home Assistant clears it', async () => {
+  it('does not promote an idle player as the current media session', () => {
     const browseHelper = createMediaDevice({
       id: 'media_player.browse',
       name: 'Browse',
@@ -238,10 +238,9 @@ describe('MediaDashboard', () => {
     });
     const view = renderWithProviders(<MediaDashboard devices={[browseHelper, bathroom]} />);
 
-    expect(screen.getByText('The Reservoir')).toBeInTheDocument();
-    expect(screen.getByText('Small Forward')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bathroom' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Resume playback' })).toBeEnabled();
+    expect(screen.queryByText('The Reservoir')).not.toBeInTheDocument();
+    expect(screen.queryByText('Small Forward')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Resume playback' })).not.toBeInTheDocument();
 
     view.unmount();
     renderWithProviders(
@@ -263,19 +262,10 @@ describe('MediaDashboard', () => {
       />
     );
 
-    expect(screen.getByText('The Reservoir')).toBeInTheDocument();
-    expect(screen.getByText('Small Forward')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bathroom' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Resume playback' }));
-
-    await waitFor(() =>
-      expect(playMediaMock).toHaveBeenCalledWith('media_player.bathroom', {
-        mediaContentId: 'spotify:track:the-reservoir',
-        mediaContentType: 'music',
-      })
-    );
-    expect(seekMediaMock).toHaveBeenCalledWith('media_player.bathroom', 2);
+    expect(screen.queryByText('The Reservoir')).not.toBeInTheDocument();
+    expect(screen.queryByText('Small Forward')).not.toBeInTheDocument();
+    expect(playMediaMock).not.toHaveBeenCalled();
+    expect(seekMediaMock).not.toHaveBeenCalled();
     expect(dispatchEntityCommandMock).not.toHaveBeenCalled();
   });
 

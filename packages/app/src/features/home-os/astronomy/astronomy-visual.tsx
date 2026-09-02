@@ -4,7 +4,6 @@ import { getMoonPhase, getMoonPhaseFromEntity } from './moon-phase';
 import {
   calculateAstronomicalDaylightDuration,
   calculateDaylightDuration,
-  calculateNightArcPosition,
   calculateSunArcPosition,
   resolveSunDaypart,
   type SunArcPoint,
@@ -30,7 +29,6 @@ export interface AstronomySnapshot {
   daylightProgress?: number;
   daylightDurationMs?: number;
   sunArcPoint?: SunArcPoint;
-  nightArcPoint?: SunArcPoint;
   daypart: SunDaypart;
   isDay: boolean;
   elevation?: number;
@@ -78,8 +76,6 @@ export function getAstronomySnapshot(
   const isDay = String(sun?.state).toLowerCase() === 'above_horizon' || (elevation ?? 0) > 0;
   const sunArcPoint =
     sunrise && sunset ? calculateSunArcPosition(now, sunrise, sunset, isDay) : undefined;
-  const nightArcPoint =
-    sunrise && sunset ? calculateNightArcPosition(now, sunrise, sunset, isDay) : undefined;
   return {
     moon: entityMoon ?? getMoonPhase(now),
     moonSource: entityMoon ? 'entity' : 'algorithm',
@@ -97,7 +93,6 @@ export function getAstronomySnapshot(
         readNumber(sun?.attributes.latitude ?? facade.getState('zone.home')?.attributes.latitude)
       ),
     sunArcPoint,
-    nightArcPoint,
     daypart: resolveSunDaypart(azimuth, elevation),
     isDay,
     elevation,
@@ -123,8 +118,7 @@ export function AstronomyVisual({
   const duration = snapshot.daylightDurationMs
     ? `${Math.floor(snapshot.daylightDurationMs / 3_600_000)}h ${Math.round((snapshot.daylightDurationMs % 3_600_000) / 60_000)}m`
     : '—';
-  const phaseOffset = (0.5 - snapshot.moon.illumination) * 19;
-  const movingBody = snapshot.isDay ? snapshot.sunArcPoint : snapshot.nightArcPoint;
+  const moonShadowRadius = Math.abs(1 - snapshot.moon.illumination * 2) * 10;
   const daypartNames: Record<SunDaypart, { en: string; zh: string }> = {
     below_horizon: { en: 'Below horizon', zh: '地平线下' },
     dawn: { en: 'Dawn', zh: '黎明' },
@@ -145,6 +139,7 @@ export function AstronomyVisual({
       }}
       data-astronomy-card="true"
       data-moon-phase={snapshot.moon.phase.toFixed(3)}
+      data-moon-illumination={snapshot.moon.illumination.toFixed(3)}
       data-sun-source={snapshot.sunSource}
       data-moon-source={snapshot.moonSource}
     >
@@ -163,10 +158,6 @@ export function AstronomyVisual({
             <stop offset="0.5" stopColor="#fbbf24" stopOpacity="0.7" />
             <stop offset="1" stopColor="#fb7185" stopOpacity="0.2" />
           </linearGradient>
-          <mask id="home-os-moon-mask">
-            <circle r="10" fill="white" />
-            <circle cx={phaseOffset} r="10" fill="black" />
-          </mask>
         </defs>
         <path
           d="M18 82 A82 58 0 0 1 182 82"
@@ -182,53 +173,42 @@ export function AstronomyVisual({
           strokeWidth="3"
           opacity="0.8"
         />
-        <path
-          d="M18 83 A82 30 0 0 0 182 83"
-          fill="none"
-          stroke="currentColor"
-          strokeDasharray="2 6"
-          opacity="0.15"
-        />
         <line x1="10" x2="190" y1="83" y2="83" stroke="currentColor" opacity="0.16" />
-        {movingBody ? (
-          snapshot.isDay ? (
-            <g
-              className="transition-transform duration-500 motion-reduce:transition-none"
-              transform={`translate(${movingBody.x} ${movingBody.y})`}
-            >
-              <circle r="12" fill="#fbbf24" opacity="0.16" />
-              <g className="origin-center animate-[spin_40s_linear_infinite] motion-reduce:animate-none">
-                {[0, 45, 90, 135].map((angle) => (
-                  <line
-                    key={angle}
-                    x1="-10"
-                    x2="10"
-                    y1="0"
-                    y2="0"
-                    stroke="#fde68a"
-                    strokeWidth="1.5"
-                    transform={`rotate(${angle})`}
-                  />
-                ))}
-              </g>
-              <circle r="6.5" fill="#fcd34d" stroke="#fef3c7" strokeWidth="1" />
+        {snapshot.sunArcPoint ? (
+          <g
+            className="transition-transform duration-500 motion-reduce:transition-none"
+            transform={`translate(${snapshot.sunArcPoint.x} ${snapshot.sunArcPoint.y})`}
+            data-sun-arc-body="true"
+          >
+            <circle r="12" fill="#fbbf24" opacity="0.16" />
+            <g className="origin-center animate-[spin_40s_linear_infinite] motion-reduce:animate-none">
+              {[0, 45, 90, 135].map((angle) => (
+                <line
+                  key={angle}
+                  x1="-10"
+                  x2="10"
+                  y1="0"
+                  y2="0"
+                  stroke="#fde68a"
+                  strokeWidth="1.5"
+                  transform={`rotate(${angle})`}
+                />
+              ))}
             </g>
-          ) : (
-            <g
-              className="transition-transform duration-500 motion-reduce:transition-none"
-              transform={`translate(${movingBody.x} ${movingBody.y})`}
-            >
-              <circle r="10" fill="#f8fafc" mask="url(#home-os-moon-mask)" />
-              <circle r="10" fill="none" stroke="rgb(255 255 255 / 0.45)" />
-            </g>
-          )
-        ) : null}
-        {snapshot.isDay ? (
-          <g transform="translate(171 20)">
-            <circle r="10" fill="#f8fafc" mask="url(#home-os-moon-mask)" opacity="0.78" />
-            <circle r="10" fill="none" stroke="rgb(255 255 255 / 0.35)" />
+            <circle r="6.5" fill="#fcd34d" stroke="#fef3c7" strokeWidth="1" />
           </g>
         ) : null}
+        <g transform="translate(171 20)" data-moon-disc="separate">
+          <circle r="10" fill="#f8fafc" opacity="0.92" />
+          <ellipse
+            cx={snapshot.moon.phase < 0.5 ? -10 + moonShadowRadius : 10 - moonShadowRadius}
+            rx={moonShadowRadius}
+            ry="10"
+            fill="rgb(15 23 42 / 0.88)"
+            data-moon-shadow="true"
+          />
+          <circle r="10" fill="none" stroke="rgb(255 255 255 / 0.35)" />
+        </g>
         <text x="8" y="101" fill="currentColor" fontSize="9" opacity="0.65">
           {time(snapshot.sunrise)}
         </text>

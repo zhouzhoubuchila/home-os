@@ -2,6 +2,10 @@
 
 ## Baseline
 
+- V2.0.3.4 canonical audit: `awesomestvi/navet` main at `a25d85acbd362f7381b06d78cd0fae26cdaf2eb8` (Navet 0.15.4 line).
+- Discovery-only fork `hhellofomo/navet` was not used as an authority or merge source.
+- Sun Position Card source is pinned at `730a1e145e064a0ccc885c795f74c81d61859a28`; MIT notice remains in `THIRD_PARTY_NOTICES.md`.
+
 - Home OS baseline: `origin/main` at `6c9921493230fb69d557d5f9c2a42d4f534ea8d3`.
 - Corresponding Navet tree baseline: upstream 0.15.1 at `fbdc437e948a3523e3ecd6acb673896140b73dd4`.
 - Important: the published Home OS main branch has rewritten root history and no Git merge base with upstream. Compare trees directly until ancestry is repaired.

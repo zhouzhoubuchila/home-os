@@ -227,11 +227,60 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     }
   }
 
+  const applianceContext = REFRIGERATION_HINTS.test(name) || /ice.?maker|制冰|冰柜/.test(name);
+  if (applianceContext) {
+    if (domain === 'lock' || /child.?lock|童锁/.test(name)) {
+      result.splice(
+        0,
+        result.length,
+        candidate(
+          HOME_OS_ROLES.applianceChildLock,
+          0.99,
+          'device_metadata',
+          'appliance lock context'
+        )
+      );
+    } else if (['door', 'opening'].includes(deviceClass)) {
+      result.splice(
+        0,
+        result.length,
+        candidate(HOME_OS_ROLES.applianceDoor, 0.99, 'device_metadata', 'appliance door context')
+      );
+    } else if (domain === 'binary_sensor' && /contact|接触/.test(name)) {
+      result.push(
+        candidate(
+          HOME_OS_ROLES.applianceContact,
+          0.98,
+          'device_metadata',
+          'appliance contact context'
+        )
+      );
+    } else if (/bin|ice.?bucket|储冰|冰盒/.test(name)) {
+      result.push(
+        candidate(
+          HOME_OS_ROLES.applianceBinStatus,
+          0.97,
+          'device_metadata',
+          'appliance bin context'
+        )
+      );
+    } else if (/status|state|状态/.test(name)) {
+      result.push(
+        candidate(
+          HOME_OS_ROLES.applianceStatus,
+          0.96,
+          'device_metadata',
+          'appliance status context'
+        )
+      );
+    }
+  }
+
   const deviceClassRoles: Record<string, string> = {
     humidity: HOME_OS_ROLES.environmentHumidity,
-    door: HOME_OS_ROLES.securityDoor,
+    door: applianceContext ? HOME_OS_ROLES.applianceDoor : HOME_OS_ROLES.securityDoor,
     garage_door: HOME_OS_ROLES.securityDoor,
-    opening: HOME_OS_ROLES.securityDoor,
+    opening: applianceContext ? HOME_OS_ROLES.applianceDoor : HOME_OS_ROLES.securityDoor,
     window: HOME_OS_ROLES.securityWindow,
     moisture: HOME_OS_ROLES.securityWaterLeak,
     smoke: HOME_OS_ROLES.securitySmoke,

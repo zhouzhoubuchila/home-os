@@ -53,7 +53,7 @@ describe('Home OS V2.0.3.3 semantic compatibility', () => {
     expect(classifyEntity(pve('Mystery count', 12))).toEqual([]);
   });
 
-  it('maps WAN IPv4 as static data and never as router online', () => {
+  it('maps WAN IPv4 as slow data and never as router online', () => {
     const entity = homeOsEntity({
       externalId: 'sensor.openwrt_wan_ipv4',
       name: 'OpenWrt WAN IPv4',
@@ -61,7 +61,7 @@ describe('Home OS V2.0.3.3 semantic compatibility', () => {
       attributes: { integration: 'openwrt' },
     });
     expect(classifyEntity(entity)[0]?.role).toBe(HOME_OS_ROLES.networkRouterWanIpv4);
-    expect(getMetricFreshnessClass(HOME_OS_ROLES.networkRouterWanIpv4)).toBe('static');
+    expect(getMetricFreshnessClass(HOME_OS_ROLES.networkRouterWanIpv4)).toBe('slow');
   });
 
   it('aggregates a switch and action button from one lamp into one functional circuit', () => {
