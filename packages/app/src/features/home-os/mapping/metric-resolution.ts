@@ -8,6 +8,11 @@ import type {
 
 export const HOME_OS_FRESHNESS_THRESHOLD_MS = 15 * 60_000;
 
+const STATIC_METRIC_ROLES = new Set<SemanticRole>([
+  'homelab.pve.version',
+  'homelab.home_assistant.version',
+]);
+
 const entityUnit = (entity: NavetEntity) => {
   const value = entity.attributes.unit ?? entity.attributes.unit_of_measurement;
   return typeof value === 'string' ? value : undefined;
@@ -47,6 +52,7 @@ export function resolveMetric(
       role,
       state: 'ambiguous',
       candidates,
+      reasonCode: 'candidate_ambiguous',
       reason: 'multiple mapped candidates require selection',
     };
   }
@@ -57,13 +63,26 @@ export function resolveMetric(
       return {
         role,
         state: 'capability_absent',
+        reasonCode: 'no_candidate_found',
         reason: 'no provider candidate supports this role',
       };
     }
     if (candidates.length > 1 && candidates[0].confidence - candidates[1].confidence < 0.1) {
-      return { role, state: 'ambiguous', candidates, reason: 'candidate confidence is too close' };
+      return {
+        role,
+        state: 'ambiguous',
+        candidates,
+        reasonCode: 'candidate_ambiguous',
+        reason: 'candidate confidence is too close',
+      };
     }
-    return { role, state: 'unmapped', candidates, reason: 'candidate exists but is not mapped' };
+    return {
+      role,
+      state: 'unmapped',
+      candidates,
+      reasonCode: 'candidate_unmapped',
+      reason: 'candidate exists but is not mapped',
+    };
   }
 
   const entity = selected.entity;
@@ -78,15 +97,21 @@ export function resolveMetric(
       role,
       state: 'unavailable',
       mappedEntityId: entity.externalId,
+      reasonCode: 'mapped_unavailable',
       reason: 'mapped entity is unavailable',
       updatedAt,
     };
   }
-  if (Number.isFinite(updatedMs) && now - updatedMs > freshnessThresholdMs) {
+  if (
+    !STATIC_METRIC_ROLES.has(role) &&
+    Number.isFinite(updatedMs) &&
+    now - updatedMs > freshnessThresholdMs
+  ) {
     return {
       role,
       state: 'stale',
       mappedEntityId: entity.externalId,
+      reasonCode: 'mapped_stale',
       reason: 'mapped value exceeded freshness threshold',
       value: entity.primaryState,
       unit: entityUnit(entity),

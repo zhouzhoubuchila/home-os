@@ -1,5 +1,5 @@
 import type { ResolvedSemanticEntity } from '../core/types';
-import { getMoonPhase } from './moon-phase';
+import { getMoonPhase, getMoonPhaseFromEntity } from './moon-phase';
 
 const readDate = (value: unknown) => {
   if (typeof value !== 'string') return undefined;
@@ -12,10 +12,12 @@ const readNumber = (value: unknown) =>
 
 export interface AstronomySnapshot {
   moon: ReturnType<typeof getMoonPhase>;
+  moonSource: 'entity' | 'algorithm';
+  sunSource: 'home_assistant' | 'unavailable';
   sunrise?: Date;
   sunset?: Date;
   nextEvent?: Date;
-  daylightProgress: number;
+  daylightProgress?: number;
   isDay: boolean;
   elevation?: number;
   azimuth?: number;
@@ -26,17 +28,34 @@ export function getAstronomySnapshot(
   now = new Date()
 ): AstronomySnapshot {
   const sun = entities.find((item) => item.entity.externalId === 'sun.sun')?.entity;
+  const moonEntity = entities.find((item) =>
+    ['moon.phase', 'sensor.moon_phase', 'sensor.moon'].includes(item.entity.externalId)
+  )?.entity;
+  const entityMoon = getMoonPhaseFromEntity(moonEntity?.primaryState);
   const sunrise = readDate(sun?.attributes.nextRising ?? sun?.attributes.next_rising);
   const sunset = readDate(sun?.attributes.nextSetting ?? sun?.attributes.next_setting);
   const elevation = readNumber(sun?.attributes.elevation);
   const azimuth = readNumber(sun?.attributes.azimuth);
-  const isDay = sun
-    ? String(sun.primaryState).toLowerCase() === 'above_horizon'
-    : now.getHours() >= 6 && now.getHours() < 18;
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const daylightProgress = Math.max(0, Math.min(1, (minutes - 360) / 720));
+  const isDay = String(sun?.primaryState).toLowerCase() === 'above_horizon';
+  // Adapted from Sun Position Card's MIT-licensed elapsed-day arc: Home Assistant exposes
+  // the next sunrise, so during daylight it belongs to tomorrow and must be shifted back.
+  const effectiveSunrise =
+    sunrise && sunrise > now ? new Date(sunrise.getTime() - 86_400_000) : sunrise;
+  const daylightProgress =
+    sun && isDay && effectiveSunrise && sunset && sunset > effectiveSunrise
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            (now.getTime() - effectiveSunrise.getTime()) /
+              (sunset.getTime() - effectiveSunrise.getTime())
+          )
+        )
+      : undefined;
   return {
-    moon: getMoonPhase(now),
+    moon: entityMoon ?? getMoonPhase(now),
+    moonSource: entityMoon ? 'entity' : 'algorithm',
+    sunSource: sun ? 'home_assistant' : 'unavailable',
     sunrise,
     sunset,
     nextEvent: [sunrise, sunset]
@@ -61,8 +80,12 @@ export function AstronomyVisual({
   compact?: boolean;
 }) {
   const snapshot = getAstronomySnapshot(entities, now);
-  const sunX = 16 + snapshot.daylightProgress * 168;
-  const sunY = 82 - Math.sin(snapshot.daylightProgress * Math.PI) * 58;
+  const sunX =
+    snapshot.daylightProgress === undefined ? undefined : 16 + snapshot.daylightProgress * 168;
+  const sunY =
+    snapshot.daylightProgress === undefined
+      ? undefined
+      : 82 - Math.sin(snapshot.daylightProgress * Math.PI) * 58;
   const moonOffset = (0.5 - snapshot.moon.illumination) * 27;
   const locale = language === 'zh' ? 'zh-CN' : 'en-US';
   const time = (value?: Date) =>
@@ -78,6 +101,8 @@ export function AstronomyVisual({
       }}
       data-astronomy-card="true"
       data-moon-phase={snapshot.moon.phase.toFixed(3)}
+      data-sun-source={snapshot.sunSource}
+      data-moon-source={snapshot.moonSource}
     >
       <svg
         viewBox="0 0 200 104"
@@ -89,13 +114,15 @@ export function AstronomyVisual({
           {language === 'zh' ? '太阳轨迹与当前月相' : 'Sun path and current moon phase'}
         </title>
         <path d="M16 82 Q100 -8 184 82" fill="none" stroke="currentColor" opacity="0.2" />
-        <circle
-          cx={sunX}
-          cy={sunY}
-          r="7"
-          className="transition-all motion-reduce:transition-none"
-          fill="#fcd34d"
-        />
+        {sunX !== undefined && sunY !== undefined ? (
+          <circle
+            cx={sunX}
+            cy={sunY}
+            r="7"
+            className="transition-all motion-reduce:transition-none"
+            fill="#fcd34d"
+          />
+        ) : null}
         <g transform="translate(164 18)">
           <circle r="14" fill="#020617" stroke="rgb(255 255 255 / 0.3)" />
           <circle cx={moonOffset} r="13" fill="#f1f5f9" opacity="0.95" />
@@ -116,6 +143,11 @@ export function AstronomyVisual({
           {Math.round(snapshot.moon.illumination * 100)}% ·{' '}
           {snapshot.isDay ? (language === 'zh' ? '昼' : 'Day') : language === 'zh' ? '夜' : 'Night'}
         </span>
+      </div>
+      <div className="mt-1 text-[10px] text-current/45">
+        {language === 'zh'
+          ? `太阳：${snapshot.sunSource === 'home_assistant' ? 'Home Assistant' : '无实时数据'} · 月相：${snapshot.moonSource === 'entity' ? '实体' : '算法估算'}`
+          : `Sun: ${snapshot.sunSource === 'home_assistant' ? 'Home Assistant' : 'no live data'} · Moon: ${snapshot.moonSource}`}
       </div>
     </div>
   );

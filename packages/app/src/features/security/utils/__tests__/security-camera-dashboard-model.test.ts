@@ -287,7 +287,10 @@ describe('security camera dashboard model', () => {
     expect(model.groups.cameras.map((device) => device.id)).toEqual(['camera.front_door']);
     expect(model.groups.sirens.map((device) => device.id)).toEqual(['siren.entry']);
     expect(model.groups.presence.map((device) => device.id)).toEqual(['person.alex']);
-    expect(model.groups.system.map((device) => device.id)).toEqual(['binary_sensor.panel_problem']);
+    expect(model.groups.system).toEqual([]);
+    expect(model.allEntities.map((device) => device.id)).not.toContain(
+      'binary_sensor.panel_problem'
+    );
     expect(model.allEntities.map((device) => device.id)).not.toContain('button.doorbell_chime');
     expect(model.allEntities.map((device) => device.id)).not.toContain('event.front_doorbell');
   });
@@ -364,7 +367,6 @@ describe('security camera dashboard model', () => {
     expect(model.summary.subtitle).toContain('Kitchen Smoke');
     expect(model.summary.attentionItems.map((device) => device.id)).toEqual([
       'security.aggregate.attention.hazards',
-      'security.aggregate.attention.system',
       'security.aggregate.attention.doors-windows',
     ]);
     expect(model.summary.activityItems).toHaveLength(0);
@@ -654,7 +656,6 @@ describe('security camera dashboard model', () => {
       'doors-windows',
       'locks',
       'cameras',
-      'system',
     ]);
     expect(
       model.summary.groupSummaries.find((group) => group.id === 'doors-windows')
@@ -666,10 +667,7 @@ describe('security camera dashboard model', () => {
       summaryText: '1 unlocked',
       defaultExpanded: true,
     });
-    expect(model.summary.groupSummaries.find((group) => group.id === 'system')).toMatchObject({
-      summaryText: '1 issues',
-      defaultExpanded: true,
-    });
+    expect(model.summary.groupSummaries.find((group) => group.id === 'system')).toBeUndefined();
   });
 
   it('counts live cameras as available in the secure summary', () => {

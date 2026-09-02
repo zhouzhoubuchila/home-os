@@ -122,14 +122,8 @@ function classifySecurityActivity(
     return 'alarm';
   }
 
-  if (
-    device.securityKind === 'problem' ||
-    device.securityKind === 'tamper' ||
-    device.securityKind === 'connectivity' ||
-    device.securityKind === 'battery' ||
-    device.securityKind === 'siren'
-  ) {
-    return isActiveState(normalized) ? 'system' : null;
+  if (device.securityKind === 'siren') {
+    return isActiveState(normalized) ? 'alarm' : null;
   }
 
   return null;

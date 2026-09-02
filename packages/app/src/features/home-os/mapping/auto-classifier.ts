@@ -41,7 +41,11 @@ function metadataText(entity: NavetEntity) {
 }
 
 function pveRole(name: string, deviceClass: string, unit: string) {
-  if (deviceClass === 'temperature' || unit === '°c' || /temperature|temp(?:erature)?\b/.test(name))
+  if (
+    deviceClass === 'temperature' ||
+    unit === '°c' ||
+    /temperature|temp(?:erature)?\b|温度/.test(name)
+  )
     return HOME_OS_ROLES.homelabPveTemperature;
   if (/backup.*progress|progress.*backup/.test(name)) return HOME_OS_ROLES.homelabPveBackupProgress;
   if (/version/.test(name)) return HOME_OS_ROLES.homelabPveVersion;
@@ -150,6 +154,15 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(HOME_OS_ROLES.lightingLight, 0.99, 'domain', 'domain=light'));
   } else if (domain === 'switch') {
     result.push(candidate(HOME_OS_ROLES.deviceSwitch, 0.95, 'domain', 'domain=switch'));
+    if (LIGHTING_NEGATIVE_HINTS.test(name)) {
+      result.unshift(
+        candidate(HOME_OS_ROLES.lightingSwitch, 0.97, 'device_metadata', 'lighting switch context')
+      );
+    }
+  } else if (domain === 'button' && LIGHTING_NEGATIVE_HINTS.test(name)) {
+    result.push(
+      candidate(HOME_OS_ROLES.lightingSwitch, 0.95, 'device_metadata', 'lighting button context')
+    );
   } else if (domain === 'lock') {
     result.push(candidate(HOME_OS_ROLES.securityLock, 0.99, 'domain', 'domain=lock'));
   } else if (domain === 'weather') {
@@ -207,7 +220,13 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
   }
 
-  if (integration.includes('openwrt') || integration.includes('immortalwrt')) {
+  const routerContext =
+    integration.includes('openwrt') ||
+    integration.includes('immortalwrt') ||
+    integration.includes('tplink') ||
+    integration.includes('tp_link') ||
+    /\brouter\b|\bgateway\b|openwrt|immortalwrt|tp[-_ ]?link|路由器|网关/.test(name);
+  if (routerContext) {
     const role = name.includes('client')
       ? HOME_OS_ROLES.networkRouterClients
       : name.includes('uptime')
@@ -221,7 +240,14 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
               : name.includes('download') || name.includes('下载')
                 ? HOME_OS_ROLES.networkRouterDownload
                 : HOME_OS_ROLES.networkRouterOnline;
-    result.push(candidate(role, 0.92, 'integration', `integration=${integration}`));
+    result.push(
+      candidate(
+        role,
+        integration ? 0.92 : 0.88,
+        integration ? 'integration' : 'device_metadata',
+        integration ? `integration=${integration}` : 'device context=router'
+      )
+    );
   }
 
   const fallbackRules: Array<[RegExp, string]> = [

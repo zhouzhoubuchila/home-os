@@ -2293,7 +2293,7 @@ export const zhMessages = {
   'camera.settings.fitMode.cover': '填满',
   'camera.settings.fitMode.description': '完整显示会保留整个画面。填满会让画面覆盖卡片边缘。',
   'camera.status.live': '实时',
-  'camera.status.unavailable': '摄像头状态',
+  'camera.status.unavailable': '摄像头不可用',
   'camera.status.noSignal': '无信号',
   'camera.status.noSnapshot': '无快照',
   'camera.motion.detected': '运动',
