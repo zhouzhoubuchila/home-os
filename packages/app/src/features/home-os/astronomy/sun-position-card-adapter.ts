@@ -60,6 +60,29 @@ export function calculateDaylightDuration(nextRising?: Date, nextSetting?: Date)
   return duration >= 0 ? duration : undefined;
 }
 
+/** Port of Sun Position Card's latitude-based daylight approximation. */
+export function calculateAstronomicalDaylightDuration(date: Date, latitude?: number) {
+  if (latitude === undefined || !Number.isFinite(latitude)) return undefined;
+  const radians = Math.PI / 180;
+  const yearStart = new Date(date.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor(
+    (date.getTime() -
+      yearStart.getTime() +
+      (yearStart.getTimezoneOffset() - date.getTimezoneOffset()) * 60_000) /
+      DAY_MS
+  );
+  const declination = Math.asin(
+    Math.sin(23.44 * radians) * Math.sin(radians * (360 / 365.24) * (dayOfYear - 81))
+  );
+  const numerator =
+    Math.sin(-0.833 * radians) - Math.sin(latitude * radians) * Math.sin(declination);
+  const denominator = Math.cos(latitude * radians) * Math.cos(declination);
+  const cosine = numerator / denominator;
+  if (cosine < -1) return DAY_MS;
+  if (cosine > 1) return 0;
+  return ((Math.acos(cosine) * 180) / Math.PI) * (2 / 15) * 3_600_000;
+}
+
 export type SunDaypart =
   | 'below_horizon'
   | 'dawn'

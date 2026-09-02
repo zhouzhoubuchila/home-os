@@ -130,7 +130,7 @@ describe('useHomeSecurityAlertCount', () => {
     expect(result.current).toBe(0);
   });
 
-  it('excludes a hidden unavailable camera from its room alert count', () => {
+  it('does not treat a generic camera domain as a security alert without positive evidence', () => {
     const unavailableCamera: CameraDevice = {
       id: 'camera.bedroom',
       name: 'Bedroom Camera',
@@ -147,7 +147,7 @@ describe('useHomeSecurityAlertCount', () => {
       cameras: [unavailableCamera],
     };
 
-    expect(getRoomSecurityAlertCount(devices, [], 'Bedroom')).toBe(1);
+    expect(getRoomSecurityAlertCount(devices, [], 'Bedroom')).toBe(0);
     expect(getRoomSecurityAlertCount(devices, [unavailableCamera.id], 'Bedroom')).toBe(0);
   });
 });

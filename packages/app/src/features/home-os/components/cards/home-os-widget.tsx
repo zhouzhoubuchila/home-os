@@ -30,9 +30,14 @@ import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
 import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
+import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
-import { formatHomeOsDisplayState } from '../../i18n/display-state';
+import {
+  formatHomeOsDisplayState,
+  formatHomeOsValueWithUnit,
+  formatHomeOsWeatherCondition,
+} from '../../i18n/display-state';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import {
   type ResolvedWeatherSource,
@@ -57,7 +62,7 @@ const sizeLimit = (size: CardSize) => (size === 'small' ? 2 : size === 'medium' 
 const stateText = (entity: ResolvedSemanticEntity, t: TranslateFn) => {
   const value = entity.entity.primaryState;
   const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
-  return `${formatHomeOsDisplayState(value, t)}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
+  return formatHomeOsValueWithUnit(formatHomeOsDisplayState(value, t), unit);
 };
 const freshnessText = (updatedAt: string | undefined, language: string, role: string) => {
   const timestamp = updatedAt ? Date.parse(updatedAt) : Number.NaN;
@@ -106,16 +111,67 @@ function Metrics({
   );
 }
 
+function PveSummaryMetrics({
+  entities,
+  t,
+}: {
+  entities: ResolvedSemanticEntity[];
+  t: TranslateFn;
+}) {
+  const roles = [
+    HOME_OS_ROLES.homelabPveCpu,
+    HOME_OS_ROLES.homelabPveTemperature,
+    HOME_OS_ROLES.homelabPveMemory,
+    HOME_OS_ROLES.homelabPveStorage,
+  ];
+  const metrics = roles.flatMap((role) => {
+    const item = entities.find((entity) => entity.roles.includes(role));
+    return item ? [{ role, item }] : [];
+  });
+  if (!metrics.length) return null;
+  return (
+    <div className="grid gap-2">
+      {metrics.map(({ role, item }) => {
+        const unit = item.entity.attributes.unit ?? item.entity.attributes.unit_of_measurement;
+        const numeric = Number(item.entity.primaryState);
+        const maximum = role === HOME_OS_ROLES.homelabPveTemperature ? 100 : 100;
+        const percent =
+          Number.isFinite(numeric) && (unit === '%' || role === HOME_OS_ROLES.homelabPveTemperature)
+            ? Math.max(0, Math.min(100, (numeric / maximum) * 100))
+            : undefined;
+        return (
+          <div key={role} className="grid gap-1 text-xs">
+            <div className="flex justify-between gap-3">
+              <span className="truncate text-current/65">{item.displayName}</span>
+              <strong className="tabular-nums">{stateText(item, t)}</strong>
+            </div>
+            {percent !== undefined ? (
+              <div className="h-1.5 overflow-hidden rounded-full bg-current/10">
+                <div
+                  className="h-full rounded-full bg-emerald-400"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function WeatherEnhancedCard({
   size,
   name,
   source,
   copy,
+  language,
 }: {
   size: CardSize;
   name: string;
   source?: ResolvedWeatherSource;
   copy: ReturnType<typeof getHomeOsCopy>;
+  language: string;
 }) {
   const current = source?.current;
   const metrics = current
@@ -134,14 +190,18 @@ function WeatherEnhancedCard({
           <>
             <div>
               <strong className="text-3xl tabular-nums">
-                {current.temperature ?? '—'}
-                {current.temperatureUnit ?? ''}
+                {formatHomeOsValueWithUnit(current.temperature, current.temperatureUnit)}
               </strong>
-              <p className="text-sm text-current/65">{current.condition ?? '—'}</p>
+              <p className="text-sm text-current/65">
+                {formatHomeOsWeatherCondition(current.condition ?? '—', language)}
+              </p>
               {current.feelsLikeTemperature !== undefined ? (
                 <p className="text-xs text-current/50">
-                  {copy.feelsLike} {current.feelsLikeTemperature}
-                  {current.feelsLikeTemperatureUnit ?? current.temperatureUnit ?? ''}
+                  {copy.feelsLike}{' '}
+                  {formatHomeOsValueWithUnit(
+                    current.feelsLikeTemperature,
+                    current.feelsLikeTemperatureUnit ?? current.temperatureUnit
+                  )}
                 </p>
               ) : null}
             </div>
@@ -151,8 +211,7 @@ function WeatherEnhancedCard({
                   <span key={String(label)}>
                     {label}:{' '}
                     <strong className="text-current">
-                      {String(value)}
-                      {String(unit ?? '')}
+                      {formatHomeOsValueWithUnit(value, unit)}
                     </strong>
                   </span>
                 ))}
@@ -560,6 +619,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
         name={name.replace('Home OS · ', '')}
         source={resolveWeatherSource(providerWeather, entities)}
         copy={copy}
+        language={language}
       />
     );
   }
@@ -577,10 +637,20 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
     );
   }
   if (definition.kind === 'pve') {
-    const device = buildPvePhysicalDevices(matched, physicalDevices)[0];
+    const pveDiagnosticRoles = new Set<string>([
+      HOME_OS_ROLES.diagnosticHardwareVoltage,
+      HOME_OS_ROLES.diagnosticMemoryModule,
+      HOME_OS_ROLES.diagnosticTask,
+    ]);
+    const pveEntities = entities.filter(
+      (item) =>
+        item.roles.some((role) => role.startsWith('homelab.pve.')) ||
+        item.roles.some((role) => pveDiagnosticRoles.has(role))
+    );
+    const device = buildPvePhysicalDevices(pveEntities, physicalDevices)[0];
     const metricEntities = device
-      ? matched.filter((item) => device.entityIds.includes(item.entity.externalId))
-      : matched;
+      ? pveEntities.filter((item) => device.entityIds.includes(item.entity.externalId))
+      : pveEntities;
     return withDetail(
       <BaseCard
         size={size}
@@ -603,13 +673,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
               <span className="text-amber-400">{copy.dataStale}</span>
             ) : null}
           </div>
-          <Metrics
-            entities={metricEntities}
-            size={size}
-            empty={copy.noMappedData}
-            language={language}
-            t={t}
-          />
+          <PveSummaryMetrics entities={metricEntities} t={t} />
         </div>
       </BaseCard>
     );
@@ -633,7 +697,12 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
             {matched.length
               ? matched.every((item) => item.entity.availability !== 'available')
                 ? copy.unavailable
-                : copy.live
+                : definition.kind === 'router' &&
+                    !matched.some((item) => item.roles.includes(HOME_OS_ROLES.networkRouterOnline))
+                  ? language === 'zh'
+                    ? '未检测到独立在线状态'
+                    : 'No independent online status detected'
+                  : copy.live
               : copy.notConfigured}
           </span>
         </div>

@@ -1,6 +1,9 @@
 import type { NavetEntity } from '@navet/core/types';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { SemanticCandidate } from '../core/types';
+import { resolveCameraCompatibleRole } from './camera-role-compatibility';
+import { resolvePveCompatibleRole } from './pve-role-compatibility';
+import { resolveRouterCompatibleRole } from './router-role-compatibility';
 
 const readString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const domainOf = (entity: NavetEntity) => entity.externalId.split('.')[0] ?? '';
@@ -41,35 +44,6 @@ function metadataText(entity: NavetEntity) {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-}
-
-function pveRole(name: string, deviceClass: string, unit: string) {
-  if (
-    deviceClass === 'temperature' ||
-    unit === '°c' ||
-    /temperature|temp(?:erature)?\b|温度/.test(name)
-  )
-    return HOME_OS_ROLES.homelabPveTemperature;
-  if (/backup.*progress|progress.*backup/.test(name)) return HOME_OS_ROLES.homelabPveBackupProgress;
-  if (/version/.test(name)) return HOME_OS_ROLES.homelabPveVersion;
-  if (/uptime|running time/.test(name)) return HOME_OS_ROLES.homelabPveUptime;
-  if (/lxc.*running|container.*running/.test(name)) return HOME_OS_ROLES.homelabPveContainerRunning;
-  if (/lxc.*total|container.*total/.test(name)) return HOME_OS_ROLES.homelabPveContainerTotal;
-  if (/vm.*running|qemu.*running/.test(name)) return HOME_OS_ROLES.homelabPveVmRunning;
-  if (/vm.*total|qemu.*total/.test(name)) return HOME_OS_ROLES.homelabPveVmTotal;
-  if (/memory.*used|used.*memory|ram.*used/.test(name)) return HOME_OS_ROLES.homelabPveMemoryUsed;
-  if (/memory.*total|total.*memory|ram.*total/.test(name))
-    return HOME_OS_ROLES.homelabPveMemoryTotal;
-  if (/memory|\bram\b/.test(name)) return HOME_OS_ROLES.homelabPveMemory;
-  if (/storage.*used|disk.*used|used.*storage/.test(name))
-    return HOME_OS_ROLES.homelabPveStorageUsed;
-  if (/storage.*total|disk.*total|total.*storage/.test(name))
-    return HOME_OS_ROLES.homelabPveStorageTotal;
-  if (/storage|disk|filesystem/.test(name)) return HOME_OS_ROLES.homelabPveStorage;
-  if (/load/.test(name)) return HOME_OS_ROLES.homelabPveLoad;
-  if (/cpu|processor/.test(name)) return HOME_OS_ROLES.homelabPveCpu;
-  if (/status|state/.test(name)) return HOME_OS_ROLES.homelabPveStatus;
-  return HOME_OS_ROLES.homelabPveOnline;
 }
 
 const REFRIGERATION_HINTS =
@@ -192,9 +166,11 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   );
   const pveContext = pveIntegration || pveDeviceContext || pvePattern.test(name);
   if (pveContext) {
+    const compatibleRole = resolvePveCompatibleRole(entity, name);
+    if (!compatibleRole) return result;
     result.push(
       candidate(
-        pveRole(name, deviceClass, unit),
+        compatibleRole,
         pveIntegration ? 0.99 : pveDeviceContext ? 0.94 : 0.82,
         pveIntegration ? 'integration' : pveDeviceContext ? 'device_metadata' : 'regex_fallback',
         pveIntegration
@@ -235,6 +211,20 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(HOME_OS_ROLES.homeMode, 0.98, 'domain', 'domain=scene'));
   } else if (domain === 'vacuum') {
     result.push(candidate(HOME_OS_ROLES.homeCleaning, 0.99, 'domain', 'domain=vacuum'));
+  } else if (domain === 'camera') {
+    const role = resolveCameraCompatibleRole(entity);
+    if (role) {
+      result.push(
+        candidate(
+          role,
+          role === HOME_OS_ROLES.diagnosticCamera ? 0.8 : 0.96,
+          'device_metadata',
+          role === HOME_OS_ROLES.diagnosticCamera
+            ? 'camera domain without positive security evidence'
+            : 'camera semantic compatibility evidence'
+        )
+      );
+    }
   }
 
   const deviceClassRoles: Record<string, string> = {
@@ -294,19 +284,8 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   const routerContext =
     !routerNegative && (routerIntegration || ROUTER_POSITIVE_CONTEXT.test(name));
   if (routerContext) {
-    const role = name.includes('client')
-      ? HOME_OS_ROLES.networkRouterClients
-      : name.includes('uptime')
-        ? HOME_OS_ROLES.networkRouterUptime
-        : name.includes('cpu')
-          ? HOME_OS_ROLES.networkRouterCpu
-          : name.includes('memory') || name.includes('ram')
-            ? HOME_OS_ROLES.networkRouterMemory
-            : name.includes('upload') || name.includes('上传')
-              ? HOME_OS_ROLES.networkRouterUpload
-              : name.includes('download') || name.includes('下载')
-                ? HOME_OS_ROLES.networkRouterDownload
-                : HOME_OS_ROLES.networkRouterOnline;
+    const role = resolveRouterCompatibleRole(entity, name);
+    if (!role) return result.sort((left, right) => right.confidence - left.confidence);
     result.push(
       candidate(
         role,
@@ -319,7 +298,6 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   }
 
   const fallbackRules: Array<[RegExp, string]> = [
-    [/\bpve\b|proxmox/, HOME_OS_ROLES.homelabPveOnline],
     [/state.?grid|国家电网/, HOME_OS_ROLES.energyElectricityToday],
     [/towngas|港华燃气/, HOME_OS_ROLES.energyGasCurrent],
     [/latency|延迟/, HOME_OS_ROLES.networkInternetLatency],

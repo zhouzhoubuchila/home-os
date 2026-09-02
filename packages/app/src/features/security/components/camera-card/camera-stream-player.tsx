@@ -4,6 +4,7 @@ import { integrationCameraFeatureService } from '@navet/app/services/integration
 import { resolveCameraStreamResource } from '@navet/app/services/integration-camera-runtime.service';
 import { subscribeVisibilityAwareTask } from '@navet/app/utils/visibility-aware-scheduler';
 import { memo, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { classifyCameraMediaError } from '../../utils/camera-media-status';
 import { CameraStreamLoadingIndicator } from './camera-stream-loading-indicator';
 import type { CameraImageSourceKind } from './camera-view-mode';
 import { DirectGo2RtcCameraPlayer } from './direct-go2rtc-camera-player';
@@ -44,16 +45,7 @@ interface CameraStreamErrorOptions {
 }
 
 function isHomeAssistantCameraStreamUnsupportedError(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const { code, message } = error as { code?: unknown; message?: unknown };
-  return (
-    code === 'start_stream_failed' &&
-    typeof message === 'string' &&
-    message.includes('does not support play stream service')
-  );
+  return classifyCameraMediaError(error) === 'stream_unsupported';
 }
 
 function applyVideoBaseAttributes(video: HTMLVideoElement) {
