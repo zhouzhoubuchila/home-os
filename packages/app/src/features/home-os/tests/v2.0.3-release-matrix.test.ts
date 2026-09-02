@@ -54,10 +54,18 @@ describe('Home OS V2.0.3 release matrix', () => {
   });
 
   it('groups all major PVE metrics under one device context', () => {
-    const entities = ['cpu', 'memory', 'storage', 'vm_running', 'version'].map((metric) =>
+    const states: Record<string, string | number> = {
+      cpu: 18,
+      memory: 42,
+      storage: 64,
+      vm_running: 3,
+      version: '8.3.5',
+    };
+    const entities = Object.entries(states).map(([metric, primaryState]) =>
       homeOsEntity({
         externalId: `sensor.pve_${metric}`,
         name: `PVE ${metric}`,
+        primaryState,
         attributes: { integration: 'proxmoxve', deviceName: 'PVE Node' },
       })
     );

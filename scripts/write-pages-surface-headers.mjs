@@ -12,7 +12,7 @@ if (!supportedSurfaces.has(surface)) {
 const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const sharedHeadersPath = path.join(repoRoot, 'apps/website/_headers');
 const outputHeadersPath = path.join(repoRoot, `apps/${surface}/dist/_headers`);
-const sharedHeaders = await readFile(sharedHeadersPath, 'utf8');
+const sharedHeaders = (await readFile(sharedHeadersPath, 'utf8')).replaceAll('\r\n', '\n');
 const rootRuleStart = sharedHeaders.indexOf('\n/\n');
 const rootRuleEnd = sharedHeaders.indexOf('\n\n/roadmap/*', rootRuleStart);
 

@@ -1,4 +1,5 @@
 import { dispatchEntityCommand } from '@navet/app/commands';
+import { CompactMeterListItem } from '@navet/app/components/patterns';
 import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
@@ -114,15 +115,18 @@ function Metrics({
 function PveSummaryMetrics({
   entities,
   t,
+  surface,
 }: {
   entities: ResolvedSemanticEntity[];
   t: TranslateFn;
+  surface: ReturnType<typeof getThemeSurfaceTokens>;
 }) {
   const roles = [
     HOME_OS_ROLES.homelabPveCpu,
     HOME_OS_ROLES.homelabPveTemperature,
     HOME_OS_ROLES.homelabPveMemory,
     HOME_OS_ROLES.homelabPveStorage,
+    HOME_OS_ROLES.homelabPveUptime,
   ];
   const metrics = roles.flatMap((role) => {
     const item = entities.find((entity) => entity.roles.includes(role));
@@ -140,20 +144,17 @@ function PveSummaryMetrics({
             ? Math.max(0, Math.min(100, (numeric / maximum) * 100))
             : undefined;
         return (
-          <div key={role} className="grid gap-1 text-xs">
-            <div className="flex justify-between gap-3">
-              <span className="truncate text-current/65">{item.displayName}</span>
-              <strong className="tabular-nums">{stateText(item, t)}</strong>
-            </div>
-            {percent !== undefined ? (
-              <div className="h-1.5 overflow-hidden rounded-full bg-current/10">
-                <div
-                  className="h-full rounded-full bg-emerald-400"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            ) : null}
-          </div>
+          <CompactMeterListItem
+            key={role}
+            label={item.displayName}
+            value={stateText(item, t)}
+            level={percent ?? 0}
+            color="rgb(52 211 153)"
+            subtleFill="rgb(127 127 127 / 0.14)"
+            textSecondary={surface.textSecondary}
+            layout="fluid"
+            isCompact={percent === undefined}
+          />
         );
       })}
     </div>
@@ -325,7 +326,7 @@ function LightingCard({
 }) {
   const functionalDevices = useHomeOsConfigStore((state) => state.config.functionalDevices ?? []);
   const lights = buildHomeOsLights(entities, functionalDevices);
-  const on = lights.filter((light) => light.state === 'on');
+  const on = lights.filter((light) => light.stateQuality === 'reliable' && light.state === 'on');
   const controllable = lights.filter((light) => light.controllable);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -673,7 +674,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
               <span className="text-amber-400">{copy.dataStale}</span>
             ) : null}
           </div>
-          <PveSummaryMetrics entities={metricEntities} t={t} />
+          <PveSummaryMetrics entities={metricEntities} t={t} surface={surface} />
         </div>
       </BaseCard>
     );

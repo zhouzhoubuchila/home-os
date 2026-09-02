@@ -1,0 +1,111 @@
+import { homeOsEntity } from '../../fixtures';
+
+const pve = (id: string, name: string, state: string | number | null, unit?: string) =>
+  homeOsEntity({
+    externalId: `sensor.pve_${id}`,
+    name,
+    primaryState: state,
+    availability: state === null ? 'unavailable' : 'available',
+    attributes: {
+      integration: 'proxmoxve',
+      device_id: 'pve-node-1',
+      deviceName: 'PVE Node 1',
+      unit_of_measurement: unit,
+    },
+  });
+
+export const REAL_HOME_FIXTURE = [
+  pve('status', 'PVE status', 'running'),
+  pve('cpu_model', 'PVE CPU model', 'AMD Ryzen 7 5700G'),
+  pve('cpu_usage', 'PVE CPU usage', 24, '%'),
+  pve('load', 'PVE load average', 1.32),
+  pve('temperature', 'PVE CPU temperature', 61, '°C'),
+  pve('io_wait', 'PVE IO wait', 2.4, '%'),
+  pve('memory_usage', 'PVE memory usage', 68, '%'),
+  pve('memory_used', 'PVE memory used', 21.8, 'GiB'),
+  pve('memory_total', 'PVE memory total', 32, 'GiB'),
+  pve('ksm_memory', 'PVE KSM memory sharing', 512, 'MiB'),
+  pve('storage_usage', 'PVE storage usage', 74, '%'),
+  pve('storage_capacity', 'PVE storage total', 1.8, 'TiB'),
+  pve('storage_used', 'PVE storage used', 1.3, 'TiB'),
+  pve('storage_free', 'PVE storage free', 0.5, 'TiB'),
+  pve('uptime', 'PVE uptime', 864000, 's'),
+  pve('kernel', 'PVE kernel version', '6.8.12-9-pve'),
+  pve('version', 'PVE version', '8.3.5'),
+  pve('updates', 'PVE updates available count', 3),
+  pve('vm_running', 'PVE VM running', 4),
+  pve('vm_total', 'PVE VM total', 6),
+  pve('lxc_running', 'PVE LXC running', 2),
+  pve('lxc_total', 'PVE LXC total', 3),
+  pve('malformed_cpu', 'PVE CPU usage malformed', 'not-a-number', '%'),
+  pve('unknown_metric', 'PVE mystery metric', 42),
+  homeOsEntity({
+    externalId: 'light.living_ceiling',
+    name: 'Living ceiling light',
+    room: 'Living room',
+    primaryState: 'on',
+    capabilities: ['toggle', 'brightness'],
+    attributes: { device_id: 'living-light', brightness: 180 },
+  }),
+  homeOsEntity({
+    externalId: 'button.living_ceiling_off',
+    name: 'Living ceiling light off',
+    room: 'Living room',
+    attributes: { device_id: 'living-light' },
+  }),
+  homeOsEntity({
+    externalId: 'button.bedroom_light_toggle',
+    name: 'Bedroom light toggle',
+    room: 'Bedroom',
+    attributes: { device_id: 'bedroom-light' },
+  }),
+  homeOsEntity({
+    externalId: 'button.doorbell_wake_screen_light',
+    name: 'Doorbell wake screen light',
+    attributes: { device_id: 'doorbell' },
+  }),
+  homeOsEntity({
+    externalId: 'binary_sensor.fridge_door',
+    name: 'Kitchen refrigerator door',
+    primaryState: 'off',
+    attributes: { device_class: 'door', device_id: 'fridge-1' },
+  }),
+  homeOsEntity({
+    externalId: 'lock.fridge_child_lock',
+    name: 'Kitchen refrigerator child lock',
+    primaryState: 'locked',
+    attributes: { device_id: 'fridge-1' },
+  }),
+  homeOsEntity({
+    externalId: 'camera.front_door',
+    name: 'Front door camera',
+    attributes: { device_id: 'doorbell' },
+  }),
+  homeOsEntity({
+    externalId: 'camera.vacuum_map',
+    name: 'Dreame vacuum cleaning map',
+    attributes: { device_id: 'vacuum-1' },
+  }),
+  homeOsEntity({
+    externalId: 'weather.home',
+    name: 'Home weather',
+    primaryState: 'partlycloudy',
+    attributes: { temperature: 29, temperature_unit: '°C', humidity: 72 },
+  }),
+  homeOsEntity({
+    externalId: 'sun.sun',
+    primaryState: 'above_horizon',
+    attributes: {
+      next_rising: '2026-09-04T05:43:00+08:00',
+      next_setting: '2026-09-03T18:27:00+08:00',
+      elevation: 38,
+      azimuth: 186,
+    },
+  }),
+  homeOsEntity({
+    externalId: 'sensor.moon_phase',
+    name: 'Moon phase',
+    primaryState: 'waning_gibbous',
+    attributes: { integration: 'moon' },
+  }),
+] as const;

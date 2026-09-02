@@ -1,45 +1,49 @@
-# Home OS V2 release audit
+# Home OS V2.0.3.4 release audit
 
-This document records the release gate and is completed with actual command results immediately before delivery.
+Audited on 2026-09-03 from `codex/home-os-v2.0.3.4`, based on `origin/main` at `2ac988a3c7c5ecacbebffbea8f2b237f9a11bb63` and compared with canonical Navet at `a25d85acbd362f7381b06d78cd0fae26cdaf2eb8`.
 
-## Architecture and product
+## Architecture and behavior
 
-- Semantic resolution is provider-neutral and ordered by manual override, explicit metadata, device/integration/domain metadata, then low-confidence name fallback.
-- `device_tracker` is not a household member without a manual person binding; switches are not lighting without a manual lighting role.
-- Mapping, ignore/display modes, physical devices, duration-aware alerts, safe export/import/reset, migration, backup recovery, and optimistic concurrency are implemented.
-- Home OS cards use Navet Add Card, layout, resize, drag, delete, lazy rendering, and error boundaries. No fixed Home OS header strip or second editor remains.
-- Navet owns Rooms, Devices, Family/household, scenes, cameras, lighting, climate, media, security, and Energy. Home OS adds only the Homelab detail destination.
-- Homelab trends use provider recorder statistics only; missing history is shown as unavailable and is never fabricated. Energy detail/history continues to use Navet's existing recorder/statistics workspace.
-
-## Security and operations
-
-- Export is allowlisted and contains no provider session, token, cookie, account, password, or authorization data.
-- The `/data` endpoint requires an authenticated principal; PUT/DELETE require strict same-origin and a matching revision.
-- Bulk lighting targets only resolved, capability-advertising lighting entities and requires a second confirmation click.
-- No Home OS code writes Home Assistant configuration or directly calls raw HA services.
-- Upgrade, persistent volume, backup recovery, and rollback procedures are documented in `OPERATIONS.md`.
+- The final lighting circuit contract separates state source, actions, source entities, state quality and classification. Buttons are action-only; unknown is neither on nor off; whole-home-off is household-lighting only.
+- PVE mapping exposes the exact V2.0.3.4 role set with type/unit compatibility. Homepage KPIs are CPU usage, temperature, memory usage, storage usage and uptime. Model, kernel, KSM and capacity remain detail data.
+- PVE meters reuse Navet `CompactMeterListItem`; no Home OS gauge or fabricated history was added.
+- Astronomy retains the pinned MIT Sun Position Card source adaptation and thin `HomeOsHassFacade`. Only the Sun occupies the solar arc; the Moon is a separate phase disc.
+- Refrigerator/freezer/ice-maker door and child-lock semantics route to appliance roles, not Security.
+- Existing Navet camera and media pipelines remain authoritative. Vacuum maps are excluded from Security, physical camera sources are deduplicated, idle media is not labeled as currently playing, and browse absence is a capability state.
+- Chinese placeholder media section titles were removed. Existing display-state and weather/unit normalization remains presentation-only.
 
 ## Verification matrix
 
-Audited on 2026-09-02 from `codex/home-os-v2.0.3.3` against `origin/main` at `7161cf8c`.
-
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Biome lint and TypeScript | PASS | 1,971 files linted; `tsc --noEmit` |
-| Home OS + Security semantic scope | PASS | 16 files, 103 tests |
-| Repository unit suite | PASS | 484 files, 3,051 tests |
-| Standalone production build | PASS | 3,056 modules, PWA generated, 33 precache entries; 159 built JavaScript files passed syntax validation |
+| TypeScript | PASS | `tsc --noEmit` |
+| Biome lint | PASS | 1,974 files; no warnings after final formatting |
+| Home OS/security/media scope | PASS | 18 files, 145 tests; V2.0.3.4 contract file has 26 tests |
+| Tier 1 | PASS | 50 files, 658 tests |
+| Tier 2 | PASS | 22 files, 155 tests |
+| Tier 3 / repository unit suite | PASS | 485 files, 3,077 tests |
+| Storybook standards | PASS | 183 story files |
+| Storybook production compile | PASS | 3,424 modules; V2.0.3.4 story emitted as a standalone chunk |
+| Standalone production build | PASS | 3,056 modules, PWA 33 precache entries, 159 JavaScript files syntax-checked |
 | Bundle budget | PASS | eager JavaScript 701.9 KB; authenticated transition JavaScript 138.3 KB |
-| V2.0.3.3 fixture matrix | PASS | PVE temperature/DIMM/voltage/load; router WAN IPv4; light circuit and negative button; camera map/dedup; media statuses; display formatting |
-| Sun/Moon source adaptation | PASS | pinned MIT upstream, thin `HomeOsHassFacade`, sun/night arcs, daylight fallback, entity moon and SVG animation retained |
-| Recorder trend integrity | PASS | existing Recorder-backed `TrendSparkline` is rendered only when statistics history exists |
-| Home OS i18n scope | PASS | Good/idle/state aliases, clear-night, Celsius and spaced weather units covered without adding hardcoded dashboard strings |
-| GHCR multi-architecture image | PENDING CI | `Home OS image` publishes `main`, `v2.0.3.3`, and immutable `sha-*` after merge |
+| UI-kit boundary | PASS | no boundary violations |
+| Lockfile/supply-chain | PASS | metadata aligned and policy check passed |
+| Release surfaces | PASS | Navet root release surfaces remain aligned for 0.15.1; Home OS image workflow is 2.0.3.4 |
+| Real device access | NOT RUN | Explicitly prohibited; no HA/PVE/router/camera/media/8082 access occurred |
 
-## Upstream baseline exceptions
+## Known upstream baseline diagnostics
 
-The repository-wide diagnostic checks retain two known `main`-branch baselines outside this hotfix: 78 i18n findings concentrated in Dashboard/Energy and the existing provider-boundary allowlist debt. V2.0.3.3 adds no findings to either list. No Home OS test, TypeScript check, lint, production build, or bundle budget failed.
+- `check:i18n` still reports the same 78 pre-existing Dashboard/Energy findings. V2.0.3.4 adds no Home OS finding and removes the visible Chinese media placeholders.
+- `check:provider-boundaries` still reports the existing 16 app-owned compatibility escapes outside this change; none is in Home OS or a file changed for V2.0.3.4.
+- The Storybook/Vitest browser runner currently indexes all 183 stories as zero-test files and exits with `No test suite found`. This is repository-wide addon/Vitest configuration debt, not a story render or compile failure. The browser dependency is installed, Storybook standards pass, and the full Storybook production compilation succeeds.
+
+## Release and rollback
+
+- Release tag: `ghcr.io/zhouzhoubuchila/home-os:v2.0.3.4`.
+- Immutable tag: `ghcr.io/zhouzhoubuchila/home-os:sha-<merge-sha>`.
+- Previous tags remain untouched. Rollback uses the prior immutable or V2.0.3.3 tag documented in `OPERATIONS.md`.
+- Real-device verification gaps are listed in `REAL_ENVIRONMENT_GAPS_V2034.md` and are not represented as CI coverage.
 
 ## Decision
 
-**READY FOR DELIVERY.** Home OS V2 is isolated, migration-safe, production-buildable, and verified at its integration boundaries. The documented upstream baseline exceptions do not originate in this branch and should remain separate maintenance work rather than being hidden by unrelated edits.
+**READY FOR DELIVERY**, subject only to GitHub Actions publishing the multi-architecture image and reporting its immutable digest. All product-code, semantic-contract, unit, tier, compile and bundle gates pass. The repository-wide Storybook runner, i18n and provider-boundary baselines are explicitly disclosed rather than hidden.

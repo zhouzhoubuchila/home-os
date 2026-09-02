@@ -1711,7 +1711,7 @@ export function MediaDashboard({
   );
   const retainedDeclaredGroupedPlaybackDevice = resolvedDevices.find(
     (device) =>
-      (device.state === 'paused' || device.state === 'idle') &&
+      device.state === 'paused' &&
       isAudioDevice(device) &&
       !isMusicAssistantPlaybackDevice(device) &&
       hasCurrentMedia(device) &&
@@ -1801,7 +1801,7 @@ export function MediaDashboard({
   const retainedNowPlayingDevice = findPreferredDevice(
     resolvedDevices,
     (device) =>
-      (device.state === 'paused' || device.state === 'idle') &&
+      device.state === 'paused' &&
       isAudioDevice(device) &&
       !isSpotifyAccountDevice(device) &&
       hasCurrentMedia(device)
@@ -1821,7 +1821,12 @@ export function MediaDashboard({
       ? restoreRememberedDevice(usableRememberedSession, rememberedCurrentDevice)
       : undefined;
   const usingRememberedSession = rememberedNowPlayingDevice !== undefined;
-  const nowPlayingDevice = liveNowPlayingDevice ?? rememberedNowPlayingDevice ?? selectedDevice;
+  const nowPlayingDevice =
+    liveNowPlayingDevice ??
+    rememberedNowPlayingDevice ??
+    (spotifyAccountControlsUnavailable
+      ? (selectedSpotifyTarget ?? selectedDevice)
+      : selectedDevice);
   const matchingPhysicalTransportDevice = isMusicAssistantPlaybackDevice(nowPlayingDevice)
     ? findPreferredDevice(
         resolvedDevices,
@@ -1862,7 +1867,10 @@ export function MediaDashboard({
     : EMPTY_NAVET_MEDIA_CAPABILITIES;
   const providerSupportsMediaBrowse = useEntityProviderFeature(mediaLibraryEntityId, 'mediaBrowse');
   const canBrowseMedia = mediaLibraryCapabilities.canBrowseMedia || providerSupportsMediaBrowse;
-  const dashboardTitleKey = 'media.dashboard.nowPlaying';
+  const dashboardTitleKey =
+    liveNowPlayingDevice || rememberedNowPlayingDevice
+      ? 'media.dashboard.nowPlaying'
+      : 'media.dashboard.players';
   const playbackProviderLabel = selectedDeviceUsesInferredMusicAssistantGroup
     ? 'Music Assistant'
     : usingRememberedSession
@@ -1884,7 +1892,7 @@ export function MediaDashboard({
   const sessionDeviceToRemember =
     !usingRememberedSession &&
     hasCurrentMedia(nowPlayingDevice) &&
-    ['playing', 'paused', 'idle'].includes(nowPlayingDevice.state)
+    ['playing', 'paused'].includes(nowPlayingDevice.state)
       ? {
           ...continuingRememberedDevice,
           ...nowPlayingDevice,
