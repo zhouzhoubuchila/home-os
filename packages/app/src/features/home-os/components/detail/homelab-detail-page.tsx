@@ -7,7 +7,15 @@ import type { ResolvedSemanticEntity } from '../../core/types';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 
-function MetricDetailCard({ entity }: { entity: ResolvedSemanticEntity }) {
+function MetricDetailCard({
+  entity,
+  language,
+  copy,
+}: {
+  entity: ResolvedSemanticEntity;
+  language: string;
+  copy: ReturnType<typeof getHomeOsCopy>;
+}) {
   const { accentColor } = useTheme();
   const { points, canFetch, hasHistory } = useSensorStatisticsHistory(entity.entity.canonicalId);
   const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
@@ -15,7 +23,7 @@ function MetricDetailCard({ entity }: { entity: ResolvedSemanticEntity }) {
     <BaseCard
       size="medium"
       title={entity.displayName}
-      subtitle={entity.roles[0] ?? 'unmapped'}
+      subtitle={entity.roles[0] ?? copy.unmapped}
       headerLeading={<Activity className="h-5 w-5" />}
     >
       <div className="flex h-full min-h-0 flex-col justify-between gap-3">
@@ -25,7 +33,8 @@ function MetricDetailCard({ entity }: { entity: ResolvedSemanticEntity }) {
             {typeof unit === 'string' && unit ? ` ${unit}` : ''}
           </strong>
           <p className="mt-1 text-xs text-current/55">
-            {entity.entity.availability} · {entity.source}
+            {entity.entity.availability === 'available' ? copy.live : copy.unavailable} ·{' '}
+            {entity.source === 'manual' ? copy.manual : copy.autoRole}
           </p>
         </div>
         {hasHistory ? (
@@ -33,13 +42,17 @@ function MetricDetailCard({ entity }: { entity: ResolvedSemanticEntity }) {
             <TrendSparkline
               data={points}
               accentColor={accentColor}
-              ariaLabel={`${entity.displayName} history`}
+              ariaLabel={`${entity.displayName} ${language === 'zh' ? '历史' : 'history'}`}
               height={80}
             />
           </div>
         ) : (
           <p className="text-xs text-current/45">
-            {canFetch ? 'No recorder statistics for this period.' : 'History is unavailable.'}
+            {canFetch
+              ? language === 'zh'
+                ? '此时间段没有 Recorder 统计数据。'
+                : 'No recorder statistics for this period.'
+              : copy.historyUnavailable}
           </p>
         )}
       </div>
@@ -82,13 +95,18 @@ export function HomelabDetailPage() {
             <div className="flex items-center gap-2 px-1">
               <Icon className="h-5 w-5" aria-hidden="true" />
               <h2 id={`home-os-${id}-title`} className="text-lg font-semibold">
-                {nameText}
+                {language === 'zh' && id === 'router' ? '路由器与互联网' : nameText}
               </h2>
             </div>
             {matched.length ? (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {matched.map((entity) => (
-                  <MetricDetailCard key={entity.entity.canonicalId} entity={entity} />
+                  <MetricDetailCard
+                    key={entity.entity.canonicalId}
+                    entity={entity}
+                    language={language}
+                    copy={copy}
+                  />
                 ))}
               </div>
             ) : (

@@ -16,4 +16,5 @@ export interface HomeOsAlert {
   durationMs: number;
   lastUpdated?: string;
   sourceEntityId: string;
+  scope: 'security' | 'system' | 'environment' | 'energy' | 'household' | 'other';
 }

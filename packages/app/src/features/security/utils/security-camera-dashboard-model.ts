@@ -385,7 +385,8 @@ function getSecurityGroupKey(device: DeviceWithType): SecurityGroupKey | null {
     securityKind === 'problem' ||
     securityKind === 'tamper'
   ) {
-    return 'system';
+    // Infrastructure diagnostics belong to Home OS / system health, not Security.
+    return null;
   }
 
   return null;
@@ -1051,8 +1052,7 @@ function buildGroupSummaries(
     {
       id: 'system',
       label: t('security.group.system'),
-      include: (device) =>
-        ['connectivity', 'battery', 'problem', 'tamper'].includes(device.securityKind ?? ''),
+      include: () => false,
     },
   ];
 

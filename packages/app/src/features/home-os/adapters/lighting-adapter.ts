@@ -60,7 +60,9 @@ export function buildHomeOsLights(
         Array.isArray(entity.attributes.rgb) && entity.attributes.rgb.length === 3
           ? (entity.attributes.rgb as [number, number, number])
           : undefined,
-      controllable: controlPolicy !== 'readonly' && hasCapability(entity.capabilities, 'toggle'),
+      controllable:
+        controlPolicy !== 'readonly' &&
+        (hasCapability(entity.capabilities, 'toggle') || entity.externalId.startsWith('button.')),
       sourceEntityIds: [entity.externalId],
       controls: { toggle: entity.externalId },
       manual: source === 'manual',

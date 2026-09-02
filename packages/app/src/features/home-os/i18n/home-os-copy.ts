@@ -130,6 +130,8 @@ const en = {
   solarAzimuth: 'Solar azimuth',
   solarElevation: 'Solar elevation',
   router: 'Router',
+  pve: 'PVE',
+  internet: 'Internet',
   lightingCircuits: 'Lighting circuits',
   temperatureDiagnostics: 'Temperature env / refrigeration / PVE / internal',
 } as const;
@@ -262,6 +264,8 @@ const zh: { [Key in keyof typeof en]: string } = {
   solarAzimuth: '太阳方位',
   solarElevation: '太阳高度',
   router: '路由器',
+  pve: 'PVE',
+  internet: '互联网',
   lightingCircuits: '照明回路',
   temperatureDiagnostics: '温度 环境 / 制冷 / PVE / 设备内部',
 };

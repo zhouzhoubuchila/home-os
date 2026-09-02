@@ -347,7 +347,7 @@ function EntityAvailabilityFrame({
                 : 'px-2.5 py-1 text-xs tracking-[0.06em] uppercase'
           } ${shouldReducePaintEffects ? '' : 'backdrop-blur-md'}`}
         >
-          {t('camera.status.unavailable')}
+          {t('common.unavailable')}
         </div>
       </div>
     </div>

@@ -313,11 +313,15 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
         <span>
           {copy.diagnostic}: {diagnostics.diagnostic}
         </span>
-        <span>PVE: {diagnostics.pve}</span>
+        <span>
+          {copy.pve}: {diagnostics.pve}
+        </span>
         <span>
           {copy.router}: {diagnostics.router}
         </span>
-        <span>Internet: {diagnostics.internet}</span>
+        <span>
+          {copy.internet}: {diagnostics.internet}
+        </span>
         <span>
           {copy.lightingCircuits}: {diagnostics.lightingCircuits}
         </span>

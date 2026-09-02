@@ -83,6 +83,13 @@ export type MetricResolutionState =
   | 'unavailable'
   | 'stale';
 
+export type MetricResolutionReasonCode =
+  | 'no_candidate_found'
+  | 'candidate_unmapped'
+  | 'candidate_ambiguous'
+  | 'mapped_unavailable'
+  | 'mapped_stale';
+
 export interface MetricResolutionCandidate {
   entityId: string;
   confidence: number;
@@ -94,6 +101,7 @@ export interface MetricResolution {
   state: MetricResolutionState;
   mappedEntityId?: string;
   candidates?: MetricResolutionCandidate[];
+  reasonCode?: MetricResolutionReasonCode;
   reason?: string;
   value?: NavetEntity['primaryState'];
   unit?: string;

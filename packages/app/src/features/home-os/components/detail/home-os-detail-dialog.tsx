@@ -10,13 +10,37 @@ import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter'
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
 import { AstronomyVisual, getAstronomySnapshot } from '../../astronomy/astronomy-visual';
-import { getMoonPhase } from '../../astronomy/moon-phase';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { resolveMetric } from '../../mapping/metric-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
+
+function formatAlertDuration(durationMs: number, language: string) {
+  const minutes = Math.max(1, Math.round(durationMs / 60_000));
+  if (minutes < 60) return language === 'zh' ? `${minutes} 分钟` : `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return language === 'zh'
+    ? `${hours} 小时${remaining ? ` ${remaining} 分钟` : ''}`
+    : `${hours}h${remaining ? ` ${remaining}m` : ''}`;
+}
+
+function formatAlertValue(value: unknown, language: string) {
+  if (language !== 'zh' || typeof value !== 'string') return String(value);
+  const translations: Record<string, string> = {
+    detected: '已检测',
+    clear: '正常',
+    problem: '异常',
+    away: '离家',
+    on: '开启',
+    off: '关闭',
+    unavailable: '不可用',
+    unknown: '未知',
+  };
+  return translations[value.toLowerCase()] ?? value;
+}
 
 function MetricRows({ entities }: { entities: readonly ResolvedSemanticEntity[] }) {
   if (!entities.length) return <p className="text-sm text-current/60">—</p>;
@@ -239,13 +263,17 @@ export function HomeOsDetailDialog({
               {alert.deviceName} · {alert.room ?? copy.roomUnknown}
             </p>
             <p className={`text-xs ${surface.textSecondary}`}>
-              {copy[alert.severity]} · {copy.currentValue}: {String(alert.currentValue)}
+              {copy[alert.severity]} · {copy.currentValue}:{' '}
+              {formatAlertValue(alert.currentValue, language)}
               {alert.unit ? ` ${alert.unit}` : ''} · {copy.duration}:{' '}
-              {Math.max(1, Math.round(alert.durationMs / 60_000))} min
+              {formatAlertDuration(alert.durationMs, language)}
             </p>
-            <p className={`text-xs ${surface.textMuted}`}>
-              {copy.sourceEntity}: {alert.sourceEntityId}
-            </p>
+            <details className={`text-xs ${surface.textMuted}`}>
+              <summary>{language === 'zh' ? '高级信息' : 'Advanced information'}</summary>
+              <p>
+                {copy.sourceEntity}: {alert.sourceEntityId}
+              </p>
+            </details>
           </div>
         ))}
       </div>
@@ -279,8 +307,8 @@ export function HomeOsDetailDialog({
   } else if (kind === 'lunar') {
     const now = new Date();
     const lunar = Solar.fromDate(now).getLunar();
-    const moon = getMoonPhase(now);
     const astronomy = getAstronomySnapshot(visible, now);
+    const moon = astronomy.moon;
     content = (
       <div className="grid gap-4">
         <AstronomyVisual entities={visible} language={language} now={now} />

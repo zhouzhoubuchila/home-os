@@ -46,28 +46,51 @@ interface HomeOsWidgetProps {
 }
 
 const sizeLimit = (size: CardSize) => (size === 'small' ? 2 : size === 'medium' ? 4 : 8);
-const stateText = (entity: ResolvedSemanticEntity) => {
+const localizedState = (value: unknown, language: string) => {
+  if (language !== 'zh' || typeof value !== 'string') return String(value ?? '—');
+  const translations: Record<string, string> = {
+    detected: '已检测',
+    clear: '正常',
+    problem: '异常',
+    away: '离家',
+    home: '在家',
+    on: '开启',
+    off: '关闭',
+    unavailable: '不可用',
+    unknown: '未知',
+  };
+  return translations[value.toLowerCase()] ?? value;
+};
+const stateText = (entity: ResolvedSemanticEntity, language: string) => {
   const value = entity.entity.primaryState;
   const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
-  return `${value ?? '—'}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
+  return `${localizedState(value, language)}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
 };
-const freshnessText = (updatedAt: string | undefined) => {
+const freshnessText = (updatedAt: string | undefined, language: string) => {
   const timestamp = updatedAt ? Date.parse(updatedAt) : Number.NaN;
-  if (!Number.isFinite(timestamp)) return 'update time unknown';
+  if (!Number.isFinite(timestamp))
+    return language === 'zh' ? '更新时间未知' : 'Update time unknown';
   const minutes = Math.max(0, Math.round((Date.now() - timestamp) / 60_000));
-  if (minutes < 1) return 'updated now';
-  if (minutes < 60) return `${minutes}m ago${minutes >= 15 ? ' · stale' : ''}`;
-  return `${Math.round(minutes / 60)}h ago · stale`;
+  if (minutes < 1) return language === 'zh' ? '刚刚更新' : 'Updated now';
+  if (minutes < 60)
+    return language === 'zh'
+      ? `${minutes} 分钟前${minutes >= 15 ? ' · 已过期' : ''}`
+      : `${minutes}m ago${minutes >= 15 ? ' · stale' : ''}`;
+  return language === 'zh'
+    ? `${Math.round(minutes / 60)} 小时前 · 已过期`
+    : `${Math.round(minutes / 60)}h ago · stale`;
 };
 
 function Metrics({
   entities,
   size,
   empty,
+  language,
 }: {
   entities: ResolvedSemanticEntity[];
   size: CardSize;
   empty: string;
+  language: string;
 }) {
   if (!entities.length) return <p className="text-sm text-current/55">{empty}</p>;
   return (
@@ -77,10 +100,10 @@ function Metrics({
           <span className="min-w-0">
             <span className="block truncate text-current/65">{item.displayName}</span>
             <span className="block truncate text-[0.65rem] text-current/40">
-              {freshnessText(item.entity.lastUpdated)}
+              {freshnessText(item.entity.lastUpdated, language)}
             </span>
           </span>
-          <strong className="shrink-0 tabular-nums">{stateText(item)}</strong>
+          <strong className="shrink-0 tabular-nums">{stateText(item, language)}</strong>
         </div>
       ))}
     </div>
@@ -92,11 +115,13 @@ function HouseholdCard({
   entities,
   title,
   status,
+  language,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   title: string;
   status: string;
+  language: string;
 }) {
   const members = buildFamilyMembers(entities);
   const homeCount = members.filter((member) => member.state === 'home').length;
@@ -113,7 +138,15 @@ function HouseholdCard({
           {members.slice(0, sizeLimit(size)).map((member) => (
             <div key={member.id} className="flex justify-between gap-2">
               <span className="truncate">{member.name}</span>
-              <span className="text-current/60">{member.state}</span>
+              <span className="text-current/60">
+                {language === 'zh'
+                  ? member.state === 'home'
+                    ? '在家'
+                    : member.state === 'away'
+                      ? '离家'
+                      : '未知'
+                  : member.state}
+              </span>
             </div>
           ))}
         </div>
@@ -172,7 +205,7 @@ function LightingCard({
         <div>
           <strong className="text-3xl tabular-nums">{on.length}</strong>
           <p className="text-sm text-current/55">
-            {lights.length} {copy.lightsOn}
+            {on.length} {copy.lightsOn}
           </p>
         </div>
         {size !== 'small' ? (
@@ -389,6 +422,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
         entities={entities}
         title={copy.household}
         status={copy.peopleAtHome}
+        language={language}
       />
     );
   if (definition.kind === 'lighting')
@@ -440,7 +474,12 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
               <span className="text-amber-400">{copy.dataStale}</span>
             ) : null}
           </div>
-          <Metrics entities={metricEntities} size={size} empty={copy.noMappedData} />
+          <Metrics
+            entities={metricEntities}
+            size={size}
+            empty={copy.noMappedData}
+            language={language}
+          />
         </div>
       </BaseCard>
     );
@@ -468,7 +507,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
               : copy.notConfigured}
           </span>
         </div>
-        <Metrics entities={matched} size={size} empty={copy.noMappedData} />
+        <Metrics entities={matched} size={size} empty={copy.noMappedData} language={language} />
       </div>
     </BaseCard>
   );

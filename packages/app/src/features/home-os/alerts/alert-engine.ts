@@ -28,6 +28,16 @@ function conditionSince(entity: ResolvedSemanticEntity) {
   return typeof value === 'string' ? value : entity.entity.lastUpdated;
 }
 
+function alertScope(entity: ResolvedSemanticEntity): HomeOsAlert['scope'] {
+  if (entity.roles.some((role) => role.startsWith('security.'))) return 'security';
+  if (entity.roles.some((role) => role.startsWith('homelab.') || role.startsWith('network.')))
+    return 'system';
+  if (entity.roles.some((role) => role.startsWith('environment.'))) return 'environment';
+  if (entity.roles.some((role) => role.startsWith('energy.'))) return 'energy';
+  if (entity.roles.some((role) => role.startsWith('family.'))) return 'household';
+  return 'other';
+}
+
 export function evaluateAlerts(
   entities: readonly ResolvedSemanticEntity[],
   rules: readonly HomeOsAlertRuleConfig[],
@@ -66,6 +76,7 @@ export function evaluateAlerts(
         durationMs: Number.isFinite(sinceMs) ? Math.max(0, now - sinceMs) : 0,
         lastUpdated: entity.entity.lastUpdated,
         sourceEntityId: entity.entity.externalId,
+        scope: alertScope(entity),
       });
     }
   }
