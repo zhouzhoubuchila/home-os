@@ -329,11 +329,11 @@ export function WidgetCard({
         <HomeOsWidget
           size={card.size}
           data={
-            card.data as {
-              kind?: import('@navet/app/features/home-os/cards/card-registry').HomeOsCardKind;
-            }
+            card.data as import('@navet/app/features/home-os/components/cards/home-os-widget').HomeOsWidgetData
           }
           isEditMode={isEditMode}
+          onUpdate={(data) => handleCardUpdate(card.id, { data: { ...card.data, ...data } })}
+          openSettingsRequestKey={resolvedOpenSettingsRequestKey}
         />
       );
       break;

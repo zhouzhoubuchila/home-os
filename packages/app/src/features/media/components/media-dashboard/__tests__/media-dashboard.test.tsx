@@ -1063,17 +1063,20 @@ describe('MediaDashboard', () => {
     expect(screen.queryByRole('button', { name: 'Load media browser' })).not.toBeInTheDocument();
   });
 
-  it('shows the browser empty state when browsing fails', async () => {
+  it('shows an actionable browser error and retries a supported request', async () => {
     browseMediaPlayerMock.mockRejectedValue(new Error('Browse failed'));
 
     renderWithProviders(<MediaDashboard devices={[createMediaDevice()]} />);
 
     await waitFor(() =>
-      expect(
-        screen.getByText('No browsable media was exposed for this player right now.')
-      ).toBeInTheDocument()
+      expect(screen.getByTestId('media-browser-error')).toHaveTextContent('Failed to browse media')
     );
-    expect(screen.queryByRole('button', { name: 'Load media browser' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('No browsable media was exposed for this player right now.')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(browseMediaPlayerMock).toHaveBeenCalledTimes(2));
   });
 
   it('uses live Spotify media title and artist for the Spotify Connect artwork text', () => {

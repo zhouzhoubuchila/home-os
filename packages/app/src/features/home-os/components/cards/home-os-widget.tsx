@@ -1,5 +1,4 @@
 import { dispatchEntityCommand } from '@navet/app/commands';
-import { CompactMeterListItem } from '@navet/app/components/patterns';
 import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
@@ -26,13 +25,13 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
 import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
-import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
 import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
+import { useHomeOsProductProjection } from '../../hooks/use-home-os-product-projection';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
 import {
   formatHomeOsDisplayState,
@@ -48,8 +47,9 @@ import {
 import { getMetricFreshnessThresholdMs } from '../../mapping/metric-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
+import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
 
-export interface HomeOsWidgetData {
+export interface HomeOsWidgetData extends PveHomeOsCardData {
   kind?: HomeOsCardKind;
 }
 
@@ -57,6 +57,8 @@ interface HomeOsWidgetProps {
   size: CardSize;
   data?: HomeOsWidgetData;
   isEditMode: boolean;
+  onUpdate?: (data: HomeOsWidgetData) => void;
+  openSettingsRequestKey?: number;
 }
 
 const sizeLimit = (size: CardSize) => (size === 'small' ? 2 : size === 'medium' ? 4 : 8);
@@ -108,55 +110,6 @@ function Metrics({
           <strong className="shrink-0 tabular-nums">{stateText(item, t)}</strong>
         </div>
       ))}
-    </div>
-  );
-}
-
-function PveSummaryMetrics({
-  entities,
-  t,
-  surface,
-}: {
-  entities: ResolvedSemanticEntity[];
-  t: TranslateFn;
-  surface: ReturnType<typeof getThemeSurfaceTokens>;
-}) {
-  const roles = [
-    HOME_OS_ROLES.homelabPveCpu,
-    HOME_OS_ROLES.homelabPveTemperature,
-    HOME_OS_ROLES.homelabPveMemory,
-    HOME_OS_ROLES.homelabPveStorage,
-    HOME_OS_ROLES.homelabPveUptime,
-  ];
-  const metrics = roles.flatMap((role) => {
-    const item = entities.find((entity) => entity.roles.includes(role));
-    return item ? [{ role, item }] : [];
-  });
-  if (!metrics.length) return null;
-  return (
-    <div className="grid gap-2">
-      {metrics.map(({ role, item }) => {
-        const unit = item.entity.attributes.unit ?? item.entity.attributes.unit_of_measurement;
-        const numeric = Number(item.entity.primaryState);
-        const maximum = role === HOME_OS_ROLES.homelabPveTemperature ? 100 : 100;
-        const percent =
-          Number.isFinite(numeric) && (unit === '%' || role === HOME_OS_ROLES.homelabPveTemperature)
-            ? Math.max(0, Math.min(100, (numeric / maximum) * 100))
-            : undefined;
-        return (
-          <CompactMeterListItem
-            key={role}
-            label={item.displayName}
-            value={stateText(item, t)}
-            level={percent ?? 0}
-            color="rgb(52 211 153)"
-            subtleFill="rgb(127 127 127 / 0.14)"
-            textSecondary={surface.textSecondary}
-            layout="fluid"
-            isCompact={percent === undefined}
-          />
-        );
-      })}
     </div>
   );
 }
@@ -502,7 +455,13 @@ const ICONS: Record<HomeOsCardKind, typeof Server> = {
   lunar: Moon,
 };
 
-export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
+export function HomeOsWidget({
+  size,
+  data,
+  isEditMode,
+  onUpdate,
+  openSettingsRequestKey,
+}: HomeOsWidgetProps) {
   const { language, t } = useI18n();
   const copy = getHomeOsCopy(language);
   const definition = getHomeOsCardDefinition(data?.kind);
@@ -512,7 +471,7 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
-  const physicalDevices = useHomeOsConfigStore((state) => state.config.physicalDevices);
+  const productProjection = useHomeOsProductProjection();
   const setActiveSection = useNavigationStore((state) => state.setActiveSection);
   const [detailOpen, setDetailOpen] = useState(false);
   if (!definition) {
@@ -601,7 +560,12 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
   if (definition.kind === 'lunar')
     return withDetail(
-      <LunarCard size={size} title={copy.lunarCalendar} language={language} entities={entities} />
+      <LunarCard
+        size={size}
+        title={copy.lunarCalendar}
+        language={language}
+        entities={productProjection.astronomyEntities}
+      />
     );
   const matched = entities.filter(
     (entity) =>
@@ -638,45 +602,15 @@ export function HomeOsWidget({ size, data, isEditMode }: HomeOsWidgetProps) {
     );
   }
   if (definition.kind === 'pve') {
-    const pveDiagnosticRoles = new Set<string>([
-      HOME_OS_ROLES.diagnosticHardwareVoltage,
-      HOME_OS_ROLES.diagnosticMemoryModule,
-      HOME_OS_ROLES.diagnosticTask,
-    ]);
-    const pveEntities = entities.filter(
-      (item) =>
-        item.roles.some((role) => role.startsWith('homelab.pve.')) ||
-        item.roles.some((role) => pveDiagnosticRoles.has(role))
-    );
-    const device = buildPvePhysicalDevices(pveEntities, physicalDevices)[0];
-    const metricEntities = device
-      ? pveEntities.filter((item) => device.entityIds.includes(item.entity.externalId))
-      : pveEntities;
     return withDetail(
-      <BaseCard
+      <PveHomeOsCard
         size={size}
-        title={name.replace('Home OS · ', '')}
-        headerLeading={<Icon className="h-5 w-5" />}
-      >
-        <div className="flex h-full min-h-0 flex-col justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span
-              className={
-                device?.state === 'online'
-                  ? 'h-2 w-2 rounded-full bg-emerald-400'
-                  : device?.state === 'offline'
-                    ? 'h-2 w-2 rounded-full bg-red-400'
-                    : 'h-2 w-2 rounded-full bg-current/30'
-              }
-            />
-            <span>{device ? copy[device.state] : copy.notConfigured}</span>
-            {device?.freshness === 'stale' ? (
-              <span className="text-amber-400">{copy.dataStale}</span>
-            ) : null}
-          </div>
-          <PveSummaryMetrics entities={metricEntities} t={t} surface={surface} />
-        </div>
-      </BaseCard>
+        devices={productProjection.pveDevices}
+        data={data}
+        onUpdate={onUpdate}
+        isEditMode={isEditMode}
+        openSettingsRequestKey={openSettingsRequestKey}
+      />
     );
   }
   return withDetail(

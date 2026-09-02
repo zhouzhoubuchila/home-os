@@ -3,6 +3,7 @@ import { InteractivePill } from '@navet/app/components/primitives/interactive-pi
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { ALL_ROOMS_ID } from '@navet/app/constants/rooms';
 import { useDashboardEntitiesStore } from '@navet/app/features/dashboard/stores/dashboard-entities-store';
+import { projectPhysicalMediaDevices } from '@navet/app/features/home-os/projection/product-path-projection';
 import {
   getMediaEntityTypeKey,
   type MediaEntityTypeKey,
@@ -246,23 +247,31 @@ export function MediaSection() {
     }))
   );
   const hiddenEntityIdSet = useMemo(() => new Set(hiddenEntityIds), [hiddenEntityIds]);
-  const allMediaDevices = useMemo(
+  const rawMediaDevices = useMemo(
     () => devices.media.map((d) => ({ ...d, type: 'media' as const })),
     [devices.media]
   );
+  const allMediaDevices = useMemo(
+    () => projectPhysicalMediaDevices(rawMediaDevices),
+    [rawMediaDevices]
+  );
   const allMediaDeviceMap = useMemo(
-    () => new Map(allMediaDevices.map((device) => [device.id, device])),
-    [allMediaDevices]
+    () => new Map(rawMediaDevices.map((device) => [device.id, device])),
+    [rawMediaDevices]
   );
   const hiddenMediaEntityIds = useMemo(
     () =>
-      allMediaDevices
+      rawMediaDevices
         .filter((device) => hiddenEntityIdSet.has(device.id))
         .map((device) => device.id),
-    [allMediaDevices, hiddenEntityIdSet]
+    [hiddenEntityIdSet, rawMediaDevices]
   );
   const mediaDevices = useMemo(
-    () => allMediaDevices.filter((device) => !hiddenEntityIdSet.has(device.id)),
+    () =>
+      allMediaDevices.filter(
+        (device) =>
+          !device.projection?.sourceEntityIds.some((entityId) => hiddenEntityIdSet.has(entityId))
+      ),
     [allMediaDevices, hiddenEntityIdSet]
   );
   const handleRemoveEntity = useCallback(

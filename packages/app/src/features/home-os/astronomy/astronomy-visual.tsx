@@ -1,6 +1,6 @@
 import type { ResolvedSemanticEntity } from '../core/types';
 import { HomeOsHassFacade } from './home-os-hass-facade';
-import { getMoonPhase, getMoonPhaseFromEntity } from './moon-phase';
+import { getMoonPhaseFromEntity, type MoonPhaseModel } from './moon-phase';
 import {
   calculateAstronomicalDaylightDuration,
   calculateDaylightDuration,
@@ -9,6 +9,59 @@ import {
   type SunArcPoint,
   type SunDaypart,
 } from './sun-position-card-adapter';
+
+const UPSTREAM_IMAGE_URLS = {
+  'abend.png': new URL('./third_party/sun-position-card/images/abend.png', import.meta.url).href,
+  'dammerung.png': new URL('./third_party/sun-position-card/images/dammerung.png', import.meta.url)
+    .href,
+  'first_quarter.png': new URL(
+    './third_party/sun-position-card/images/first_quarter.png',
+    import.meta.url
+  ).href,
+  'full_moon.png': new URL('./third_party/sun-position-card/images/full_moon.png', import.meta.url)
+    .href,
+  'last_quarter.png': new URL(
+    './third_party/sun-position-card/images/last_quarter.png',
+    import.meta.url
+  ).href,
+  'mittag.png': new URL('./third_party/sun-position-card/images/mittag.png', import.meta.url).href,
+  'morgen.png': new URL('./third_party/sun-position-card/images/morgen.png', import.meta.url).href,
+  'nachmittag.png': new URL(
+    './third_party/sun-position-card/images/nachmittag.png',
+    import.meta.url
+  ).href,
+  'new_moon.png': new URL('./third_party/sun-position-card/images/new_moon.png', import.meta.url)
+    .href,
+  'unterHorizont.png': new URL(
+    './third_party/sun-position-card/images/unterHorizont.png',
+    import.meta.url
+  ).href,
+  'waning_crescent.png': new URL(
+    './third_party/sun-position-card/images/waning_crescent.png',
+    import.meta.url
+  ).href,
+  'waning_gibbous.png': new URL(
+    './third_party/sun-position-card/images/waning_gibbous.png',
+    import.meta.url
+  ).href,
+  'waxing_crescent.png': new URL(
+    './third_party/sun-position-card/images/waxing_crescent.png',
+    import.meta.url
+  ).href,
+  'waxing_gibbous.png': new URL(
+    './third_party/sun-position-card/images/waxing_gibbous.png',
+    import.meta.url
+  ).href,
+} as const;
+
+type UpstreamImageName = keyof typeof UPSTREAM_IMAGE_URLS;
+const UNKNOWN_MOON: MoonPhaseModel = {
+  phase: 0,
+  age: 0,
+  illumination: 0,
+  name: { en: 'New moon', zh: '新月' },
+  icon: '🌑',
+};
 
 const readDate = (value: unknown) => {
   if (typeof value !== 'string') return undefined;
@@ -19,29 +72,8 @@ const readDate = (value: unknown) => {
 const readNumber = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
-export interface AstronomySnapshot {
-  moon: ReturnType<typeof getMoonPhase>;
-  moonSource: 'entity' | 'algorithm';
-  sunSource: 'home_assistant' | 'unavailable';
-  sunrise?: Date;
-  sunset?: Date;
-  nextEvent?: Date;
-  daylightProgress?: number;
-  daylightDurationMs?: number;
-  sunArcPoint?: SunArcPoint;
-  daypart: SunDaypart;
-  isDay: boolean;
-  elevation?: number;
-  azimuth?: number;
-}
-
-export function getAstronomySnapshot(
-  entities: readonly ResolvedSemanticEntity[],
-  now = new Date()
-): AstronomySnapshot {
-  const facade = new HomeOsHassFacade(entities);
-  const sun = facade.getState('sun.sun');
-  const moonEntity = entities.find((item) => {
+function findMoonEntity(entities: readonly ResolvedSemanticEntity[]) {
+  return entities.find((item) => {
     const entity = item.entity;
     const text = [
       entity.externalId,
@@ -60,6 +92,53 @@ export function getAstronomySnapshot(
       getMoonPhaseFromEntity(entity.primaryState) !== undefined
     );
   })?.entity;
+}
+
+function resolveUpstreamImage(
+  isDay: boolean,
+  azimuth: number | undefined,
+  elevation: number | undefined,
+  moonState: unknown
+): UpstreamImageName {
+  if (!isDay || (elevation ?? 0) <= 0) {
+    const phase =
+      typeof moonState === 'string'
+        ? (`${moonState.trim().toLowerCase().replace(/[ -]+/g, '_')}.png` as UpstreamImageName)
+        : undefined;
+    return phase && phase in UPSTREAM_IMAGE_URLS ? phase : 'unterHorizont.png';
+  }
+  if ((elevation ?? 0) < 10) return 'dammerung.png';
+  if ((azimuth ?? 0) < 150) return 'morgen.png';
+  if ((azimuth ?? 0) < 200) return 'mittag.png';
+  if ((azimuth ?? 0) < 255) return 'nachmittag.png';
+  return 'abend.png';
+}
+
+export interface AstronomySnapshot {
+  moon: MoonPhaseModel;
+  moonSource: 'entity' | 'unavailable';
+  moonState?: string;
+  sunSource: 'home_assistant' | 'unavailable';
+  sunrise?: Date;
+  sunset?: Date;
+  nextEvent?: Date;
+  daylightProgress?: number;
+  daylightDurationMs?: number;
+  sunArcPoint?: SunArcPoint;
+  daypart: SunDaypart;
+  isDay: boolean;
+  elevation?: number;
+  azimuth?: number;
+  upstreamImage: UpstreamImageName;
+}
+
+export function getAstronomySnapshot(
+  entities: readonly ResolvedSemanticEntity[],
+  now = new Date()
+): AstronomySnapshot {
+  const facade = new HomeOsHassFacade(entities);
+  const sun = facade.getState('sun.sun');
+  const moonEntity = findMoonEntity(entities);
   const entityMoon = getMoonPhaseFromEntity(moonEntity?.primaryState);
   const sunrise = readDate(
     facade.getState('sensor.sun_next_rising')?.state ??
@@ -77,8 +156,9 @@ export function getAstronomySnapshot(
   const sunArcPoint =
     sunrise && sunset ? calculateSunArcPosition(now, sunrise, sunset, isDay) : undefined;
   return {
-    moon: entityMoon ?? getMoonPhase(now),
-    moonSource: entityMoon ? 'entity' : 'algorithm',
+    moon: entityMoon ?? UNKNOWN_MOON,
+    moonSource: entityMoon ? 'entity' : 'unavailable',
+    moonState: typeof moonEntity?.primaryState === 'string' ? moonEntity.primaryState : undefined,
     sunSource: sun ? 'home_assistant' : 'unavailable',
     sunrise,
     sunset,
@@ -97,6 +177,7 @@ export function getAstronomySnapshot(
     isDay,
     elevation,
     azimuth,
+    upstreamImage: resolveUpstreamImage(isDay, azimuth, elevation, moonEntity?.primaryState),
   };
 }
 
@@ -118,7 +199,6 @@ export function AstronomyVisual({
   const duration = snapshot.daylightDurationMs
     ? `${Math.floor(snapshot.daylightDurationMs / 3_600_000)}h ${Math.round((snapshot.daylightDurationMs % 3_600_000) / 60_000)}m`
     : '—';
-  const moonShadowRadius = Math.abs(1 - snapshot.moon.illumination * 2) * 10;
   const daypartNames: Record<SunDaypart, { en: string; zh: string }> = {
     below_horizon: { en: 'Below horizon', zh: '地平线下' },
     dawn: { en: 'Dawn', zh: '黎明' },
@@ -128,6 +208,14 @@ export function AstronomyVisual({
     evening: { en: 'Evening', zh: '傍晚' },
     dusk: { en: 'Dusk', zh: '黄昏' },
   };
+  const moonName =
+    snapshot.moonSource === 'entity'
+      ? language === 'zh'
+        ? snapshot.moon.name.zh
+        : snapshot.moon.name.en
+      : language === 'zh'
+        ? '未连接月相实体'
+        : 'Moon entity unavailable';
 
   return (
     <div
@@ -139,93 +227,26 @@ export function AstronomyVisual({
       }}
       data-astronomy-card="true"
       data-moon-phase={snapshot.moon.phase.toFixed(3)}
-      data-moon-illumination={snapshot.moon.illumination.toFixed(3)}
       data-sun-source={snapshot.sunSource}
       data-moon-source={snapshot.moonSource}
+      data-upstream-commit="730a1e145e064a0ccc885c795f74c81d61859a28"
     >
-      <svg
-        viewBox="0 0 200 112"
-        className={`${compact ? 'h-20' : 'h-32'} w-full`}
-        role="img"
-        aria-label={`${language === 'zh' ? snapshot.moon.name.zh : snapshot.moon.name.en}, ${Math.round(snapshot.moon.illumination * 100)}%`}
+      <div
+        className={`${compact ? 'h-20' : 'h-32'} flex items-center justify-center overflow-hidden`}
       >
-        <title>
-          {language === 'zh' ? '太阳轨迹与当前月相' : 'Sun path and current moon phase'}
-        </title>
-        <defs>
-          <linearGradient id="home-os-horizon" x1="0" x2="1">
-            <stop offset="0" stopColor="#38bdf8" stopOpacity="0.2" />
-            <stop offset="0.5" stopColor="#fbbf24" stopOpacity="0.7" />
-            <stop offset="1" stopColor="#fb7185" stopOpacity="0.2" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M18 82 A82 58 0 0 1 182 82"
-          fill="none"
-          stroke="currentColor"
-          strokeDasharray="3 5"
-          opacity="0.32"
+        <img
+          src={UPSTREAM_IMAGE_URLS[snapshot.upstreamImage]}
+          alt={moonName}
+          className="h-full w-auto max-w-full object-contain"
+          data-sun-position-card-image={snapshot.upstreamImage}
         />
-        <path
-          d="M18 82 A82 58 0 0 1 182 82"
-          fill="none"
-          stroke="url(#home-os-horizon)"
-          strokeWidth="3"
-          opacity="0.8"
-        />
-        <line x1="10" x2="190" y1="83" y2="83" stroke="currentColor" opacity="0.16" />
-        {snapshot.sunArcPoint ? (
-          <g
-            className="transition-transform duration-500 motion-reduce:transition-none"
-            transform={`translate(${snapshot.sunArcPoint.x} ${snapshot.sunArcPoint.y})`}
-            data-sun-arc-body="true"
-          >
-            <circle r="12" fill="#fbbf24" opacity="0.16" />
-            <g className="origin-center animate-[spin_40s_linear_infinite] motion-reduce:animate-none">
-              {[0, 45, 90, 135].map((angle) => (
-                <line
-                  key={angle}
-                  x1="-10"
-                  x2="10"
-                  y1="0"
-                  y2="0"
-                  stroke="#fde68a"
-                  strokeWidth="1.5"
-                  transform={`rotate(${angle})`}
-                />
-              ))}
-            </g>
-            <circle r="6.5" fill="#fcd34d" stroke="#fef3c7" strokeWidth="1" />
-          </g>
-        ) : null}
-        <g transform="translate(171 20)" data-moon-disc="separate">
-          <circle r="10" fill="#f8fafc" opacity="0.92" />
-          <ellipse
-            cx={snapshot.moon.phase < 0.5 ? -10 + moonShadowRadius : 10 - moonShadowRadius}
-            rx={moonShadowRadius}
-            ry="10"
-            fill="rgb(15 23 42 / 0.88)"
-            data-moon-shadow="true"
-          />
-          <circle r="10" fill="none" stroke="rgb(255 255 255 / 0.35)" />
-        </g>
-        <text x="8" y="101" fill="currentColor" fontSize="9" opacity="0.65">
-          {time(snapshot.sunrise)}
-        </text>
-        <text x="166" y="101" fill="currentColor" fontSize="9" opacity="0.65">
-          {time(snapshot.sunset)}
-        </text>
-      </svg>
+      </div>
       <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="font-medium">
-          {language === 'zh' ? snapshot.moon.name.zh : snapshot.moon.name.en}
-        </span>
+        <span className="font-medium">{moonName}</span>
         <span className="tabular-nums text-current/60">
           {language === 'zh'
             ? daypartNames[snapshot.daypart].zh
             : daypartNames[snapshot.daypart].en}
-          {' · '}
-          {Math.round(snapshot.moon.illumination * 100)}%
         </span>
       </div>
       {!compact ? (
@@ -248,10 +269,13 @@ export function AstronomyVisual({
           </span>
         </div>
       ) : null}
-      <div className="mt-1 text-[10px] text-current/45">
-        {language === 'zh'
-          ? `太阳：${snapshot.sunSource === 'home_assistant' ? 'Home Assistant' : '无实时数据'} · 月相：${snapshot.moonSource === 'entity' ? '实体' : '算法估算'}`
-          : `Sun: ${snapshot.sunSource === 'home_assistant' ? 'Home Assistant' : 'no live data'} · Moon: ${snapshot.moonSource}`}
+      <div className="mt-2 flex justify-between gap-2 text-[10px] text-current/45">
+        <span>
+          {language === 'zh' ? `日出 ${time(snapshot.sunrise)}` : `Rise ${time(snapshot.sunrise)}`}
+        </span>
+        <span>
+          {language === 'zh' ? `日落 ${time(snapshot.sunset)}` : `Set ${time(snapshot.sunset)}`}
+        </span>
       </div>
     </div>
   );

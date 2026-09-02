@@ -120,7 +120,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       weatherSource: weather ? `${weather.sourceType}: ${weather.id}` : '—',
       airMetrics: air.metrics.flatMap((item) => item.roles).length,
       sunEntity: sun?.entity.externalId ?? '—',
-      moonSource: moon?.entity.externalId ?? 'calculated',
+      moonSource: moon?.entity.externalId ?? 'unavailable',
       routerNegatives: routerNegatives.length,
       environmentTemperature: resolved.filter((item) =>
         item.roles.includes('environment.temperature')

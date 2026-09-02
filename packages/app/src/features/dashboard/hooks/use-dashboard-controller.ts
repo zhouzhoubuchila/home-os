@@ -5,6 +5,8 @@ import {
   isAllRooms,
 } from '@navet/app/constants/rooms';
 import { STORAGE_KEYS } from '@navet/app/constants/storage-keys';
+import { useHomeOsProductProjection } from '@navet/app/features/home-os/hooks/use-home-os-product-projection';
+import { projectSecurityDeviceCollection } from '@navet/app/features/home-os/projection/product-path-projection';
 import type { DeviceCollectionKey } from '@navet/app/hooks';
 import {
   buildDashboardVisibilityResult,
@@ -216,13 +218,18 @@ export function useDashboardController(): DashboardController {
     () => resolveDashboardSectionDeviceKeys(activeSection),
     [activeSection]
   );
-  const allDevices = useDeviceCollectionsByKeys(sectionDeviceKeys, {
+  const rawAllDevices = useDeviceCollectionsByKeys(sectionDeviceKeys, {
     enabled: sectionDeviceKeys.length > 0,
     includeFeatureCollections:
       sectionDeviceKeys.includes('calendars') || sectionDeviceKeys.includes('weather')
         ? shouldIncludeFeatureCollections
         : false,
   });
+  const homeOsProductProjection = useHomeOsProductProjection();
+  const allDevices = useMemo(
+    () => projectSecurityDeviceCollection(rawAllDevices, homeOsProductProjection),
+    [homeOsProductProjection, rawAllDevices]
+  );
   const dashboardVisibility = useMemo(
     () => buildDashboardVisibilityResult(allDevices, hiddenEntityIds, shownSensorEntityIds),
     [allDevices, hiddenEntityIds, shownSensorEntityIds]

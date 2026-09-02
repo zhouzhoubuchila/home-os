@@ -13,12 +13,17 @@ export async function setLightsPower(
 ): Promise<LightBatchActionResult> {
   const targets = lights.filter((light) => light.available && light.supportsToggle);
   const results = await Promise.allSettled(
-    targets.map(async (light) => {
-      const result = await dispatchEntityCommand(
-        { type: state === 'on' ? 'turn_on' : 'turn_off', entityId: light.id },
-        light.providerId
-      );
-      if (!result.accepted) throw new Error(result.error ?? 'Command was rejected');
+    targets.flatMap((light) => {
+      const commandTargets =
+        light.commandTargets[state] ??
+        (light.primaryCommandTarget ? [light.primaryCommandTarget] : []);
+      return commandTargets.map(async (entityId) => {
+        const result = await dispatchEntityCommand(
+          { type: state === 'on' ? 'turn_on' : 'turn_off', entityId },
+          light.providerId
+        );
+        if (!result.accepted) throw new Error(result.error ?? 'Command was rejected');
+      });
     })
   );
 
@@ -36,13 +41,15 @@ export async function setLightsBrightness(
   const targets = lights.filter((light) => light.available && light.supportsBrightness);
   const normalizedBrightness = Math.min(100, Math.max(1, Math.round(brightness)));
   const results = await Promise.allSettled(
-    targets.map(async (light) => {
-      const result = await dispatchEntityCommand(
-        { type: 'set_brightness', entityId: light.id, brightness: normalizedBrightness },
-        light.providerId
-      );
-      if (!result.accepted) throw new Error(result.error ?? 'Command was rejected');
-    })
+    targets.flatMap((light) =>
+      (light.commandTargets.brightness ?? []).map(async (entityId) => {
+        const result = await dispatchEntityCommand(
+          { type: 'set_brightness', entityId, brightness: normalizedBrightness },
+          light.providerId
+        );
+        if (!result.accepted) throw new Error(result.error ?? 'Command was rejected');
+      })
+    )
   );
 
   return {

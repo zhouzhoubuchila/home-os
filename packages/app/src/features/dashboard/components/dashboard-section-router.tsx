@@ -29,7 +29,7 @@ import { useNavigationStore, useSettingsStore } from '@navet/app/stores';
 import { integrationSelectors, settingsSelectors } from '@navet/app/stores/selectors';
 import { getDeviceRoomLabel } from '@navet/app/utils/device-location';
 import { getChoreTiming } from '@navet/core/chores';
-import { Lightbulb, Thermometer } from 'lucide-react';
+import { Thermometer } from 'lucide-react';
 import {
   lazy,
   memo,
@@ -499,50 +499,27 @@ function DashboardSectionRouterComponent({ controller }: DashboardSectionRouterP
   } else if (activeSection === 'lights') {
     sectionContent = (
       <div {...sectionStackProps} className="relative flex flex-col gap-2 md:gap-6">
-        {lightDeviceMap.size > 0 ? (
-          <SectionCustomizeShell
-            isEditMode={isEditMode}
-            onToggle={onToggleEditMode ?? (() => {})}
-            className="relative"
-            actions={null}
-            showCustomizeButton={false}
-          >
-            <RenderProfiler id="LightsSection">
-              <Suspense fallback={<LoadingSpinner message={t('common.loading')} />}>
-                <LightsDashboard
-                  deviceMap={lightDeviceMap}
-                  rooms={lightRooms}
-                  cardOrders={cardOrders}
-                  scenes={lightScenes}
-                  isEditMode={isEditMode}
-                  onRemoveEntity={handleRemoveEntity}
-                />
-              </Suspense>
-            </RenderProfiler>
-          </SectionCustomizeShell>
-        ) : (
-          <div className="flex h-full items-center justify-center p-6">
-            <DashboardEmptyState
-              icon={Lightbulb}
-              title={t('dashboard.shell.noLightsTitle')}
-              description={
-                sectionData.hiddenLightEntityIds.length > 0
-                  ? t('dashboard.shell.noLightsHidden')
-                  : t('dashboard.shell.noLightsEmpty')
-              }
-              actionIcon={Lightbulb}
-              actionLabel={
-                sectionData.hiddenLightEntityIds.length > 0
-                  ? t('dashboard.addEntity.title')
-                  : undefined
-              }
-              onAction={
-                sectionData.hiddenLightEntityIds.length > 0 ? openAddLightEntityDialog : undefined
-              }
-              className="w-full max-w-md"
-            />
-          </div>
-        )}
+        <SectionCustomizeShell
+          isEditMode={isEditMode}
+          onToggle={onToggleEditMode ?? (() => {})}
+          className="relative"
+          actions={null}
+          showCustomizeButton={false}
+        >
+          <RenderProfiler id="LightsSection">
+            <Suspense fallback={<LoadingSpinner message={t('common.loading')} />}>
+              <LightsDashboard
+                deviceMap={lightDeviceMap}
+                rooms={lightRooms}
+                cardOrders={cardOrders}
+                scenes={lightScenes}
+                isEditMode={isEditMode}
+                onRemoveEntity={handleRemoveEntity}
+                hiddenEntityIds={hiddenEntityIds}
+              />
+            </Suspense>
+          </RenderProfiler>
+        </SectionCustomizeShell>
 
         {isAddLightEntityDialogOpen ? (
           <Suspense fallback={<LoadingSpinner message={t('common.loading')} />}>

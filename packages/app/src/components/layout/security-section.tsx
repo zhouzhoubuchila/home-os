@@ -2,6 +2,8 @@ import { DashboardEmptyState } from '@navet/app/components/patterns';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { ALL_ROOMS_ID } from '@navet/app/constants/rooms';
 import { useDashboardEntitiesStore } from '@navet/app/features/dashboard/stores/dashboard-entities-store';
+import { useHomeOsProductProjection } from '@navet/app/features/home-os/hooks/use-home-os-product-projection';
+import { projectSecurityDeviceCollection } from '@navet/app/features/home-os/projection/product-path-projection';
 import { SecurityCameraDashboard } from '@navet/app/features/security/components/security-camera-dashboard';
 import { useSecurityAlarmEntities } from '@navet/app/features/security/hooks/use-security-alarm-entities';
 import {
@@ -101,9 +103,14 @@ export function SecuritySection({
   const { t } = useI18n();
   const theme = useThemeMode();
   const surface = getThemeSurfaceTokens(theme);
-  const devices = useDeviceCollectionsByKeys(SECURITY_SECTION_DEVICE_KEYS, {
+  const rawDevices = useDeviceCollectionsByKeys(SECURITY_SECTION_DEVICE_KEYS, {
     deviceFilter: isSecurityDashboardDevice,
   });
+  const productProjection = useHomeOsProductProjection();
+  const devices = useMemo(
+    () => projectSecurityDeviceCollection(rawDevices, productProjection),
+    [productProjection, rawDevices]
+  );
   const alarms = useSecurityAlarmEntities();
   const { isEditMode, toggleEditMode } = useEditMode();
   const [isAddEntityDialogOpen, setIsAddEntityDialogOpen] = useState(false);

@@ -70,7 +70,7 @@ describe('Home OS V2.0.3.4 real-environment contracts', () => {
     );
   });
 
-  it('renders the Moon as a separate disc and keeps only the Sun on the arc', () => {
+  it('renders the pinned upstream phase image without homemade Moon geometry', () => {
     const html = renderToStaticMarkup(
       <AstronomyVisual
         entities={resolved}
@@ -78,8 +78,9 @@ describe('Home OS V2.0.3.4 real-environment contracts', () => {
         now={new Date('2026-09-03T12:00:00+08:00')}
       />
     );
-    expect(html).toContain('data-sun-arc-body="true"');
-    expect(html).toContain('data-moon-disc="separate"');
-    expect(html).toContain('data-moon-illumination=');
+    expect(html).toContain('data-sun-position-card-image="mittag.png"');
+    expect(html).toContain('data-moon-source="entity"');
+    expect(html).not.toContain('data-moon-disc=');
+    expect(html).not.toContain('<ellipse');
   });
 });
