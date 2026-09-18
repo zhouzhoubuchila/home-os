@@ -1,6 +1,11 @@
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../core/types';
 
 export interface ResolvedHomeOsFunctionalDevice extends HomeOsFunctionalDevice {
+  stateEntity?: ResolvedSemanticEntity;
+  controlEntities: Partial<
+    Record<keyof NonNullable<HomeOsFunctionalDevice['controls']>, ResolvedSemanticEntity>
+  >;
+  metricEntities: Record<string, ResolvedSemanticEntity | undefined>;
   entities: ResolvedSemanticEntity[];
   missingEntityIds: string[];
 }
@@ -65,7 +70,12 @@ export function resolveFunctionalDevices(
   configs: readonly HomeOsFunctionalDevice[],
   entities: readonly ResolvedSemanticEntity[]
 ): ResolvedHomeOsFunctionalDevice[] {
-  const byExternalId = new Map(entities.map((item) => [item.entity.externalId, item]));
+  const byExternalId = new Map<string, ResolvedSemanticEntity>();
+  for (const item of entities) {
+    byExternalId.set(item.entity.id, item);
+    byExternalId.set(item.entity.canonicalId, item);
+    byExternalId.set(item.entity.externalId, item);
+  }
   return configs.map((config) => {
     const referencedIds = new Set([
       ...config.sourceEntityIds,
@@ -78,6 +88,16 @@ export function resolveFunctionalDevices(
       .filter((item): item is ResolvedSemanticEntity => Boolean(item));
     return {
       ...config,
+      stateEntity: config.stateEntityId ? byExternalId.get(config.stateEntityId) : undefined,
+      controlEntities: Object.fromEntries(
+        Object.entries(config.controls ?? {}).flatMap(([key, entityId]) => {
+          const entity = entityId ? byExternalId.get(entityId) : undefined;
+          return entity ? [[key, entity]] : [];
+        })
+      ),
+      metricEntities: Object.fromEntries(
+        Object.entries(config.metrics).map(([key, entityId]) => [key, byExternalId.get(entityId)])
+      ),
       entities: members,
       missingEntityIds: [...referencedIds].filter((entityId) => !byExternalId.has(entityId)),
     };

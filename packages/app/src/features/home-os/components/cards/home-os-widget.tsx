@@ -24,13 +24,14 @@ import {
 import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
+import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-device-adapter';
 import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
 import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
-import type { ResolvedSemanticEntity } from '../../core/types';
+import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../../core/types';
 import { useHomeOsProductProjection } from '../../hooks/use-home-os-product-projection';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
 import {
@@ -45,6 +46,13 @@ import {
   resolveWeatherSource,
 } from '../../mapping/data-source-resolver';
 import { getMetricFreshnessThresholdMs } from '../../mapping/metric-resolution';
+import {
+  functionalDeviceMetricRows,
+  ROUTER_METRIC_ORDER,
+  resolveFinalFunctionalDevices,
+  resolveFinalPveDevices,
+  resolveFunctionalOnlineState,
+} from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
@@ -235,14 +243,16 @@ function HouseholdCard({
   title,
   status,
   t,
+  functionalDevices,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   title: string;
   status: string;
   t: TranslateFn;
+  functionalDevices: readonly HomeOsFunctionalDevice[];
 }) {
-  const members = buildFamilyMembers(entities);
+  const members = buildFamilyMembers(entities, functionalDevices);
   const homeCount = members.filter((member) => member.state === 'home').length;
   return (
     <BaseCard size={size} title={title} headerLeading={<Users className="h-5 w-5" />}>
@@ -258,6 +268,75 @@ function HouseholdCard({
             <div key={member.id} className="flex justify-between gap-2">
               <span className="truncate">{member.name}</span>
               <span className="text-current/60">{formatHomeOsDisplayState(member.state, t)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </BaseCard>
+  );
+}
+
+const routerMetricLabel = (key: string, language: string) => {
+  const labels: Record<string, [string, string]> = {
+    clients: ['Clients', '客户端'],
+    wan_ip: ['WAN', 'WAN'],
+    lan_ip: ['LAN', 'LAN'],
+    cpu: ['CPU', 'CPU'],
+    memory: ['Memory', '内存'],
+    temperature: ['Temperature', '温度'],
+    uptime: ['Uptime', '运行时间'],
+    upload: ['Upload', '上传'],
+    download: ['Download', '下载'],
+  };
+  const pair = labels[key];
+  return pair ? (language === 'zh' ? pair[1] : pair[0]) : key;
+};
+
+function FunctionalRouterCard({
+  size,
+  device,
+  language,
+  t,
+}: {
+  size: CardSize;
+  device: ResolvedHomeOsFunctionalDevice;
+  language: string;
+  t: TranslateFn;
+}) {
+  const online = resolveFunctionalOnlineState(device);
+  const rows = functionalDeviceMetricRows(device, ROUTER_METRIC_ORDER).filter(
+    ({ key }) => key !== 'online'
+  );
+  const status =
+    online === 'online'
+      ? language === 'zh'
+        ? '在线'
+        : 'Online'
+      : online === 'offline'
+        ? language === 'zh'
+          ? '离线'
+          : 'Offline'
+        : language === 'zh'
+          ? '未知'
+          : 'Unknown';
+  return (
+    <BaseCard size={size} title={device.name} headerLeading={<Network className="h-5 w-5" />}>
+      <div className="flex h-full min-h-0 flex-col justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span
+            className={
+              online === 'online'
+                ? 'h-2 w-2 rounded-full bg-emerald-400'
+                : 'h-2 w-2 rounded-full bg-current/30'
+            }
+          />
+          <span>{status}</span>
+        </div>
+        <div className="grid min-h-0 gap-2 overflow-hidden">
+          {rows.slice(0, sizeLimit(size)).map(({ key, entity }) => (
+            <div key={key} className="flex justify-between gap-3 text-sm">
+              <span className="text-current/65">{routerMetricLabel(key, language)}</span>
+              <strong className="tabular-nums">{stateText(entity, t)}</strong>
             </div>
           ))}
         </div>
@@ -471,6 +550,11 @@ export function HomeOsWidget({
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
+  const functionalDevices = useHomeOsConfigStore((state) => state.config.functionalDevices ?? []);
+  const resolvedFunctionalDevices = useMemo(
+    () => resolveFinalFunctionalDevices(entities, functionalDevices),
+    [entities, functionalDevices]
+  );
   const productProjection = useHomeOsProductProjection();
   const setActiveSection = useNavigationStore((state) => state.setActiveSection);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -548,6 +632,7 @@ export function HomeOsWidget({
         title={copy.household}
         status={copy.peopleAtHome}
         t={t}
+        functionalDevices={functionalDevices}
       />
     );
   if (definition.kind === 'lighting')
@@ -602,16 +687,30 @@ export function HomeOsWidget({
     );
   }
   if (definition.kind === 'pve') {
+    const hasFunctionalPve = resolvedFunctionalDevices.some((device) => device.kind === 'pve');
+    const pveDevices = resolveFinalPveDevices(
+      resolvedFunctionalDevices,
+      productProjection.pveDevices
+    );
     return withDetail(
       <PveHomeOsCard
         size={size}
-        devices={productProjection.pveDevices}
-        data={data}
+        devices={pveDevices}
+        data={
+          hasFunctionalPve ? { ...data, pveDeviceId: undefined, pveMetricRoles: undefined } : data
+        }
         onUpdate={onUpdate}
         isEditMode={isEditMode}
         openSettingsRequestKey={openSettingsRequestKey}
       />
     );
+  }
+  if (definition.kind === 'router') {
+    const router = resolvedFunctionalDevices.find((device) => device.kind === 'router');
+    if (router)
+      return withDetail(
+        <FunctionalRouterCard size={size} device={router} language={language} t={t} />
+      );
   }
   return withDetail(
     <BaseCard

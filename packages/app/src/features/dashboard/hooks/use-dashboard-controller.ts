@@ -6,7 +6,10 @@ import {
 } from '@navet/app/constants/rooms';
 import { STORAGE_KEYS } from '@navet/app/constants/storage-keys';
 import { useHomeOsProductProjection } from '@navet/app/features/home-os/hooks/use-home-os-product-projection';
+import { useResolvedHomeOsEntities } from '@navet/app/features/home-os/hooks/use-resolved-home-os';
 import { projectSecurityDeviceCollection } from '@navet/app/features/home-os/projection/product-path-projection';
+import { resolveFinalDashboardDeviceMap } from '@navet/app/features/home-os/resolution/final-home-os-resolution';
+import { useHomeOsConfigStore } from '@navet/app/features/home-os/stores/home-os-config-store';
 import type { DeviceCollectionKey } from '@navet/app/hooks';
 import {
   buildDashboardVisibilityResult,
@@ -226,6 +229,10 @@ export function useDashboardController(): DashboardController {
         : false,
   });
   const homeOsProductProjection = useHomeOsProductProjection();
+  const homeOsResolvedEntities = useResolvedHomeOsEntities();
+  const homeOsFunctionalDevices = useHomeOsConfigStore(
+    (state) => state.config.functionalDevices ?? []
+  );
   const allDevices = useMemo(
     () => projectSecurityDeviceCollection(rawAllDevices, homeOsProductProjection),
     [homeOsProductProjection, rawAllDevices]
@@ -388,9 +395,25 @@ export function useDashboardController(): DashboardController {
     },
     [isHomeOverview, updateActiveCardZone, updateSharedCardZone]
   );
-  const { deviceMap } = useDeviceMap(isDeviceHeavySection ? devices : EMPTY_DEVICE_COLLECTION);
-  const { deviceMap: availableDeviceMap } = useDeviceMap(
+  const { deviceMap: rawDeviceMap } = useDeviceMap(
+    isDeviceHeavySection ? devices : EMPTY_DEVICE_COLLECTION
+  );
+  const { deviceMap: rawAvailableDeviceMap } = useDeviceMap(
     isDeviceHeavySection ? availableDevices : EMPTY_DEVICE_COLLECTION
+  );
+  const deviceMap = useMemo(
+    () =>
+      resolveFinalDashboardDeviceMap(rawDeviceMap, homeOsResolvedEntities, homeOsFunctionalDevices),
+    [homeOsFunctionalDevices, homeOsResolvedEntities, rawDeviceMap]
+  );
+  const availableDeviceMap = useMemo(
+    () =>
+      resolveFinalDashboardDeviceMap(
+        rawAvailableDeviceMap,
+        homeOsResolvedEntities,
+        homeOsFunctionalDevices
+      ),
+    [homeOsFunctionalDevices, homeOsResolvedEntities, rawAvailableDeviceMap]
   );
   const availableDeviceMapRef = useRef(availableDeviceMap);
   useLayoutEffect(() => {

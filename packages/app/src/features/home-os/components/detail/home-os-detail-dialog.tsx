@@ -5,6 +5,7 @@ import { useI18n, useTheme } from '@navet/app/hooks';
 import { Solar } from 'lunar-javascript';
 import type { ReactNode } from 'react';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
+import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-device-adapter';
 import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
@@ -20,6 +21,12 @@ import {
   resolveAirQualitySources,
 } from '../../mapping/data-source-resolver';
 import { resolveMetric } from '../../mapping/metric-resolution';
+import {
+  functionalDeviceMetricRows,
+  ROUTER_METRIC_ORDER,
+  resolveFinalFunctionalDevices,
+  resolveFunctionalOnlineState,
+} from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 
 function formatAlertDuration(durationMs: number, language: string) {
@@ -56,6 +63,68 @@ function MetricRows({
             <strong className="shrink-0 tabular-nums">
               {formatHomeOsDisplayState(item.entity.primaryState, t)}
               {typeof unit === 'string' ? ` ${unit}` : ''}
+            </strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FunctionalMetricRows({
+  device,
+  order,
+  language,
+  t,
+}: {
+  device: ResolvedHomeOsFunctionalDevice;
+  order: readonly string[];
+  language: string;
+  t: ReturnType<typeof useI18n>['t'];
+}) {
+  const labels: Record<string, [string, string]> = {
+    online: ['Online', '在线状态'],
+    clients: ['Clients', '客户端'],
+    wan_ip: ['WAN', 'WAN'],
+    lan_ip: ['LAN', 'LAN'],
+    cpu: ['CPU usage', 'CPU 使用率'],
+    temperature: ['Temperature', 'CPU 温度'],
+    memory: ['Memory usage', '内存使用率'],
+    storage: ['Storage usage', '存储使用率'],
+    uptime: ['Uptime', '运行时间'],
+    upload: ['Upload', '上传'],
+    download: ['Download', '下载'],
+  };
+  const rows = functionalDeviceMetricRows(device, order);
+  return (
+    <div className="grid gap-2">
+      {rows.map(({ key, entity }) => {
+        const pair = labels[key];
+        const label = pair ? (language === 'zh' ? pair[1] : pair[0]) : key;
+        const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
+        const value =
+          key === 'online'
+            ? resolveFunctionalOnlineState(device) === 'online'
+              ? language === 'zh'
+                ? '正常'
+                : 'Online'
+              : resolveFunctionalOnlineState(device) === 'offline'
+                ? language === 'zh'
+                  ? '离线'
+                  : 'Offline'
+                : language === 'zh'
+                  ? '未知'
+                  : 'Unknown'
+            : formatHomeOsDisplayState(entity.entity.primaryState, t);
+        return (
+          <div
+            key={key}
+            className="flex justify-between gap-4 rounded-xl border border-current/10 p-3 text-sm"
+          >
+            <span className="font-medium">{label}</span>
+            <strong className="tabular-nums">
+              {value}
+              {key !== 'online' && typeof unit === 'string' ? ` ${unit}` : ''}
             </strong>
           </div>
         );
@@ -164,6 +233,7 @@ export function HomeOsDetailDialog({
   const config = useHomeOsConfigStore((state) => state.config);
   const definition = getHomeOsCardDefinition(kind);
   const visible = entities.filter((item) => !item.ignored && item.displayMode !== 'hidden');
+  const functionalDevices = resolveFinalFunctionalDevices(visible, config.functionalDevices ?? []);
   const prefix =
     kind === 'pve'
       ? 'homelab.pve.'
@@ -187,7 +257,7 @@ export function HomeOsDetailDialog({
   let content: ReactNode;
 
   if (kind === 'household') {
-    const members = buildFamilyMembers(visible);
+    const members = buildFamilyMembers(visible, config.functionalDevices ?? []);
     content = members.length ? (
       <div className="grid gap-2">
         {members.map((member) => (
@@ -204,8 +274,14 @@ export function HomeOsDetailDialog({
             </p>
             <p className={`mt-2 text-xs ${surface.textMuted}`}>
               {copy.trackerSources}:{' '}
-              {member.trackerSources.map((tracker) => tracker.name).join(' · ') ||
-                copy.noMappedData}
+              {member.trackerSources.length
+                ? member.trackerSources
+                    .map(
+                      (tracker) =>
+                        `${tracker.name}${tracker.platform ? ` (${tracker.platform})` : ''}: ${tracker.state}`
+                    )
+                    .join(' · ')
+                : copy.noMappedData}
             </p>
           </div>
         ))}
@@ -289,7 +365,10 @@ export function HomeOsDetailDialog({
       <p>{copy.noActiveAlerts}</p>
     );
   } else if (kind === 'pve') {
-    const devices = buildPvePhysicalDevices(visible, config.physicalDevices);
+    const functionalPve = functionalDevices.filter((device) => device.kind === 'pve');
+    const devices = functionalPve.length
+      ? []
+      : buildPvePhysicalDevices(visible, config.physicalDevices);
     const sections: Array<{ label: string; roles: string[] }> = [
       {
         label: language === 'zh' ? '概览' : 'Overview',
@@ -330,7 +409,20 @@ export function HomeOsDetailDialog({
         ],
       },
     ];
-    content = (
+    content = functionalPve.length ? (
+      <div className="grid gap-3">
+        {functionalPve.map((device) => (
+          <BaseCard key={device.id} size="medium" title={device.name} subtitle={device.room}>
+            <FunctionalMetricRows
+              device={device}
+              order={['online', 'cpu', 'temperature', 'memory', 'storage', 'uptime']}
+              language={language}
+              t={t}
+            />
+          </BaseCard>
+        ))}
+      </div>
+    ) : (
       <div className="grid gap-3">
         {devices.map((device) => (
           <BaseCard
@@ -363,6 +455,21 @@ export function HomeOsDetailDialog({
         ))}
         <DiagnosisRows roles={DETAIL_ROLES.pve ?? []} entities={visible} copy={copy} />
       </div>
+    );
+  } else if (kind === 'router') {
+    const router = functionalDevices.find((device) => device.kind === 'router');
+    content = router ? (
+      <div className="grid gap-3">
+        <h3 className="font-semibold">{router.name}</h3>
+        <FunctionalMetricRows
+          device={router}
+          order={ROUTER_METRIC_ORDER}
+          language={language}
+          t={t}
+        />
+      </div>
+    ) : (
+      <DiagnosisRows roles={DETAIL_ROLES.router ?? []} entities={visible} copy={copy} />
     );
   } else if (kind === 'lunar') {
     const now = new Date();

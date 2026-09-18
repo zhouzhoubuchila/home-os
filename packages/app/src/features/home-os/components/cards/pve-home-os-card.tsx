@@ -114,7 +114,7 @@ export function PveHomeOsCard({
     .filter(({ role }) => !role.startsWith('diagnostic.'));
   const visibleMetrics = selectedMetrics.slice(
     0,
-    resolvedSize === 'small' ? 2 : resolvedSize === 'medium' ? 4 : 6
+    resolvedSize === 'small' ? 2 : resolvedSize === 'medium' ? 5 : 6
   );
   const primaryMetric =
     visibleMetrics.find(({ role }) => role === 'homelab.pve.cpu_usage') ?? visibleMetrics[0];
