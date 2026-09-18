@@ -1253,4 +1253,99 @@ describe('homeassistant-mappers', () => {
       })
     );
   });
+
+  it('preserves Registry metadata used by Home OS semantic classification', () => {
+    const entities = mapHomeAssistantEntitiesToNavetEntities({
+      entities: {
+        'sensor.pve_cpu': makeEntity('sensor.pve_cpu', '24.5', {
+          friendly_name: 'PVE CPU usage',
+          state_class: 'measurement',
+          unit_of_measurement: '%',
+        }),
+      },
+      areas: [],
+      deviceRegistry: [
+        {
+          id: 'pve-node-1',
+          name: 'PVE Node 1',
+          manufacturer: 'Proxmox',
+          model: 'Virtual Environment',
+        },
+      ],
+      entityRegistry: [
+        {
+          entity_id: 'sensor.pve_cpu',
+          device_id: 'pve-node-1',
+          platform: 'proxmoxve',
+          unique_id: 'pve-node-1-cpu',
+          entity_category: 'diagnostic',
+        },
+      ],
+    });
+
+    expect(entities[0]?.attributes).toEqual(
+      expect.objectContaining({
+        deviceId: 'pve-node-1',
+        deviceName: 'PVE Node 1',
+        manufacturer: 'Proxmox',
+        model: 'Virtual Environment',
+        platform: 'proxmoxve',
+        integration: 'proxmoxve',
+        uniqueId: 'pve-node-1-cpu',
+        entityCategory: 'diagnostic',
+        stateClass: 'measurement',
+        unit: '%',
+      })
+    );
+  });
+
+  it('maps weather, calendar, and sun domains with card-required attributes', () => {
+    const entities = mapHomeAssistantEntitiesToNavetEntities({
+      entities: {
+        'weather.home': makeEntity('weather.home', 'sunny', {
+          friendly_name: 'Home weather',
+          temperature: 27,
+          temperature_unit: '°C',
+          humidity: 61,
+          forecast: [{ condition: 'cloudy' }],
+        }),
+        'calendar.family': makeEntity('calendar.family', 'on', {
+          friendly_name: 'Family calendar',
+          message: 'Dinner',
+          start_time: '2026-09-18 18:00:00',
+          end_time: '2026-09-18 20:00:00',
+        }),
+        'sun.sun': makeEntity('sun.sun', 'above_horizon', {
+          friendly_name: 'Sun',
+          next_rising: '2026-09-19T05:30:00+09:00',
+          next_setting: '2026-09-18T17:45:00+09:00',
+          elevation: 38.2,
+          azimuth: 186.4,
+        }),
+      },
+      areas: [],
+      deviceRegistry: [],
+      entityRegistry: [],
+    });
+
+    expect(entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          externalId: 'weather.home',
+          type: 'weather',
+          attributes: expect.objectContaining({ temperature: 27, humidity: 61 }),
+        }),
+        expect.objectContaining({
+          externalId: 'calendar.family',
+          type: 'calendar',
+          attributes: expect.objectContaining({ message: 'Dinner' }),
+        }),
+        expect.objectContaining({
+          externalId: 'sun.sun',
+          type: 'sensor',
+          attributes: expect.objectContaining({ elevation: 38.2, azimuth: 186.4 }),
+        }),
+      ])
+    );
+  });
 });

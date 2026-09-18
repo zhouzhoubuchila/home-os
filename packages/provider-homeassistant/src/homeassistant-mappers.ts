@@ -70,6 +70,9 @@ const MAPPED_HOME_ASSISTANT_DOMAINS = new Set([
   'cover',
   'lock',
   'scene',
+  'calendar',
+  'weather',
+  'sun',
   'person',
   'device_tracker',
   'camera',
@@ -1077,6 +1080,7 @@ function createHomeAssistantState(
   entityId: string,
   entity: HassEntity,
   entityEntry?: HomeAssistantEntityRegistryEntry,
+  deviceEntry?: HomeAssistantDeviceRegistryEntry,
   areaMap: Map<string, string> = new Map(),
   switchMetricsByDeviceId?: Map<string, SwitchMetricState[]>
 ): Record<string, unknown> {
@@ -1089,6 +1093,20 @@ function createHomeAssistantState(
   const deviceId = entityEntry?.device_id ?? undefined;
   const commonState = {
     deviceId,
+    uniqueId: entityEntry?.unique_id ?? undefined,
+    platform: entityEntry?.platform ?? undefined,
+    integration: entityEntry?.platform ?? undefined,
+    deviceName: deviceEntry?.name_by_user ?? deviceEntry?.name ?? undefined,
+    manufacturer: deviceEntry?.manufacturer ?? undefined,
+    model: deviceEntry?.model ?? undefined,
+    deviceClass,
+    stateClass:
+      typeof entity.attributes?.state_class === 'string'
+        ? entity.attributes.state_class
+        : undefined,
+    unit: entity.attributes?.unit_of_measurement ?? entity.attributes?.native_unit_of_measurement,
+    lastChanged: entity.last_changed,
+    lastUpdated: entity.last_updated,
     sourceDeviceId:
       typeof entity.attributes?.source_device_id === 'string'
         ? entity.attributes.source_device_id
@@ -1103,6 +1121,55 @@ function createHomeAssistantState(
         securitySeverity: security.severity,
       }
     : {};
+
+  if (domain === 'sun') {
+    return {
+      ...commonState,
+      value: entity.state,
+      next_rising: entity.attributes?.next_rising,
+      next_setting: entity.attributes?.next_setting,
+      next_dawn: entity.attributes?.next_dawn,
+      next_dusk: entity.attributes?.next_dusk,
+      next_noon: entity.attributes?.next_noon,
+      next_midnight: entity.attributes?.next_midnight,
+      elevation: entity.attributes?.elevation,
+      azimuth: entity.attributes?.azimuth,
+      rising: entity.attributes?.rising,
+    };
+  }
+
+  if (domain === 'weather') {
+    return {
+      ...commonState,
+      value: entity.state,
+      temperature: entity.attributes?.temperature ?? entity.attributes?.native_temperature,
+      apparent_temperature:
+        entity.attributes?.apparent_temperature ?? entity.attributes?.native_apparent_temperature,
+      temperature_unit: entity.attributes?.temperature_unit,
+      humidity: entity.attributes?.humidity,
+      pressure: entity.attributes?.pressure ?? entity.attributes?.native_pressure,
+      pressure_unit: entity.attributes?.pressure_unit,
+      wind_speed: entity.attributes?.wind_speed ?? entity.attributes?.native_wind_speed,
+      wind_speed_unit: entity.attributes?.wind_speed_unit,
+      wind_bearing: entity.attributes?.wind_bearing,
+      visibility: entity.attributes?.visibility,
+      dew_point: entity.attributes?.dew_point,
+      forecast: entity.attributes?.forecast,
+    };
+  }
+
+  if (domain === 'calendar') {
+    return {
+      ...commonState,
+      value: entity.state,
+      message: entity.attributes?.message,
+      description: entity.attributes?.description,
+      location: entity.attributes?.location,
+      start_time: entity.attributes?.start_time,
+      end_time: entity.attributes?.end_time,
+      all_day: entity.attributes?.all_day,
+    };
+  }
 
   if (domain === 'climate' || domain === 'water_heater') {
     const currentTemperature = readNumberish(entity.attributes?.current_temperature);
@@ -1668,9 +1735,11 @@ function mapHomeAssistantEntity(
             ? 'sensor'
             : domain === 'binary_sensor'
               ? 'sensor'
-              : isVacuumLikeDomain(domain)
-                ? 'vacuum'
-                : (domain as NavetEntity['type']);
+              : domain === 'sun'
+                ? 'sensor'
+                : isVacuumLikeDomain(domain)
+                  ? 'vacuum'
+                  : (domain as NavetEntity['type']);
 
   const resources =
     domain === 'camera'
@@ -1718,7 +1787,14 @@ function mapHomeAssistantEntity(
     name,
     room || UNKNOWN_ROOM_LABEL,
     capabilities,
-    createHomeAssistantState(entityId, entity, entityEntry, areaMap, switchMetricsByDeviceId),
+    createHomeAssistantState(
+      entityId,
+      entity,
+      entityEntry,
+      deviceEntry,
+      areaMap,
+      switchMetricsByDeviceId
+    ),
     resources,
     roomId
   );

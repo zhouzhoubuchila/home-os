@@ -33,6 +33,7 @@ export interface HomeAssistantEntityRegistryEntry {
   name?: string | null;
   original_name?: string | null;
   platform?: string | null;
+  unique_id?: string | null;
   entity_category?: 'config' | 'diagnostic' | null;
   options?: Record<string, Record<string, unknown>>;
 }
