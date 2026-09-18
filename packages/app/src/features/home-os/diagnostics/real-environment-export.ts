@@ -5,6 +5,8 @@ import type { ResolvedSemanticEntity } from '../core/types';
 import { HomeOsDataSourceResolver } from '../mapping/data-source-resolver';
 
 const SENSITIVE_ENTITY_PATTERN = /password|token|secret|credential|authorization|cookie|api.?key/i;
+const SENSITIVE_VALUE_PATTERN =
+  /^(?:bearer\s+|basic\s+)|^[\w-]{24,}\.[\w-]{16,}\.[\w-]{16,}$|^[a-f\d]{40,}$/i;
 
 const readString = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -17,12 +19,15 @@ const attr = (entity: NavetEntity, ...keys: string[]) => {
   return undefined;
 };
 
+const safeValue = <T>(value: T): T | null =>
+  typeof value === 'string' && SENSITIVE_VALUE_PATTERN.test(value.trim()) ? null : value;
+
 const safeState = (entity: NavetEntity) =>
   SENSITIVE_ENTITY_PATTERN.test(
     `${entity.externalId} ${entity.name} ${String(attr(entity, 'deviceClass', 'device_class') ?? '')}`
   )
     ? null
-    : entity.primaryState;
+    : safeValue(entity.primaryState);
 
 export interface RealEnvironmentEntitySnapshot {
   entityId: string;
@@ -73,7 +78,7 @@ const snapshotEntity = (item: ResolvedSemanticEntity): RealEnvironmentEntitySnap
     unit: attr(entity, 'unit', 'unit_of_measurement'),
     platform: attr(entity, 'platform'),
     integration: attr(entity, 'integration'),
-    uniqueId: attr(entity, 'uniqueId', 'unique_id'),
+    uniqueId: safeValue(attr(entity, 'uniqueId', 'unique_id')),
     deviceId: attr(entity, 'deviceId', 'device_id'),
     deviceName: attr(entity, 'deviceName', 'device_name'),
     manufacturer: attr(entity, 'manufacturer'),
@@ -136,9 +141,10 @@ const registryGroups = (entities: readonly RealEnvironmentEntitySnapshot[]) => {
 };
 
 const mappingSummary = (entities: readonly ResolvedSemanticEntity[]) => {
-  const resolver = new HomeOsDataSourceResolver(entities);
+  const visibleEntities = entities.filter((item) => !item.ignored);
+  const resolver = new HomeOsDataSourceResolver(visibleEntities);
   return HOME_OS_CARD_REGISTRY.map((card) => {
-    const candidates = entities.filter((item) =>
+    const candidates = visibleEntities.filter((item) =>
       item.roles.some((role) => card.semanticRolePrefixes.some((prefix) => role.startsWith(prefix)))
     );
     const roles = [...new Set(candidates.flatMap((item) => item.roles))].filter((role) =>
@@ -153,7 +159,7 @@ const mappingSummary = (entities: readonly ResolvedSemanticEntity[]) => {
           ? 'needs_review'
           : roles.length === 0
             ? card.kind === 'lunar'
-              ? entities.some((item) => item.entity.externalId === 'sun.sun')
+              ? visibleEntities.some((item) => item.entity.externalId === 'sun.sun')
                 ? 'complete'
                 : 'partial'
               : 'missing'

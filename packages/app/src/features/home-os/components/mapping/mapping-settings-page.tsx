@@ -10,7 +10,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { exportHomeOsConfig, importHomeOsConfig } from '../../config/export-import';
-import type { ManualEntityMapping, ResolvedSemanticEntity } from '../../core/types';
+import type {
+  HomeOsFunctionalDevice,
+  ManualEntityMapping,
+  ResolvedSemanticEntity,
+} from '../../core/types';
+import {
+  serializeRealEnvironmentReport,
+  serializeRealEnvironmentSnapshot,
+} from '../../diagnostics/real-environment-export';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { resolveAirQualitySources, resolveWeatherSource } from '../../mapping/data-source-resolver';
 import { upsertManualMapping } from '../../mapping/manual-overrides';
@@ -19,10 +27,12 @@ import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { stableRefForEntity } from '../../mapping/stable-entity-ref';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
+import { FunctionalDeviceEditorDialog } from './functional-device-editor-dialog';
+import { FUNCTIONAL_DEVICE_KIND_NAMES } from './functional-device-options';
 import { MappingEditorDialog } from './mapping-editor-dialog';
 
 type Filter =
-  | 'all'
+  | 'detected'
   | 'review'
   | 'mapped'
   | 'unmapped'
@@ -35,7 +45,8 @@ type Filter =
   | 'energy';
 
 const matchesFilter = (resolved: ResolvedSemanticEntity, filter: Filter) => {
-  if (filter === 'all') return resolved.reviewDisposition !== 'diagnostic' && !resolved.ignored;
+  if (filter === 'detected')
+    return resolved.source !== 'manual' && resolved.roles.length > 0 && !resolved.needsReview;
   if (filter === 'review') return resolved.needsReview;
   if (filter === 'mapped') return resolved.reviewDisposition === 'mapped';
   if (filter === 'unmapped') return resolved.reviewDisposition === 'unmapped';
@@ -55,8 +66,11 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   const { config, loading, saving, error, recovered, load, reset, upsertMapping, removeMapping } =
     useHomeOsConfigStore();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [section, setSection] = useState<'mapping' | 'diagnostics'>('mapping');
+  const [filter, setFilter] = useState<Filter>('detected');
   const [editing, setEditing] = useState<NavetEntity | null>(null);
+  const [functionalEditorOpen, setFunctionalEditorOpen] = useState(false);
+  const [editingFunctionalDevice, setEditingFunctionalDevice] = useState<HomeOsFunctionalDevice>();
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -81,8 +95,16 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     return searchIndex.search(query).filter((item) => matchesFilter(item, filter));
   }, [filter, query, searchIndex]);
   const existing = editing
-    ? config.mappings.find((mapping) => mapping.entityId === editing.externalId)
+    ? config.mappings.find(
+        (mapping) =>
+          mapping.entityId === editing.externalId &&
+          (!mapping.stableRef?.providerId || mapping.stableRef.providerId === editing.providerId)
+      )
     : undefined;
+  const selectedEntities = useMemo(
+    () => resolved.filter((item) => selectedIds.has(item.entity.canonicalId)),
+    [resolved, selectedIds]
+  );
 
   useEffect(() => {
     setVisibleLimit(160);
@@ -138,7 +160,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   }, [config.functionalDevices, providerWeather, resolved]);
 
   const batchUpdate = async (ignored: boolean) => {
-    const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
+    const selected = selectedEntities;
     const updatedAt = new Date().toISOString();
     const mappings = selected.reduce((currentMappings, item) => {
       const current = item.mapping;
@@ -161,7 +183,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
   };
 
   const createLightingCircuit = async () => {
-    const selected = resolved.filter((item) => selectedIds.has(item.entity.externalId));
+    const selected = selectedEntities;
     const byDomain = (domain: string) =>
       selected.find((item) => item.entity.externalId.startsWith(`${domain}.`))?.entity.externalId;
     const namedButton = (pattern: RegExp) =>
@@ -223,6 +245,31 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     URL.revokeObjectURL(url);
   };
 
+  const downloadText = (contents: string, filename: string, type: string) => {
+    const url = URL.createObjectURL(new Blob([contents], { type }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportRealEnvironment = () => {
+    const date = new Date().toISOString().slice(0, 10);
+    downloadText(
+      serializeRealEnvironmentSnapshot(resolved, config),
+      `home-os-real-environment-${date}.json`,
+      'application/json'
+    );
+  };
+
+  const exportMappingReport = () =>
+    downloadText(
+      serializeRealEnvironmentReport(resolved, config),
+      'home-os-real-environment-report.md',
+      'text/markdown'
+    );
+
   const importConfig = async (file: File) => {
     try {
       setTransferError(null);
@@ -241,236 +288,403 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       description={copy.mappingDescription}
       styles={controller.styles}
     >
-      <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_180px_auto] md:px-5">
-        <Input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={copy.searchMappings}
-          aria-label={copy.searchMappings}
-        />
-        <Select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
-          <option value="all">{copy.allEntities}</option>
-          <option value="review">{copy.needsReview}</option>
-          <option value="mapped">{copy.mapped}</option>
-          <option value="unmapped">{copy.unmapped}</option>
-          <option value="diagnostic">{copy.diagnostic}</option>
-          <option value="manual">{copy.manual}</option>
-          <option value="ignored">{copy.ignored}</option>
-          <option value="lighting">{copy.lighting}</option>
-          <option value="family">{copy.family}</option>
-          <option value="homelab">{copy.homelab}</option>
-          <option value="energy">{copy.energy}</option>
-        </Select>
-        <Button variant="secondary" onClick={() => void load()} loading={loading}>
-          {copy.refresh}
-        </Button>
-        <div className="flex flex-wrap gap-2 md:col-span-3">
-          <Button size="small" variant="ghost" onClick={exportConfig}>
-            {copy.exportConfig}
-          </Button>
-          <Button size="small" variant="ghost" onClick={() => importInputRef.current?.click()}>
-            {copy.importConfig}
-          </Button>
+      <div className="flex gap-1 border-b px-4 pt-3 md:px-5">
+        {(['mapping', 'diagnostics'] as const).map((item) => (
           <Button
+            key={item}
             size="small"
-            variant={confirmReset ? 'destructive' : 'ghost'}
-            loading={saving}
-            onClick={() => {
-              if (!confirmReset) {
-                setConfirmReset(true);
-                return;
-              }
-              void reset().finally(() => setConfirmReset(false));
-            }}
+            variant={section === item ? 'secondary' : 'ghost'}
+            onClick={() => setSection(item)}
           >
-            {confirmReset ? copy.confirmReset : copy.resetHomeOs}
+            {item === 'mapping' ? copy.entityMapping : copy.diagnostics}
           </Button>
-          <input
-            ref={importInputRef}
-            className="hidden"
-            type="file"
-            accept="application/json,.json"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importConfig(file);
-              event.target.value = '';
-            }}
-          />
-        </div>
+        ))}
       </div>
-      {error ? <p className="px-5 py-3 text-sm text-red-500">{error}</p> : null}
-      {transferError ? <p className="px-5 py-3 text-sm text-red-500">{transferError}</p> : null}
-      {recovered ? (
-        <p className="px-5 py-3 text-sm text-amber-500">{copy.recoveredBackup}</p>
-      ) : null}
-      <div
-        className={cn(
-          'mx-4 grid grid-cols-2 gap-2 rounded-xl border p-3 text-xs sm:grid-cols-5 md:mx-5',
-          controller.styles.insetBorderColor
-        )}
-      >
-        <strong className={cn('col-span-2 sm:col-span-5', controller.styles.textColor)}>
-          {copy.diagnosticsSummary}
-        </strong>
-        <span>
-          {copy.mapped}: {diagnostics.mapped}
-        </span>
-        <span>
-          {copy.needsReview}: {diagnostics.review}
-        </span>
-        <span>
-          {copy.manual}: {diagnostics.manual}
-        </span>
-        <span>
-          {copy.ignored}: {diagnostics.ignored}
-        </span>
-        <span>
-          {copy.diagnostic}: {diagnostics.diagnostic}
-        </span>
-        <span>
-          {copy.pve}: {diagnostics.pve}
-        </span>
-        <span>
-          {copy.router}: {diagnostics.router}
-        </span>
-        <span>
-          {copy.internet}: {diagnostics.internet}
-        </span>
-        <span>
-          {copy.lightingCircuits}: {diagnostics.lightingCircuits}
-        </span>
-        <span>
-          {copy.weatherSource}: {diagnostics.weatherSource}
-        </span>
-        <span>
-          {copy.detectedMetrics}: {copy.airQuality} {diagnostics.airMetrics}
-        </span>
-        <span>
-          {copy.sunEntity}: {diagnostics.sunEntity}
-        </span>
-        <span>
-          {copy.moonSource}: {diagnostics.moonSource}
-        </span>
-        <span>
-          {copy.routerNegativeCandidates}: {diagnostics.routerNegatives}
-        </span>
-        <span>
-          {copy.temperatureDiagnostics}: {diagnostics.environmentTemperature} /{' '}
-          {diagnostics.refrigerationTemperature} / {diagnostics.pveTemperature} /{' '}
-          {diagnostics.internalTemperature}
-        </span>
-      </div>
-      {selectedIds.size ? (
-        <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
-          <Input
-            value={batchPhysicalDeviceId}
-            onChange={(event) => setBatchPhysicalDeviceId(event.target.value)}
-            placeholder={copy.batchPhysicalDevice}
-            aria-label={copy.batchPhysicalDevice}
-          />
-          <Select
-            value={batchDisplayMode}
-            onChange={(event) =>
-              setBatchDisplayMode(event.target.value as ManualEntityMapping['displayMode'])
-            }
-            aria-label={copy.displayMode}
-          >
-            <option value="primary">{copy.primary}</option>
-            <option value="detail">{copy.detail}</option>
-            <option value="diagnostic">{copy.diagnostic}</option>
-            <option value="hidden">{copy.hidden}</option>
-          </Select>
-          <Button
-            size="small"
-            variant="secondary"
-            loading={saving}
-            onClick={() => void batchUpdate(false)}
-          >
-            {copy.applyBatch} ({selectedIds.size})
-          </Button>
-          <Button
-            size="small"
-            variant="ghost"
-            disabled={saving}
-            onClick={() => void batchUpdate(true)}
-          >
-            {copy.ignoreBatch}
-          </Button>
-          <Input
-            value={circuitName}
-            onChange={(event) => setCircuitName(event.target.value)}
-            placeholder={copy.lightingCircuitName}
-            aria-label={copy.lightingCircuitName}
-          />
-          <Input
-            value={circuitRoom}
-            onChange={(event) => setCircuitRoom(event.target.value)}
-            placeholder={copy.lightingCircuitRoom}
-            aria-label={copy.lightingCircuitRoom}
-          />
-          <Button
-            size="small"
-            variant="secondary"
-            loading={saving}
-            onClick={() => void createLightingCircuit()}
-          >
-            {copy.createLightingCircuit} ({selectedIds.size})
-          </Button>
+      {section === 'diagnostics' ? (
+        <div className="grid gap-4 px-4 py-5 md:px-5">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={exportRealEnvironment}>
+              {copy.exportRealEnvironment}
+            </Button>
+            <Button variant="secondary" onClick={exportMappingReport}>
+              {copy.exportMappingReport}
+            </Button>
+          </div>
+          <p className={cn('text-sm', controller.styles.subtleColor)}>{copy.exportPrivacyNote}</p>
         </div>
       ) : null}
-      <div className="flex items-center justify-between px-5 py-3 text-xs">
-        <span className={controller.styles.subtleColor}>
-          {visible.length} / {resolved.length} {copy.mappingCount} · {copy.revision}{' '}
-          {config.revision}
-        </span>
-        <span className={cn(controller.styles.subtleColor, 'hidden sm:inline')}>
-          {copy.manualWins}
-        </span>
-      </div>
-      {visible.length ? (
-        visible.slice(0, visibleLimit).map((item) => (
-          <EntityMappingRow
-            key={item.entity.canonicalId}
-            resolved={item}
-            styles={controller.styles}
+      {section === 'mapping' ? (
+        <>
+          <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_180px_auto] md:px-5">
+            <Input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={copy.searchMappings}
+              aria-label={copy.searchMappings}
+            />
+            <Select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
+              <option value="detected">{copy.detected}</option>
+              <option value="review">{copy.needsReview}</option>
+              <option value="manual">{copy.mapped}</option>
+              <option value="unmapped">{copy.unrecognized}</option>
+              <option value="diagnostic">{copy.diagnostic}</option>
+              <option value="ignored">{copy.ignored}</option>
+              <option value="lighting">{copy.lighting}</option>
+              <option value="family">{copy.family}</option>
+              <option value="homelab">{copy.homelab}</option>
+              <option value="energy">{copy.energy}</option>
+            </Select>
+            <Button variant="secondary" onClick={() => void load()} loading={loading}>
+              {copy.refresh}
+            </Button>
+            <div className="flex flex-wrap gap-2 md:col-span-3">
+              <Button size="small" variant="ghost" onClick={exportConfig}>
+                {copy.exportConfig}
+              </Button>
+              <Button size="small" variant="ghost" onClick={() => importInputRef.current?.click()}>
+                {copy.importConfig}
+              </Button>
+              <Button
+                size="small"
+                variant={confirmReset ? 'destructive' : 'ghost'}
+                loading={saving}
+                onClick={() => {
+                  if (!confirmReset) {
+                    setConfirmReset(true);
+                    return;
+                  }
+                  void reset().finally(() => setConfirmReset(false));
+                }}
+              >
+                {confirmReset ? copy.confirmReset : copy.resetHomeOs}
+              </Button>
+              <input
+                ref={importInputRef}
+                className="hidden"
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void importConfig(file);
+                  event.target.value = '';
+                }}
+              />
+            </div>
+          </div>
+          {error ? <p className="px-5 py-3 text-sm text-red-500">{error}</p> : null}
+          {transferError ? <p className="px-5 py-3 text-sm text-red-500">{transferError}</p> : null}
+          {recovered ? (
+            <p className="px-5 py-3 text-sm text-amber-500">{copy.recoveredBackup}</p>
+          ) : null}
+          <div
+            className={cn(
+              'mx-4 grid grid-cols-2 gap-2 rounded-xl border p-3 text-xs sm:grid-cols-5 md:mx-5',
+              controller.styles.insetBorderColor
+            )}
+          >
+            <strong className={cn('col-span-2 sm:col-span-5', controller.styles.textColor)}>
+              {copy.diagnosticsSummary}
+            </strong>
+            <span>
+              {copy.mapped}: {diagnostics.mapped}
+            </span>
+            <span>
+              {copy.needsReview}: {diagnostics.review}
+            </span>
+            <span>
+              {copy.manual}: {diagnostics.manual}
+            </span>
+            <span>
+              {copy.ignored}: {diagnostics.ignored}
+            </span>
+            <span>
+              {copy.diagnostic}: {diagnostics.diagnostic}
+            </span>
+            <span>
+              {copy.pve}: {diagnostics.pve}
+            </span>
+            <span>
+              {copy.router}: {diagnostics.router}
+            </span>
+            <span>
+              {copy.internet}: {diagnostics.internet}
+            </span>
+            <span>
+              {copy.lightingCircuits}: {diagnostics.lightingCircuits}
+            </span>
+            <span>
+              {copy.weatherSource}: {diagnostics.weatherSource}
+            </span>
+            <span>
+              {copy.detectedMetrics}: {copy.airQuality} {diagnostics.airMetrics}
+            </span>
+            <span>
+              {copy.sunEntity}: {diagnostics.sunEntity}
+            </span>
+            <span>
+              {copy.moonSource}: {diagnostics.moonSource}
+            </span>
+            <span>
+              {copy.routerNegativeCandidates}: {diagnostics.routerNegatives}
+            </span>
+            <span>
+              {copy.temperatureDiagnostics}: {diagnostics.environmentTemperature} /{' '}
+              {diagnostics.refrigerationTemperature} / {diagnostics.pveTemperature} /{' '}
+              {diagnostics.internalTemperature}
+            </span>
+          </div>
+          {(config.functionalDevices?.length ?? 0) > 0 ? (
+            <section className="mx-4 mt-3 grid gap-2 md:mx-5">
+              <h3 className={cn('text-sm font-semibold', controller.styles.textColor)}>
+                {copy.functionalDevices}
+              </h3>
+              {config.functionalDevices?.map((device) => (
+                <div
+                  key={device.id}
+                  className={cn(
+                    'flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2',
+                    controller.styles.insetBorderColor
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className={cn('truncate text-sm font-medium', controller.styles.textColor)}>
+                      {device.name}
+                    </p>
+                    <p className={cn('truncate text-xs', controller.styles.subtleColor)}>
+                      {FUNCTIONAL_DEVICE_KIND_NAMES[device.kind][language === 'zh' ? 'zh' : 'en']}
+                      {device.room ? ` · ${device.room}` : ''} · {device.sourceEntityIds.length}{' '}
+                      {copy.entities}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="small"
+                      variant="secondary"
+                      onClick={() => {
+                        setEditingFunctionalDevice(device);
+                        setFunctionalEditorOpen(true);
+                      }}
+                    >
+                      {copy.edit}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="ghost"
+                      onClick={() =>
+                        void useHomeOsConfigStore.getState().save({
+                          ...config,
+                          functionalDevices: (config.functionalDevices ?? []).filter(
+                            (current) => current.id !== device.id
+                          ),
+                        })
+                      }
+                    >
+                      {copy.remove}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          ) : null}
+          {selectedIds.size ? (
+            <div className="mx-4 mt-3 grid gap-2 md:mx-5 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_auto_auto]">
+              <Input
+                value={batchPhysicalDeviceId}
+                onChange={(event) => setBatchPhysicalDeviceId(event.target.value)}
+                placeholder={copy.batchPhysicalDevice}
+                aria-label={copy.batchPhysicalDevice}
+              />
+              <Select
+                value={batchDisplayMode}
+                onChange={(event) =>
+                  setBatchDisplayMode(event.target.value as ManualEntityMapping['displayMode'])
+                }
+                aria-label={copy.displayMode}
+              >
+                <option value="primary">{copy.primary}</option>
+                <option value="detail">{copy.detail}</option>
+                <option value="diagnostic">{copy.diagnostic}</option>
+                <option value="hidden">{copy.hidden}</option>
+              </Select>
+              <Button
+                size="small"
+                variant="secondary"
+                loading={saving}
+                onClick={() => void batchUpdate(false)}
+              >
+                {copy.applyBatch} ({selectedIds.size})
+              </Button>
+              <Button
+                size="small"
+                variant="ghost"
+                disabled={saving}
+                onClick={() => void batchUpdate(true)}
+              >
+                {copy.ignoreBatch}
+              </Button>
+              <Input
+                value={circuitName}
+                onChange={(event) => setCircuitName(event.target.value)}
+                placeholder={copy.lightingCircuitName}
+                aria-label={copy.lightingCircuitName}
+              />
+              <Input
+                value={circuitRoom}
+                onChange={(event) => setCircuitRoom(event.target.value)}
+                placeholder={copy.lightingCircuitRoom}
+                aria-label={copy.lightingCircuitRoom}
+              />
+              <Button
+                size="small"
+                variant="secondary"
+                loading={saving}
+                onClick={() => void createLightingCircuit()}
+              >
+                {copy.createLightingCircuit} ({selectedIds.size})
+              </Button>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={saving}
+                onClick={() => {
+                  setEditingFunctionalDevice(undefined);
+                  setFunctionalEditorOpen(true);
+                }}
+              >
+                {copy.createFunctionalDevice} ({selectedIds.size})
+              </Button>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between px-5 py-3 text-xs">
+            <span className={controller.styles.subtleColor}>
+              {visible.length} / {resolved.length} {copy.mappingCount} · {copy.revision}{' '}
+              {config.revision}
+            </span>
+            <span className={cn(controller.styles.subtleColor, 'hidden sm:inline')}>
+              {copy.manualWins}
+            </span>
+          </div>
+          {visible.length ? (
+            visible.slice(0, visibleLimit).map((item) => (
+              <EntityMappingRow
+                key={item.entity.canonicalId}
+                resolved={item}
+                styles={controller.styles}
+                saving={saving}
+                selected={selectedIds.has(item.entity.canonicalId)}
+                onSelectionChange={(selected) =>
+                  setSelectedIds((current) => {
+                    const next = new Set(current);
+                    if (selected) next.add(item.entity.canonicalId);
+                    else next.delete(item.entity.canonicalId);
+                    return next;
+                  })
+                }
+                onEdit={() => setEditing(item.entity)}
+                onIgnore={() => void ignore(item)}
+                onRestoreAuto={() =>
+                  void removeMapping(item.entity.externalId, item.entity.providerId)
+                }
+              />
+            ))
+          ) : (
+            <p className={cn('px-5 py-10 text-center text-sm', controller.styles.subtleColor)}>
+              {copy.noMatchingEntities}
+            </p>
+          )}
+          {visible.length > visibleLimit ? (
+            <div className="px-5 py-4 text-center">
+              <Button
+                variant="secondary"
+                onClick={() => setVisibleLimit((current) => current + 160)}
+              >
+                {copy.showMore} ({visible.length - visibleLimit})
+              </Button>
+            </div>
+          ) : null}
+          <MappingEditorDialog
+            entity={editing}
+            existing={existing}
             saving={saving}
-            selected={selectedIds.has(item.entity.externalId)}
-            onSelectionChange={(selected) =>
-              setSelectedIds((current) => {
-                const next = new Set(current);
-                if (selected) next.add(item.entity.externalId);
-                else next.delete(item.entity.externalId);
-                return next;
-              })
-            }
-            onEdit={() => setEditing(item.entity)}
-            onIgnore={() => void ignore(item)}
-            onRestoreAuto={() => void removeMapping(item.entity.externalId, item.entity.providerId)}
+            onClose={() => setEditing(null)}
+            onRestoreAuto={async () => {
+              if (editing) await removeMapping(editing.externalId, editing.providerId);
+            }}
+            onSave={async (mapping: ManualEntityMapping, functionalType) => {
+              await upsertMapping(mapping);
+              if (functionalType && editing) {
+                const domain = editing.externalId.split('.')[0] ?? '';
+                const controllable = domain === 'light' || domain === 'switch';
+                const trigger = domain === 'button' || domain === 'input_button';
+                const currentConfig = useHomeOsConfigStore.getState().config;
+                const previous = currentConfig.functionalDevices?.find(
+                  (device) =>
+                    device.manual &&
+                    device.sourceEntityIds.length === 1 &&
+                    device.sourceEntityIds[0] === editing.externalId
+                );
+                const nextDevice: HomeOsFunctionalDevice = {
+                  id: previous?.id ?? `functional-${functionalType}-${Date.now().toString(36)}`,
+                  kind: functionalType,
+                  name: mapping.displayName ?? editing.name,
+                  room: mapping.roomOverride ?? editing.room,
+                  stateEntityId: ['light', 'switch', 'binary_sensor'].includes(domain)
+                    ? editing.externalId
+                    : undefined,
+                  controls: controllable
+                    ? { on: editing.externalId, off: editing.externalId }
+                    : trigger
+                      ? { trigger: editing.externalId }
+                      : undefined,
+                  metrics: previous?.metrics ?? {},
+                  sourceEntityIds: [editing.externalId],
+                  manual: true,
+                };
+                await useHomeOsConfigStore.getState().save({
+                  ...currentConfig,
+                  functionalDevices: [
+                    ...(currentConfig.functionalDevices ?? []).filter(
+                      (device) => device.id !== previous?.id
+                    ),
+                    nextDevice,
+                  ],
+                });
+              }
+              setEditing(null);
+            }}
           />
-        ))
-      ) : (
-        <p className={cn('px-5 py-10 text-center text-sm', controller.styles.subtleColor)}>
-          {copy.noMatchingEntities}
-        </p>
-      )}
-      {visible.length > visibleLimit ? (
-        <div className="px-5 py-4 text-center">
-          <Button variant="secondary" onClick={() => setVisibleLimit((current) => current + 160)}>
-            {copy.showMore} ({visible.length - visibleLimit})
-          </Button>
-        </div>
+          <FunctionalDeviceEditorDialog
+            open={functionalEditorOpen}
+            existing={editingFunctionalDevice}
+            entities={resolved}
+            initialEntityIds={
+              editingFunctionalDevice?.sourceEntityIds ??
+              selectedEntities.map((item) => item.entity.externalId)
+            }
+            saving={saving}
+            onClose={() => {
+              setFunctionalEditorOpen(false);
+              setEditingFunctionalDevice(undefined);
+            }}
+            onSave={async (device) => {
+              const currentConfig = useHomeOsConfigStore.getState().config;
+              await useHomeOsConfigStore.getState().save({
+                ...currentConfig,
+                functionalDevices: [
+                  ...(currentConfig.functionalDevices ?? []).filter(
+                    (current) => current.id !== device.id
+                  ),
+                  device,
+                ],
+              });
+              setFunctionalEditorOpen(false);
+              setEditingFunctionalDevice(undefined);
+              setSelectedIds(new Set());
+            }}
+          />
+        </>
       ) : null}
-      <MappingEditorDialog
-        entity={editing}
-        existing={existing}
-        saving={saving}
-        onClose={() => setEditing(null)}
-        onSave={async (mapping: ManualEntityMapping) => {
-          await upsertMapping(mapping);
-          setEditing(null);
-        }}
-      />
     </SettingsSectionShell>
   );
 }

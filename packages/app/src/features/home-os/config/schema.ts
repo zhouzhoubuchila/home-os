@@ -112,13 +112,23 @@ function isFunctionalDevice(value: unknown): value is HomeOsFunctionalDevice {
     typeof value.id === 'string' &&
     [
       'light',
+      'switch',
+      'fan',
+      'outlet',
+      'climate',
+      'media',
+      'sensor',
       'router',
+      'internet',
       'pve',
+      'server',
       'energy_meter',
       'gas_account',
+      'air_quality',
       'person',
       'vacuum',
       'appliance',
+      'other',
     ].includes(String(value.kind)) &&
     typeof value.name === 'string' &&
     isOptionalString(value.room) &&
@@ -127,7 +137,7 @@ function isFunctionalDevice(value: unknown): value is HomeOsFunctionalDevice {
     Object.values(value.metrics).every((entry) => typeof entry === 'string') &&
     (controls === undefined ||
       (isRecord(controls) &&
-        ['on', 'off', 'toggle', 'brightness', 'colorTemperature', 'color'].every((key) =>
+        ['on', 'off', 'toggle', 'trigger', 'brightness', 'colorTemperature', 'color'].every((key) =>
           isOptionalString(controls[key])
         ))) &&
     (value.manual === undefined || typeof value.manual === 'boolean')

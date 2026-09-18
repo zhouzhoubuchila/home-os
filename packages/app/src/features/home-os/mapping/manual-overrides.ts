@@ -36,3 +36,17 @@ export function upsertManualMapping(
   if (index === -1) return [...mappings, next];
   return mappings.map((mapping, mappingIndex) => (mappingIndex === index ? next : mapping));
 }
+
+export function removeManualMapping(
+  mappings: readonly ManualEntityMapping[],
+  entityId: string,
+  providerId?: string
+) {
+  return mappings.filter(
+    (mapping) =>
+      mapping.entityId !== entityId ||
+      Boolean(
+        providerId && mapping.stableRef?.providerId && mapping.stableRef.providerId !== providerId
+      )
+  );
+}

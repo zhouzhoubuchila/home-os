@@ -30,6 +30,9 @@ export function EntityMappingRow({
   const copy = getHomeOsCopy(language);
   const autoRole = resolved.candidates[0]?.role ?? 'unmapped';
   const finalRole = resolved.ignored ? 'ignored' : (resolved.roles[0] ?? 'unmapped');
+  const attributes = resolved.entity.attributes;
+  const registryDevice = attributes.deviceName ?? attributes.device_name ?? attributes.deviceId;
+  const integration = attributes.integration ?? attributes.platform;
   return (
     <article className={cn('grid gap-3 px-4 py-4 md:px-5', styles.hoverBg)}>
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
@@ -60,7 +63,7 @@ export function EntityMappingRow({
           {resolved.needsReview ? copy.needsReview : resolved.source}
         </span>
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4 lg:grid-cols-6">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4 lg:grid-cols-8">
         <div>
           <dt className={styles.subtleColor}>{copy.domain}</dt>
           <dd className={styles.textColor}>{resolved.entity.externalId.split('.')[0]}</dd>
@@ -70,6 +73,20 @@ export function EntityMappingRow({
           <dd className={styles.textColor}>{resolved.room || '—'}</dd>
         </div>
         <div>
+          <dt className={styles.subtleColor}>{copy.currentState}</dt>
+          <dd className="truncate font-mono">{String(resolved.entity.primaryState ?? '—')}</dd>
+        </div>
+        <div>
+          <dt className={styles.subtleColor}>{copy.registryDevice}</dt>
+          <dd className="truncate">{typeof registryDevice === 'string' ? registryDevice : '—'}</dd>
+        </div>
+        <div>
+          <dt className={styles.subtleColor}>{copy.platformIntegration}</dt>
+          <dd className="truncate font-mono">
+            {typeof integration === 'string' ? integration : '—'}
+          </dd>
+        </div>
+        <div>
           <dt className={styles.subtleColor}>{copy.autoRole}</dt>
           <dd className="truncate font-mono">{autoRole}</dd>
         </div>
@@ -77,7 +94,7 @@ export function EntityMappingRow({
           <dt className={styles.subtleColor}>{copy.confidence}</dt>
           <dd className={styles.textColor}>{Math.round(resolved.confidence * 100)}%</dd>
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <dt className={styles.subtleColor}>{copy.finalRole}</dt>
           <dd className="truncate font-mono">{finalRole}</dd>
         </div>

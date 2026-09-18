@@ -125,13 +125,23 @@ export interface MetricResolution {
 
 export type HomeOsFunctionalDeviceKind =
   | 'light'
+  | 'switch'
+  | 'fan'
+  | 'outlet'
+  | 'climate'
+  | 'media'
+  | 'sensor'
   | 'router'
+  | 'internet'
   | 'pve'
+  | 'server'
   | 'energy_meter'
   | 'gas_account'
+  | 'air_quality'
   | 'person'
   | 'vacuum'
-  | 'appliance';
+  | 'appliance'
+  | 'other';
 
 export interface HomeOsFunctionalDevice {
   id: string;
@@ -143,6 +153,7 @@ export interface HomeOsFunctionalDevice {
     on?: string;
     off?: string;
     toggle?: string;
+    trigger?: string;
     brightness?: string;
     colorTemperature?: string;
     color?: string;

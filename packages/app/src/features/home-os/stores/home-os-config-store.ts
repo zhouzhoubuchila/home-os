@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createDefaultHomeOsConfig, type HomeOsConfig } from '../config/schema';
 import { homeOsConfigStorage } from '../config/storage';
 import type { ManualEntityMapping } from '../core/types';
-import { upsertManualMapping } from '../mapping/manual-overrides';
+import { removeManualMapping, upsertManualMapping } from '../mapping/manual-overrides';
 
 interface HomeOsConfigState {
   config: HomeOsConfig;
@@ -66,15 +66,7 @@ export const useHomeOsConfigStore = create<HomeOsConfigState>((set, get) => ({
     const current = get().config;
     await get().save({
       ...current,
-      mappings: current.mappings.filter(
-        (mapping) =>
-          mapping.entityId !== entityId ||
-          Boolean(
-            providerId &&
-              mapping.stableRef?.providerId &&
-              mapping.stableRef.providerId !== providerId
-          )
-      ),
+      mappings: removeManualMapping(current.mappings, entityId, providerId),
     });
   },
 }));
