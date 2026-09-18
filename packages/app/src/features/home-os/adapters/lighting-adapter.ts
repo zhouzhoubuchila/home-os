@@ -132,7 +132,9 @@ export const getWholeHomeLightTargets = (lights: readonly HomeOsLight[]) =>
       ({ controllable, classification }) => controllable && classification === 'household_lighting'
     )
     .flatMap(({ actions }) => {
-      const target = actions.turnOff ?? actions.toggle;
+      const target =
+        actions.turnOff ??
+        (actions.toggle && !actions.toggle.startsWith('button.') ? actions.toggle : undefined);
       return target ? [target] : [];
     });
 
@@ -144,7 +146,11 @@ export interface HomeOsLightAction {
 
 export const getWholeHomeLightActions = (lights: readonly HomeOsLight[]): HomeOsLightAction[] =>
   lights.flatMap((light) => {
-    const target = light.actions.turnOff ?? light.actions.toggle;
+    const target =
+      light.actions.turnOff ??
+      (light.actions.toggle && !light.actions.toggle.startsWith('button.')
+        ? light.actions.toggle
+        : undefined);
     if (!light.controllable || light.classification !== 'household_lighting' || !target) return [];
     return [
       {

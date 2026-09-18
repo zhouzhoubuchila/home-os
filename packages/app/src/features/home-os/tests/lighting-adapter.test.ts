@@ -69,4 +69,25 @@ describe('lighting adapter', () => {
       },
     ]);
   });
+
+  it('excludes toggle-only buttons from whole-home off actions', () => {
+    const entities = resolveSemanticEntities([
+      homeOsEntity({ externalId: 'button.study_light_toggle' }),
+    ]);
+    const lights = buildHomeOsLights(entities, [
+      {
+        id: 'study-light',
+        kind: 'light',
+        name: 'Study light',
+        room: 'Study',
+        controls: { toggle: 'button.study_light_toggle' },
+        metrics: {},
+        sourceEntityIds: ['button.study_light_toggle'],
+        manual: true,
+      },
+    ]);
+
+    expect(getWholeHomeLightTargets(lights)).toEqual([]);
+    expect(getWholeHomeLightActions(lights)).toEqual([]);
+  });
 });

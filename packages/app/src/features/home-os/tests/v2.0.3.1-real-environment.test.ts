@@ -130,7 +130,7 @@ describe('Home OS V2.0.3.1 real environment regressions', () => {
     ).toBeNull();
   });
 
-  it('surfaces a lighting button and uses the trigger command', () => {
+  it('surfaces a lighting button without using a toggle for whole-home off', () => {
     const lights = buildHomeOsLights(
       resolveSemanticEntities([
         homeOsEntity({
@@ -142,7 +142,7 @@ describe('Home OS V2.0.3.1 real environment regressions', () => {
       ])
     );
     expect(lights).toHaveLength(1);
-    expect(getWholeHomeLightActions(lights)[0]?.command).toBe('trigger');
+    expect(getWholeHomeLightActions(lights)).toEqual([]);
   });
 
   it('aggregates a multi-entity bath heater as one functional device', () => {
