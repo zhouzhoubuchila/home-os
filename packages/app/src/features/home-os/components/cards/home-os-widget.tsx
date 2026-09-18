@@ -28,7 +28,6 @@ import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-d
 import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
-import { AstronomyVisual } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../../core/types';
@@ -55,6 +54,8 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
+import { MoonCard } from './lunar/moon-card';
+import { buildMoonCardModel } from './lunar/moon-card-model';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
 
 export interface HomeOsWidgetData extends PveHomeOsCardData {
@@ -498,24 +499,6 @@ function ModesCard({
   );
 }
 
-function LunarCard({
-  size,
-  title,
-  language,
-  entities,
-}: {
-  size: CardSize;
-  title: string;
-  language: string;
-  entities: ResolvedSemanticEntity[];
-}) {
-  return (
-    <BaseCard size={size} title={title} headerLeading={<Moon className="h-5 w-5" />}>
-      <AstronomyVisual entities={entities} language={language} compact={size === 'small'} />
-    </BaseCard>
-  );
-}
-
 const ICONS: Record<HomeOsCardKind, typeof Server> = {
   household: Users,
   lighting: Lightbulb,
@@ -645,12 +628,7 @@ export function HomeOsWidget({
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
   if (definition.kind === 'lunar')
     return withDetail(
-      <LunarCard
-        size={size}
-        title={copy.lunarCalendar}
-        language={language}
-        entities={productProjection.astronomyEntities}
-      />
+      <MoonCard size={size} language={language} model={buildMoonCardModel(entities)} />
     );
   const matched = entities.filter(
     (entity) =>
