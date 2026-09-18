@@ -1,3 +1,4 @@
+import * as Popover from '@radix-ui/react-popover';
 import { Check, ChevronDown, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ResolvedSemanticEntity } from '../../core/types';
@@ -61,7 +62,6 @@ export function SearchableEntitySelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sortedEntities = useMemo(
     () =>
@@ -78,38 +78,32 @@ export function SearchableEntitySelect({
     () => buildHomeOsMappingSearchIndex(sortedEntities),
     [sortedEntities]
   );
-  const initialSet = useMemo(() => new Set(initialEntityIds), [initialEntityIds]);
-  const selectedEntities = useMemo(
+  const preferredEntities = useMemo(
     () =>
       deduplicate(
-        initialEntityIds
+        [...initialEntityIds, value]
+          .filter(Boolean)
           .map((entityId) => entityById.get(entityId))
           .filter((item): item is ResolvedSemanticEntity => Boolean(item))
       ),
-    [entityById, initialEntityIds]
+    [entityById, initialEntityIds, value]
+  );
+  const preferredSet = useMemo(
+    () => new Set(preferredEntities.map((item) => item.entity.externalId)),
+    [preferredEntities]
   );
   const otherEntities = useMemo(() => {
+    if (!query.trim()) return [];
     const matches = searchIndex
       .search(query)
-      .filter((item) => !initialSet.has(item.entity.externalId));
-    const current = value && !initialSet.has(value) ? entityById.get(value) : undefined;
-    return deduplicate([...(current ? [current] : []), ...matches]).slice(0, RESULT_LIMIT);
-  }, [entityById, initialSet, query, searchIndex, value]);
+      .filter((item) => !preferredSet.has(item.entity.externalId));
+    return deduplicate(matches).slice(0, RESULT_LIMIT);
+  }, [preferredSet, query, searchIndex]);
   const visibleEntities = useMemo(
-    () => [...selectedEntities, ...otherEntities],
-    [otherEntities, selectedEntities]
+    () => [...preferredEntities, ...otherEntities],
+    [otherEntities, preferredEntities]
   );
   const selectedEntity = entityById.get(value);
-
-  useEffect(() => {
-    if (!open) return;
-    inputRef.current?.focus();
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
-  }, [open]);
 
   useEffect(() => {
     setActiveIndex((current) => Math.min(current, Math.max(visibleEntities.length - 1, 0)));
@@ -180,49 +174,60 @@ export function SearchableEntitySelect({
   };
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        id={id}
-        type="button"
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className="flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 pr-16 text-left text-sm shadow-sm"
-        onClick={() => {
-          setOpen((current) => !current);
-          setQuery('');
-          setActiveIndex(0);
-        }}
-      >
-        <span className="min-w-0">
-          <span className="block truncate">
-            {selectedEntity?.displayName ?? (value || emptyLabel)}
-          </span>
-          {value ? (
-            <span className="block truncate font-mono text-xs text-muted-foreground">{value}</span>
-          ) : null}
-        </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      </button>
-      {value ? (
-        <button
-          type="button"
-          aria-label={`${clearLabel}: ${ariaLabel}`}
-          className="absolute right-9 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          onClick={(event) => {
-            event.stopPropagation();
-            onChange('');
-          }}
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-      ) : null}
-      {open ? (
-        <div
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        setQuery('');
+        setActiveIndex(0);
+      }}
+    >
+      <div className="relative">
+        <Popover.Trigger asChild>
+          <button
+            id={id}
+            type="button"
+            aria-label={ariaLabel}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            className="flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 pr-16 text-left text-sm shadow-sm"
+          >
+            <span className="min-w-0">
+              <span className="block truncate">
+                {selectedEntity?.displayName ?? (value || emptyLabel)}
+              </span>
+              {value ? (
+                <span className="block truncate font-mono text-xs text-muted-foreground">
+                  {value}
+                </span>
+              ) : null}
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          </button>
+        </Popover.Trigger>
+        {value ? (
+          <button
+            type="button"
+            aria-label={`${clearLabel}: ${ariaLabel}`}
+            className="absolute right-9 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={() => onChange('')}
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
+      </div>
+      <Popover.Portal>
+        <Popover.Content
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-background shadow-lg"
+          sideOffset={4}
+          collisionPadding={12}
+          className="z-[920] w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-md border bg-background shadow-lg"
           onKeyDown={handleKeyDown}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            inputRef.current?.focus();
+          }}
         >
           <div className="relative border-b p-2">
             <Search
@@ -243,16 +248,16 @@ export function SearchableEntitySelect({
             />
           </div>
           <div className="max-h-72 overflow-y-auto">
-            {renderGroup(selectedGroupLabel, selectedEntities, 0)}
-            {renderGroup(otherGroupLabel, otherEntities, selectedEntities.length)}
+            {renderGroup(selectedGroupLabel, preferredEntities, 0)}
+            {renderGroup(otherGroupLabel, otherEntities, preferredEntities.length)}
             {!visibleEntities.length ? (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 {noResultsLabel}
               </div>
             ) : null}
           </div>
-        </div>
-      ) : null}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

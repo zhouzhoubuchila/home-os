@@ -92,11 +92,16 @@ describe('SearchableEntitySelect', () => {
     fireEvent.click(screen.getByRole('button', { name: '状态实体' }));
 
     const listbox = screen.getByRole('listbox', { name: '状态实体' });
-    const text = listbox.textContent ?? '';
-    expect(text.indexOf('已选择实体')).toBeLessThan(text.indexOf('其他实体'));
-    expect(text.indexOf('sensor.study_humidity')).toBeLessThan(
-      text.indexOf('sensor.living_room_temperature')
-    );
+    expect(listbox).toHaveTextContent('已选择实体');
+    expect(listbox).toHaveTextContent('sensor.study_humidity');
+    expect(listbox).not.toHaveTextContent('其他实体');
+    expect(listbox).not.toHaveTextContent('sensor.living_room_temperature');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索实体' }), {
+      target: { value: '客厅' },
+    });
+    expect(listbox).toHaveTextContent('其他实体');
+    expect(listbox).toHaveTextContent('sensor.living_room_temperature');
   });
 
   it('can clear the selected value', () => {
@@ -115,6 +120,9 @@ describe('SearchableEntitySelect', () => {
     expect(trigger).toHaveTextContent('sensor.1_node_pve_cpu_usage');
 
     fireEvent.click(trigger);
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜索实体' }), {
+      target: { value: '客厅' },
+    });
     fireEvent.click(
       within(screen.getByRole('listbox', { name: '状态实体' })).getByRole('option', {
         name: /客厅温度/,
