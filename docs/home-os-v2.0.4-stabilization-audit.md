@@ -1,7 +1,9 @@
 # Home OS V2.0.4 Stabilization Audit
 
-Branch: `codex/home-os-v2.0.4-stabilization`  
-Baseline: `c5231e7` (`origin/main`)  
+Branch: `codex/home-os-v2.0.4-stabilization`
+
+Baseline: `c5231e7` (`origin/main`)
+
 Scope: data correctness, semantic mapping, provider compatibility and low-risk diagnostics. Card
 System V2, Moon Card V2, deployment changes and visual redesign are out of scope.
 
