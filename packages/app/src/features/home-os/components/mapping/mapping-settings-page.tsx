@@ -16,6 +16,7 @@ import { resolveAirQualitySources, resolveWeatherSource } from '../../mapping/da
 import { upsertManualMapping } from '../../mapping/manual-overrides';
 import { buildHomeOsMappingSearchIndex } from '../../mapping/search-index';
 import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
+import { stableRefForEntity } from '../../mapping/stable-entity-ref';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { EntityMappingRow } from './entity-mapping-row';
 import { MappingEditorDialog } from './mapping-editor-dialog';
@@ -144,10 +145,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
       const next: ManualEntityMapping = {
         schemaVersion: 2,
         entityId: item.entity.externalId,
-        stableRef: current?.stableRef ?? {
-          canonicalId: item.entity.canonicalId,
-          providerId: item.entity.providerId,
-        },
+        stableRef: current?.stableRef ?? stableRefForEntity(item.entity),
         ...current,
         semanticRoles: current?.semanticRoles ?? item.roles,
         physicalDeviceId: batchPhysicalDeviceId.trim() || current?.physicalDeviceId,
@@ -206,10 +204,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
     await upsertMapping({
       schemaVersion: 2,
       entityId: item.entity.externalId,
-      stableRef: current?.stableRef ?? {
-        canonicalId: item.entity.canonicalId,
-        providerId: item.entity.providerId,
-      },
+      stableRef: current?.stableRef ?? stableRefForEntity(item.entity),
       ...current,
       semanticRoles: current?.semanticRoles ?? item.roles,
       ignored: true,

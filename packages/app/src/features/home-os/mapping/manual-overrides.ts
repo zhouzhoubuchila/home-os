@@ -7,7 +7,9 @@ export function findManualMapping(
   mappings: readonly ManualEntityMapping[]
 ): ManualEntityMapping | undefined {
   const exact = mappings.find(
-    (mapping) => mapping.entityId === entity.externalId || mapping.entityId === entity.id
+    (mapping) =>
+      (mapping.entityId === entity.externalId || mapping.entityId === entity.id) &&
+      (!mapping.stableRef?.providerId || mapping.stableRef.providerId === entity.providerId)
   );
   if (exact) return exact;
 

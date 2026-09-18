@@ -43,6 +43,29 @@ describe('semantic resolver', () => {
     expect(result.needsReview).toBe(false);
   });
 
+  it('does not apply an exact native ID mapping from another provider', () => {
+    const mapping: ManualEntityMapping = {
+      schemaVersion: 2,
+      entityId: 'switch.shared_id',
+      stableRef: { providerId: 'home_assistant' },
+      semanticRoles: [HOME_OS_ROLES.lightingSwitch],
+      source: 'manual',
+      updatedAt: '2026-09-01T00:00:00.000Z',
+    };
+    const result = resolveSemanticEntity(
+      homeOsEntity({
+        id: 'homey:switch.shared_id',
+        canonicalId: 'homey:switch.shared_id',
+        providerId: 'homey',
+        externalId: 'switch.shared_id',
+      }),
+      [mapping]
+    );
+
+    expect(result.source).not.toBe('manual');
+    expect(result.roles).toEqual([HOME_OS_ROLES.deviceSwitch]);
+  });
+
   it('uses PVE device context before temperature semantics', () => {
     const result = resolveSemanticEntity(
       homeOsEntity({
@@ -59,6 +82,32 @@ describe('semantic resolver', () => {
     expect(result.roles).toEqual([HOME_OS_ROLES.homelabPveTemperature]);
     expect(result.roles).not.toContain(HOME_OS_ROLES.environmentTemperature);
     expect(result.needsReview).toBe(false);
+  });
+
+  it('accepts finite HA numeric strings for PVE telemetry', () => {
+    const result = resolveSemanticEntity(
+      homeOsEntity({
+        externalId: 'sensor.pve_cpu_usage',
+        name: 'PVE CPU usage',
+        primaryState: '24.5',
+        attributes: { integration: 'proxmoxve', unit: '%', deviceName: 'PVE node' },
+      })
+    );
+
+    expect(result.roles).toContain(HOME_OS_ROLES.homelabPveCpu);
+  });
+
+  it('does not treat an unrelated System Monitor disk sensor as HA online', () => {
+    const result = resolveSemanticEntity(
+      homeOsEntity({
+        externalId: 'sensor.system_monitor_disk_use',
+        name: 'System Monitor disk use',
+        primaryState: '17.2',
+        attributes: { integration: 'systemmonitor', unit: '%' },
+      })
+    );
+
+    expect(result.roles).not.toContain(HOME_OS_ROLES.homelabHomeAssistantOnline);
   });
 
   it('keeps room temperature environmental and freezer temperature appliance-internal', () => {

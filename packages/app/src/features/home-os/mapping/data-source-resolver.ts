@@ -128,8 +128,11 @@ export class HomeOsDataSourceResolver {
 
   resolve(role: SemanticRole): DataSourceResolution {
     const candidates = this.candidatesForRole(role);
-    const selected =
-      candidates.find((candidate) => candidate.sourceType === 'manual') ?? candidates[0];
+    const manualCandidates = candidates.filter((candidate) => candidate.sourceType === 'manual');
+    if (manualCandidates.length > 1) {
+      return { role, state: 'ambiguous', reasonCode: 'candidate_ambiguous', candidates };
+    }
+    const selected = manualCandidates[0] ?? candidates[0];
     if (!selected)
       return { role, state: 'capability_absent', reasonCode: 'no_candidate_found', candidates };
     if (

@@ -323,8 +323,10 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
         ? HOME_OS_ROLES.homelabHomeAssistantMemory
         : name.includes('cpu')
           ? HOME_OS_ROLES.homelabHomeAssistantCpu
-          : HOME_OS_ROLES.homelabHomeAssistantOnline;
-    result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
+          : /online|status|connectivity|reachable/.test(name)
+            ? HOME_OS_ROLES.homelabHomeAssistantOnline
+            : undefined;
+    if (role) result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
   }
 
   const routerNegative =

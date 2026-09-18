@@ -57,6 +57,13 @@ const candidateFor = (
   role: SemanticRole
 ): MetricResolutionCandidate | undefined => {
   const match = item.candidates.find((candidate) => candidate.role === role);
+  if (!match && item.source === 'manual' && item.roles.includes(role)) {
+    return {
+      entityId: item.entity.externalId,
+      confidence: 1,
+      reasons: ['manual override'],
+    };
+  }
   return match
     ? {
         entityId: item.entity.externalId,
@@ -81,7 +88,8 @@ export function resolveMetric(
     .filter((item): item is MetricResolutionCandidate => Boolean(item))
     .sort((left, right) => right.confidence - left.confidence);
 
-  if (mapped.length > 1 && !mapped.some((item) => item.source === 'manual')) {
+  const manualMapped = mapped.filter((item) => item.source === 'manual');
+  if (manualMapped.length > 1 || (mapped.length > 1 && manualMapped.length === 0)) {
     return {
       role,
       state: 'ambiguous',

@@ -180,12 +180,17 @@ const ONLINE_STATES = new Set([
   'false',
 ]);
 const read = (value: unknown) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+const valueTypeOf = (value: unknown) => {
+  if (typeof value !== 'string') return typeof value;
+  const normalized = value.trim();
+  return normalized.length > 0 && Number.isFinite(Number(normalized)) ? 'number' : 'string';
+};
 
 export function resolvePveCompatibleRole(entity: NavetEntity, text: string): string | undefined {
   const domain = entity.externalId.split('.')[0] ?? '';
   const deviceClass = read(entity.attributes.deviceClass ?? entity.attributes.device_class);
   const unit = read(entity.attributes.unit ?? entity.attributes.unit_of_measurement);
-  const valueType = typeof entity.primaryState;
+  const valueType = valueTypeOf(entity.primaryState);
   if (
     domain === 'sensor' &&
     /temperature|temp\b|温度/.test(text) &&

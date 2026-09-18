@@ -7,6 +7,7 @@ import { HOME_OS_ROLES, type SemanticRole } from '../../core/semantic-roles';
 import type { ControlPolicy, DisplayMode, ManualEntityMapping } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { classifyEntity } from '../../mapping/auto-classifier';
+import { stableRefForEntity } from '../../mapping/stable-entity-ref';
 
 const ROLE_OPTIONS = Object.values(HOME_OS_ROLES);
 
@@ -66,14 +67,7 @@ export function MappingEditorDialog({
           void onSave({
             schemaVersion: 2,
             entityId: entity.externalId,
-            stableRef: {
-              canonicalId: entity.canonicalId,
-              providerId: entity.providerId,
-              uniqueId:
-                typeof entity.attributes.uniqueId === 'string'
-                  ? entity.attributes.uniqueId
-                  : undefined,
-            },
+            stableRef: stableRefForEntity(entity),
             semanticRoles: role ? [role] : [],
             displayName: displayName.trim() || undefined,
             roomOverride: roomOverride.trim() || undefined,

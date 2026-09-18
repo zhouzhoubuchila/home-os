@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
+import type { ManualEntityMapping } from '../core/types';
+import { HomeOsDataSourceResolver } from '../mapping/data-source-resolver';
 import { resolveMetric } from '../mapping/metric-resolution';
 import { buildHomeOsMappingSearchIndex } from '../mapping/search-index';
 import { resolveSemanticEntities, resolveSemanticEntity } from '../mapping/semantic-resolver';
@@ -83,6 +85,27 @@ describe('Home OS V2.0.3 real environment resolution', () => {
         Date.parse('2026-09-02T01:00:00Z')
       ).state
     ).toBe('stale');
+  });
+
+  it('reports multiple manual sources for one role as ambiguous', () => {
+    const entities = [
+      homeOsEntity({ externalId: 'sensor.room_temperature_a', primaryState: 22 }),
+      homeOsEntity({ externalId: 'sensor.room_temperature_b', primaryState: 23 }),
+    ];
+    const mappings: ManualEntityMapping[] = entities.map((entity) => ({
+      schemaVersion: 2,
+      entityId: entity.externalId,
+      stableRef: { providerId: entity.providerId },
+      semanticRoles: [HOME_OS_ROLES.environmentTemperature],
+      source: 'manual',
+      updatedAt: '2026-09-18T00:00:00.000Z',
+    }));
+    const resolved = resolveSemanticEntities(entities, mappings);
+
+    expect(resolveMetric(HOME_OS_ROLES.environmentTemperature, resolved).state).toBe('ambiguous');
+    expect(
+      new HomeOsDataSourceResolver(resolved).resolve(HOME_OS_ROLES.environmentTemperature)
+    ).toMatchObject({ state: 'ambiguous', reasonCode: 'candidate_ambiguous' });
   });
 
   it('indexes and searches 600 entities without re-resolving', () => {
