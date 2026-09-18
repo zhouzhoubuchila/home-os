@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { ManualEntityMapping } from '../core/types';
+import { upsertManualMapping } from '../mapping/manual-overrides';
 import { resolveSemanticEntities, resolveSemanticEntity } from '../mapping/semantic-resolver';
 import { homeOsEntity } from './fixtures';
 
@@ -64,6 +65,28 @@ describe('semantic resolver', () => {
 
     expect(result.source).not.toBe('manual');
     expect(result.roles).toEqual([HOME_OS_ROLES.deviceSwitch]);
+  });
+
+  it('stores identical native IDs separately for different providers', () => {
+    const base: ManualEntityMapping = {
+      schemaVersion: 2,
+      entityId: 'switch.shared_id',
+      stableRef: { providerId: 'home_assistant' },
+      semanticRoles: [HOME_OS_ROLES.lightingSwitch],
+      source: 'manual',
+      updatedAt: '2026-09-01T00:00:00.000Z',
+    };
+    const result = upsertManualMapping([base], {
+      ...base,
+      stableRef: { providerId: 'homey' },
+      semanticRoles: [HOME_OS_ROLES.deviceSwitch],
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result.map((mapping) => mapping.stableRef?.providerId)).toEqual([
+      'home_assistant',
+      'homey',
+    ]);
   });
 
   it('uses PVE device context before temperature semantics', () => {

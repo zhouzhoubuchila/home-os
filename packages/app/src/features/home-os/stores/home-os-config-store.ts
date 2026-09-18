@@ -15,7 +15,7 @@ interface HomeOsConfigState {
   save: (config: HomeOsConfig) => Promise<void>;
   reset: () => Promise<void>;
   upsertMapping: (mapping: ManualEntityMapping) => Promise<void>;
-  removeMapping: (entityId: string) => Promise<void>;
+  removeMapping: (entityId: string, providerId?: string) => Promise<void>;
 }
 
 const messageOf = (error: unknown) =>
@@ -62,11 +62,19 @@ export const useHomeOsConfigStore = create<HomeOsConfigState>((set, get) => ({
     const current = get().config;
     await get().save({ ...current, mappings: upsertManualMapping(current.mappings, mapping) });
   },
-  removeMapping: async (entityId) => {
+  removeMapping: async (entityId, providerId) => {
     const current = get().config;
     await get().save({
       ...current,
-      mappings: current.mappings.filter((mapping) => mapping.entityId !== entityId),
+      mappings: current.mappings.filter(
+        (mapping) =>
+          mapping.entityId !== entityId ||
+          Boolean(
+            providerId &&
+              mapping.stableRef?.providerId &&
+              mapping.stableRef.providerId !== providerId
+          )
+      ),
     });
   },
 }));

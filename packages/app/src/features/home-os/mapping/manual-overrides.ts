@@ -26,7 +26,13 @@ export function upsertManualMapping(
   mappings: readonly ManualEntityMapping[],
   next: ManualEntityMapping
 ) {
-  const index = mappings.findIndex((mapping) => mapping.entityId === next.entityId);
+  const index = mappings.findIndex(
+    (mapping) =>
+      mapping.entityId === next.entityId &&
+      (!mapping.stableRef?.providerId ||
+        !next.stableRef?.providerId ||
+        mapping.stableRef.providerId === next.stableRef.providerId)
+  );
   if (index === -1) return [...mappings, next];
   return mappings.map((mapping, mappingIndex) => (mappingIndex === index ? next : mapping));
 }

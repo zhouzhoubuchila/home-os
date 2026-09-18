@@ -446,7 +446,7 @@ export function MappingSettingsPage({ controller }: { controller: SettingsSectio
             }
             onEdit={() => setEditing(item.entity)}
             onIgnore={() => void ignore(item)}
-            onRestoreAuto={() => void removeMapping(item.entity.externalId)}
+            onRestoreAuto={() => void removeMapping(item.entity.externalId, item.entity.providerId)}
           />
         ))
       ) : (
