@@ -13,6 +13,22 @@ The Home OS implementation ports and modifies the upstream sun path, night path,
 daylight-duration, daypart and moon-display behavior. It does not include the
 upstream custom element, `ha-card`, editor, or Home Assistant-only UI.
 
+## Lunar Phase Card
+
+- Repository: https://github.com/ngocjohn/lunar-phase-card
+- Pinned source commit: `3a9eafd39cea1efb32da9aa2bb13af1e28324d5a`
+- Adapted source: upstream `src/model/moon.ts`, `src/lunar-phase-card/components/moon-image.ts`,
+  `src/lunar-phase-card/components/moon-base.ts`, and `src/lunar-phase-card/components/moon-compact-view.ts`
+- Vendored resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/moon_pic/`
+- License: MIT, preserved in the adjacent `LICENSE` file
+- Home OS rendering: `packages/app/src/features/home-os/components/cards/lunar/`
+
+The Home OS implementation ports the upstream 31-image phase selection, moon image treatment,
+left-image/right-data composition, compact information hierarchy, and numeric formatting ideas.
+It removes the upstream Lit custom element, `hass` object, Lovelace editor/configuration,
+Home Assistant theme plumbing, Swiper, and chart pages. Home OS's existing astronomy model
+remains the data source.
+
 ## Audited visual references (no source copied)
 
 - ApexCharts Card (`RomRider/apexcharts-card`), commit `6d3f1e9843f2d58ff73098128e78be8f57a5272b`, MIT. Home OS retains its existing Recorder-backed `TrendSparkline` instead of adding an iframe or chart runtime.

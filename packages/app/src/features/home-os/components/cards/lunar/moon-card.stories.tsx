@@ -1,3 +1,4 @@
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { EntityCardStoryFrame } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { MoonCard } from './moon-card';
@@ -10,6 +11,7 @@ interface MoonCardStudioProps {
   illumination: number;
   isDay: boolean;
   source: MoonCardModel['source'];
+  theme: ThemeType;
 }
 
 function MoonCardStudio({
@@ -19,6 +21,7 @@ function MoonCardStudio({
   illumination,
   isDay,
   source,
+  theme,
 }: MoonCardStudioProps) {
   const normalizedIllumination = Math.min(1, Math.max(0, illumination));
   const model = createMoonCardFixture(phase, {
@@ -29,7 +32,7 @@ function MoonCardStudio({
   });
   return (
     <EntityCardStoryFrame size={size}>
-      <MoonCard size={size} model={model} language={language} />
+      <MoonCard size={size} model={model} language={language} theme={theme} />
     </EntityCardStoryFrame>
   );
 }
@@ -66,6 +69,7 @@ const meta = {
     illumination: { control: { type: 'range', min: 0, max: 1, step: 0.01 } },
     isDay: { control: 'boolean' },
     source: { control: 'inline-radio', options: ['entity', 'calculated'] },
+    theme: { control: 'inline-radio', options: ['dark', 'light'] },
   },
   args: {
     size: 'medium',
@@ -74,6 +78,7 @@ const meta = {
     illumination: 0.75,
     isDay: false,
     source: 'entity',
+    theme: 'dark',
   },
 } satisfies Meta<typeof MoonCardStudio>;
 
@@ -110,3 +115,5 @@ export const EntityUnavailableCalculatedFallback: Story = {
 export const Small: Story = { args: { size: 'small' } };
 export const Medium: Story = { args: { size: 'medium' } };
 export const Large: Story = { args: { size: 'large' } };
+export const Light: Story = { args: { theme: 'light' } };
+export const Dark: Story = { args: { theme: 'dark' } };

@@ -5,6 +5,7 @@ import {
   type MoonPhaseModel,
 } from '../../../astronomy/moon-phase';
 import type { ResolvedSemanticEntity } from '../../../core/types';
+import { getUpstreamMoonImageUrl } from './moon-assets';
 
 export type MoonPhaseKey =
   | 'new_moon'
@@ -41,6 +42,8 @@ const PHASE_NAMES: Record<MoonPhaseKey, { en: string; zh: string }> = {
 export interface MoonCardModel {
   phase: number;
   phaseKey: MoonPhaseKey;
+  phaseImageIndex: number;
+  moonImageUrl: string;
   illumination: number;
   illuminationPercent: number;
   ageDays: number;
@@ -51,6 +54,8 @@ export interface MoonCardModel {
   nextEvent?: Date;
   nextEventKind?: 'sunrise' | 'sunset';
   daylightDurationMs?: number;
+  azimuth?: number;
+  altitude?: number;
 }
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -91,9 +96,13 @@ function toModel(
   astronomy: ReturnType<typeof getAstronomySnapshot>
 ): MoonCardModel {
   const illumination = clamp01(moon.illumination);
+  const phase = ((moon.phase % 1) + 1) % 1;
+  const image = getUpstreamMoonImageUrl(phase);
   return {
-    phase: ((moon.phase % 1) + 1) % 1,
+    phase,
     phaseKey: getMoonPhaseKey(moon.phase),
+    phaseImageIndex: image.phaseIndex,
+    moonImageUrl: image.url,
     illumination,
     illuminationPercent: Math.round(illumination * 100),
     ageDays: moon.age,
@@ -104,6 +113,8 @@ function toModel(
     nextEvent: astronomy.nextEvent,
     nextEventKind: nextEventKind(astronomy.nextEvent, astronomy.sunrise, astronomy.sunset),
     daylightDurationMs: astronomy.daylightDurationMs,
+    azimuth: astronomy.azimuth,
+    altitude: astronomy.elevation,
   };
 }
 
@@ -123,10 +134,13 @@ export function createMoonCardFixture(
   overrides: Partial<MoonCardModel> = {}
 ): MoonCardModel {
   const phase = PHASE_KEYS.indexOf(phaseKey) / 8;
+  const image = getUpstreamMoonImageUrl(phase);
   const illumination = clamp01((1 - Math.cos(phase * Math.PI * 2)) / 2);
   return {
     phase,
     phaseKey,
+    phaseImageIndex: image.phaseIndex,
+    moonImageUrl: image.url,
     illumination,
     illuminationPercent: Math.round(illumination * 100),
     ageDays: phase * 29.530588853,

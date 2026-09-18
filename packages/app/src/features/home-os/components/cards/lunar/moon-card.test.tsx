@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveSemanticEntities } from '../../../mapping/semantic-resolver';
 import { homeOsEntity } from '../../../tests/fixtures';
 import { HomeOsWidget } from '../home-os-widget';
-import { MoonCard, MoonPhaseVisual } from './moon-card';
+import { MoonCard, MoonCardDetail, MoonPhaseVisual } from './moon-card';
 import {
   buildMoonCardModel,
   createMoonCardFixture,
@@ -44,7 +44,14 @@ describe('Moon Card V2', () => {
     const { container } = renderWithProviders(
       <MoonPhaseVisual model={createMoonCardFixture(phase)} language="en" />
     );
-    expect(container.querySelector('svg')).toHaveAttribute('data-moon-phase', phase);
+    expect(container.querySelector('[data-upstream-moon-image="true"]')).toHaveAttribute(
+      'data-moon-phase',
+      phase
+    );
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('_moon.webp')
+    );
   });
 
   it.each([
@@ -65,11 +72,17 @@ describe('Moon Card V2', () => {
     const { container, rerender } = renderWithProviders(
       <MoonPhaseVisual model={createMoonCardFixture('waxing_crescent')} language="en" />
     );
-    expect(container.querySelector('svg')).toHaveAttribute('data-moon-direction', 'waxing');
-    const waxingPath = container.querySelector('path')?.getAttribute('d');
+    expect(container.querySelector('[data-upstream-moon-image="true"]')).toHaveAttribute(
+      'data-moon-direction',
+      'waxing'
+    );
+    const waxingImage = container.querySelector('img')?.getAttribute('src');
     rerender(<MoonPhaseVisual model={createMoonCardFixture('waning_crescent')} language="en" />);
-    expect(container.querySelector('svg')).toHaveAttribute('data-moon-direction', 'waning');
-    expect(container.querySelector('path')?.getAttribute('d')).not.toBe(waxingPath);
+    expect(container.querySelector('[data-upstream-moon-image="true"]')).toHaveAttribute(
+      'data-moon-direction',
+      'waning'
+    );
+    expect(container.querySelector('img')?.getAttribute('src')).not.toBe(waxingImage);
   });
 
   it('prefers an available HA moon entity', () => {
@@ -83,6 +96,7 @@ describe('Moon Card V2', () => {
     expect(buildMoonCardModel(entities, new Date('2026-09-19T12:00:00Z'))).toMatchObject({
       phaseKey: 'waning_gibbous',
       source: 'entity',
+      phaseImageIndex: 19,
     });
   });
 
@@ -109,7 +123,9 @@ describe('Moon Card V2', () => {
   it.each(['small', 'medium', 'large'] as const)('renders the %s card layout', (size) => {
     const model = createMoonCardFixture('full_moon');
     const { container } = renderWithProviders(<MoonCard size={size} model={model} language="zh" />);
-    expect(container.querySelector('[data-home-os-moon-card="v2"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-home-os-moon-card="upstream-adapted"]')
+    ).toBeInTheDocument();
     expect(screen.getByText('满月')).toBeInTheDocument();
   });
 
@@ -117,6 +133,19 @@ describe('Moon Card V2', () => {
     const { container } = renderWithProviders(
       <HomeOsWidget size="medium" data={{ kind: 'lunar' }} isEditMode={false} />
     );
-    expect(container.querySelector('[data-home-os-moon-card="v2"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-home-os-moon-card="upstream-adapted"]')
+    ).toBeInTheDocument();
+  });
+
+  it('uses one upstream-adapted hero in detail without the legacy astronomy visual or emoji moon', () => {
+    const { container } = renderWithProviders(
+      <MoonCardDetail model={createMoonCardFixture('waxing_gibbous')} language="zh" />
+    );
+    expect(
+      container.querySelector('[data-home-os-moon-detail="upstream-adapted"]')
+    ).toBeInTheDocument();
+    expect(container.querySelector('[data-astronomy-card="true"]')).not.toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/[🌑🌒🌓🌔🌕🌖🌗🌘]/u);
   });
 });

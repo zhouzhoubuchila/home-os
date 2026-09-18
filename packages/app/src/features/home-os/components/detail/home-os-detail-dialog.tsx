@@ -10,7 +10,6 @@ import { buildHomeOsLights } from '../../adapters/lighting-adapter';
 import { buildPvePhysicalDevices } from '../../adapters/physical-device-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
-import { AstronomyVisual, getAstronomySnapshot } from '../../astronomy/astronomy-visual';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
@@ -28,6 +27,8 @@ import {
   resolveFunctionalOnlineState,
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
+import { MoonCardDetail } from '../cards/lunar/moon-card';
+import { buildMoonCardModel } from '../cards/lunar/moon-card-model';
 
 function formatAlertDuration(durationMs: number, language: string) {
   const minutes = Math.max(1, Math.round(durationMs / 60_000));
@@ -474,45 +475,16 @@ export function HomeOsDetailDialog({
   } else if (kind === 'lunar') {
     const now = new Date();
     const lunar = Solar.fromDate(now).getLunar();
-    const astronomy = getAstronomySnapshot(entities, now);
-    const moon = astronomy.moon;
+    const moon = buildMoonCardModel(entities, now);
     content = (
       <div className="grid gap-4">
-        <AstronomyVisual entities={entities} language={language} now={now} />
-        <div className="flex items-center gap-4">
-          <span className="text-5xl" aria-hidden="true">
-            {moon.icon}
-          </span>
-          <div>
-            <p className="text-xl font-semibold">
-              {language === 'zh' ? moon.name.zh : moon.name.en}
-            </p>
-            <p className={surface.textSecondary}>
-              {copy.moonAge}: {moon.age.toFixed(1)} · {copy.illumination}:{' '}
-              {Math.round(moon.illumination * 100)}%
-            </p>
-          </div>
-        </div>
+        <MoonCardDetail model={moon} language={language} />
         <p>
           {now.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')} · {lunar.toString()}
         </p>
         <p className={surface.textSecondary}>
           {copy.solarTerm}: {lunar.getJieQi() || lunar.getNextJieQi()?.getName() || '—'}
         </p>
-        <div className={`grid grid-cols-2 gap-2 text-sm ${surface.textSecondary}`}>
-          <span>
-            {copy.sunrise}: {astronomy.sunrise?.toLocaleTimeString() ?? '—'}
-          </span>
-          <span>
-            {copy.sunset}: {astronomy.sunset?.toLocaleTimeString() ?? '—'}
-          </span>
-          <span>
-            {copy.solarAzimuth}: {astronomy.azimuth ?? '—'}°
-          </span>
-          <span>
-            {copy.solarElevation}: {astronomy.elevation ?? '—'}°
-          </span>
-        </div>
       </div>
     );
   } else if (kind === 'weather') {
