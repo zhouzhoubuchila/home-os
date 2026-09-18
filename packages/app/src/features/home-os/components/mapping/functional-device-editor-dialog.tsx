@@ -8,6 +8,7 @@ import type {
 } from '../../core/types';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import { FUNCTIONAL_DEVICE_KIND_NAMES, FUNCTIONAL_DEVICE_KINDS } from './functional-device-options';
+import { SearchableEntitySelect } from './searchable-entity-select';
 
 const METRICS: Partial<Record<HomeOsFunctionalDeviceKind, string[]>> = {
   light: ['power', 'voltage'],
@@ -62,9 +63,24 @@ export function FunctionalDeviceEditorDialog({
   const [toggleEntityId, setToggleEntityId] = useState('');
   const [triggerEntityId, setTriggerEntityId] = useState('');
   const [metrics, setMetrics] = useState<Record<string, string>>({});
-  const options = useMemo(
-    () => [...entities].sort((left, right) => left.displayName.localeCompare(right.displayName)),
-    [entities]
+  const entitySelectCopy = useMemo(
+    () =>
+      language === 'zh'
+        ? {
+            searchPlaceholder: '搜索名称、实体 ID、房间、设备、集成或角色',
+            selectedGroupLabel: '已选择实体',
+            otherGroupLabel: '其他实体',
+            clearLabel: '清空选择',
+            noResultsLabel: '没有匹配的实体',
+          }
+        : {
+            searchPlaceholder: 'Search name, entity ID, room, device, integration, or role',
+            selectedGroupLabel: 'Selected entities',
+            otherGroupLabel: 'Other entities',
+            clearLabel: 'Clear selection',
+            noResultsLabel: 'No matching entities',
+          },
+    [language]
   );
 
   useEffect(() => {
@@ -89,10 +105,23 @@ export function FunctionalDeviceEditorDialog({
 
   if (!open) return null;
   const metricKeys = METRICS[kind] ?? [];
-  const entityOption = (item: ResolvedSemanticEntity) => (
-    <option key={item.entity.canonicalId} value={item.entity.externalId}>
-      {item.displayName} ({item.entity.externalId})
-    </option>
+  const entitySelect = (
+    id: string,
+    label: string,
+    value: string,
+    onChange: (next: string) => void,
+    emptyLabel = '—'
+  ) => (
+    <SearchableEntitySelect
+      id={id}
+      ariaLabel={label}
+      entities={entities}
+      initialEntityIds={initialEntityIds}
+      value={value}
+      onChange={onChange}
+      emptyLabel={emptyLabel}
+      {...entitySelectCopy}
+    />
   );
 
   return (
@@ -171,17 +200,15 @@ export function FunctionalDeviceEditorDialog({
             onChange={(event) => setRoom(event.target.value)}
           />
         </label>
-        <label className="grid gap-1 text-sm" htmlFor="functional-device-state">
-          {copy.stateEntity}
-          <Select
-            id="functional-device-state"
-            value={stateEntityId}
-            onChange={(event) => setStateEntityId(event.target.value)}
-          >
-            <option value="">—</option>
-            {options.map(entityOption)}
-          </Select>
-        </label>
+        <div className="grid gap-1 text-sm">
+          <span>{copy.stateEntity}</span>
+          {entitySelect(
+            'functional-device-state',
+            copy.stateEntity,
+            stateEntityId,
+            setStateEntityId
+          )}
+        </div>
         <fieldset className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
           <legend className="px-1 text-sm font-medium">{copy.controlCapability}</legend>
           {[
@@ -190,41 +217,28 @@ export function FunctionalDeviceEditorDialog({
             [copy.toggleOnly, toggleEntityId, setToggleEntityId, 'toggle'],
             [copy.trigger, triggerEntityId, setTriggerEntityId, 'trigger'],
           ].map(([label, value, setValue, id]) => (
-            <label
-              key={String(id)}
-              className="grid gap-1 text-sm"
-              htmlFor={`functional-device-${id}`}
-            >
-              {String(label)}
-              <Select
-                id={`functional-device-${id}`}
-                value={String(value)}
-                onChange={(event) => (setValue as (next: string) => void)(event.target.value)}
-              >
-                <option value="">{copy.readOnly}</option>
-                {options.map(entityOption)}
-              </Select>
-            </label>
+            <div key={String(id)} className="grid gap-1 text-sm">
+              <span>{String(label)}</span>
+              {entitySelect(
+                `functional-device-${id}`,
+                String(label),
+                String(value),
+                setValue as (next: string) => void,
+                copy.readOnly
+              )}
+            </div>
           ))}
         </fieldset>
         {metricKeys.map((metric) => (
-          <label
-            key={metric}
-            className="grid gap-1 text-sm"
-            htmlFor={`functional-device-metric-${metric}`}
-          >
-            {metric.replaceAll('_', ' ')}
-            <Select
-              id={`functional-device-metric-${metric}`}
-              value={metrics[metric] ?? ''}
-              onChange={(event) =>
-                setMetrics((current) => ({ ...current, [metric]: event.target.value }))
-              }
-            >
-              <option value="">—</option>
-              {options.map(entityOption)}
-            </Select>
-          </label>
+          <div key={metric} className="grid gap-1 text-sm">
+            <span>{metric.replaceAll('_', ' ')}</span>
+            {entitySelect(
+              `functional-device-metric-${metric}`,
+              metric.replaceAll('_', ' '),
+              metrics[metric] ?? '',
+              (next) => setMetrics((current) => ({ ...current, [metric]: next }))
+            )}
+          </div>
         ))}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
