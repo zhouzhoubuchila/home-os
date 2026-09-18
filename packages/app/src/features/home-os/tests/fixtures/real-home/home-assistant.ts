@@ -1,4 +1,4 @@
-import type { HomeAssistantNavetMappingInput } from '@navet/provider-homeassistant/homeassistant-mappers';
+import type { HomeAssistantNavetMappingInput } from '@navet/provider-homeassistant';
 
 const state = (entityId: string, value: string, attributes: Record<string, unknown>) => ({
   entity_id: entityId,
@@ -43,7 +43,7 @@ export const REAL_HOME_ASSISTANT_FIXTURE = {
     }),
     'calendar.family': state('calendar.family', 'on', {
       friendly_name: 'Family calendar',
-      message: 'Family dinner',
+      message: '家庭晚餐',
       start_time: '2026-09-18 18:00:00',
       end_time: '2026-09-18 20:00:00',
     }),

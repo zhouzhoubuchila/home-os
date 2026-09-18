@@ -1,4 +1,4 @@
-import { mapHomeAssistantEntitiesToNavetEntities } from '@navet/provider-homeassistant/homeassistant-mappers';
+import { mapHomeAssistantEntitiesToNavetEntities } from '@navet/provider-homeassistant';
 import { describe, expect, it } from 'vitest';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { ManualEntityMapping } from '../core/types';
