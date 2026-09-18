@@ -1,6 +1,6 @@
 # Home OS V2.0.4 Real Environment Coverage
 
-This inventory describes the coverage on `codex/home-os-v2.0.4-stabilization` before the
+This inventory describes the coverage on `codex/home-os-v2.0.4-stabilization` after the
 stabilization fixes. A "real" fixture means a payload shaped like an actual provider response or a
 captured Home OS entity set. Small inline `homeOsEntity()` objects remain useful unit fixtures, but
 they do not prove the Home Assistant to card path.
@@ -20,18 +20,18 @@ they do not prove the Home Assistant to card path.
 | Household | Partial | Person/tracker resolver and family adapter unit tests | HA Registry relationship, renamed entities, multiple trackers and unavailable person state |
 | Lighting | Partial | Real-home light/button grouping and action tests | Generic room switch, multi-gang relay and HA Registry metadata through the provider mapper |
 | Alerts | Partial | Default rule and duration tests; PVE temperature and appliance fixtures | Real HA `last_changed`, unknown/unavailable alerts and conflicting roles |
-| PVE | Partial | Broad normalized `REAL_HOME_FIXTURE` metric set | Raw HA string states, Registry platform/device metadata and duplicate role selection |
-| Home Assistant | Uncovered | Classifier-only integration heuristics | Real System Monitor entities and independent online/version/CPU/memory sources |
-| Router | Partial | OpenWrt/TP-Link normalized classifier cases | Raw Registry platform metadata, online status, WAN/LAN IP and multiple routers |
+| PVE | Covered | Broad normalized metric set plus raw HA numeric strings and Registry metadata through product projection | Multiple real PVE nodes and duplicate metrics from one node |
+| Home Assistant | Partial | Raw System Monitor online and unrelated disk sensors prove positive and negative classification | Independent version/CPU/memory sources and unavailable host |
+| Router | Partial | Raw OpenWrt client sensor proves Registry platform/device classification | Online status, WAN/LAN IP, throughput and multiple routers |
 | Internet | Partial | Name fallback for latency and packet loss | WAN availability, numeric-string latency, packet loss and jitter as one real fixture |
 | Electricity | Partial | One normalized State Grid daily-energy fixture | Raw Registry platform, units/state class, month and balance entities |
 | Gas | Uncovered | Name fallback only | Real provider payload, unit semantics and account/usage distinction |
-| Weather | Partial | Provider feature service tests and normalized fallback entity | Home OS fallback from a raw HA weather entity, unavailable provider and unit variants |
+| Weather | Covered | Provider feature service tests plus raw HA fallback through semantic resolution | Additional unavailable provider and unit variants |
 | Air quality | Partial | PM2.5/CO2 normalized resolver tests | Raw HA Registry/device metadata, unavailable values and several sensors with the same role |
-| Calendar | Partial | General calendar feature hook/service tests | Home OS semantic path from raw `calendar.*` entity to `family.calendar` |
+| Calendar | Covered | Raw `calendar.*` entity reaches `family.calendar` with event attributes | Multiple calendars and unavailable state |
 | Modes | Partial | Scene domain classifier behavior | Raw HA scene entity through Provider to Home OS and command routing |
 | Cleaning | Partial | Vacuum mapper tests and a vacuum-map camera fixture | Raw vacuum entity through Provider to `home.cleaning`, unavailable and vendor status variants |
-| Lunar / Astronomy | Partial | Normalized `sun.sun` and Moon sensor tests | Raw `sun.sun` currently does not enter the normalized Provider entity collection |
+| Lunar / Astronomy | Covered | Raw `sun.sun` reaches astronomy projection; Moon phase and visual calculations have dedicated tests | Real Moon integration payload variants |
 
 ## Real-home fixture inventory
 
@@ -45,8 +45,12 @@ they do not prove the Home Assistant to card path.
 - Security camera and vacuum-map camera classification.
 - A normalized weather entity, `sun.sun`, and `sensor.moon_phase`.
 
-The fixture does not currently cover family members, Home Assistant health, complete router and
-Internet telemetry, gas, air quality, calendar, scenes, or a real vacuum status entity.
+`home-assistant.ts` adds raw HA states, area/device/entity registries, numeric-string PVE metrics,
+OpenWrt, System Monitor positive and negative cases, weather, calendar, `sun.sun`, and a stable
+`unique_id` used to recover a renamed switch.
+
+The fixtures do not currently cover family members, complete Home Assistant/router/Internet
+telemetry, gas, complete air quality, scenes, or a real vacuum status entity.
 
 ## Semantic role coverage
 
@@ -65,7 +69,7 @@ Internet telemetry, gas, air quality, calendar, scenes, or a real vacuum status 
 
 - `environment.humidity`, AQI, PM10, VOC, TVOC and HCHO as one realistic sensor family
 - water leak, smoke, window, connectivity and battery edge states
-- `homelab.home_assistant.*`
+- complete `homelab.home_assistant.*` telemetry beyond online-state classification
 - router online, upload/download, WAN/LAN IP and complete Internet telemetry
 - electricity month/balance and gas
 - calendar in the Home OS pipeline
@@ -76,33 +80,27 @@ Internet telemetry, gas, air quality, calendar, scenes, or a real vacuum status 
 
 | Resolver | Current test shape | Gap |
 |---|---|---|
-| `classifyEntity` | Mostly normalized `NavetEntity` objects | Registry metadata loss is bypassed |
-| `resolveSemanticEntity` | Good manual priority and confidence unit tests | Cross-provider exact-ID collision is not tested |
-| `HomeOsDataSourceResolver` | Basic source precedence | Availability/staleness and duplicate manual sources are not covered |
-| `resolveMetric` | State matrix covered | Multiple manual sources and numeric-string values are not covered |
-| `buildHomeOsProductProjection` | Manually constructed resolved entities | Raw HA to projection path is not covered |
-| `resolveWeatherSource` | Provider and normalized fallback tests | Raw HA fallback is not covered |
-| `buildPvePhysicalDevices` | Normalized PVE fixture | Registry device grouping and duplicate metric roles are not covered |
+| `classifyEntity` | Normalized and raw HA Registry fixtures | More vendor variants remain useful |
+| `resolveSemanticEntity` | Manual priority, rename recovery and cross-provider collision tests | Multi-provider live capture remains unverified |
+| `HomeOsDataSourceResolver` | Source precedence and duplicate manual ambiguity | Provider candidate conflicts need broader coverage |
+| `resolveMetric` | State matrix and duplicate manual ambiguity | Future timestamps remain a P2 gap |
+| `buildHomeOsProductProjection` | Raw HA PVE and astronomy path | Broader raw card projection remains useful |
+| `resolveWeatherSource` | Provider and raw HA fallback | Unavailable raw weather variants remain |
+| `buildPvePhysicalDevices` | Raw Registry device grouping plus broad normalized metrics | Duplicate physical metrics remain a P2 gap |
 
-## High-risk regression areas
+## High-risk regression protections
 
-1. Provider metadata propagation. Classifier accuracy depends on fields that the HA mapper may
-   omit.
-2. Whole-home lighting actions. An action-only toggle button must never be treated as an explicit
-   off command.
-3. Numeric HA sensor states. HA transports sensor states as strings even when they represent a
-   number.
-4. Manual mapping identity. Entity renames and identical native IDs across providers must not bind
-   the wrong mapping.
-5. Single-source metric selection. Multiple strong candidates must remain ambiguous until the
-   user chooses one.
-6. Domain allowlists. A card can have resolver tests while the Provider silently drops that domain.
+1. Provider metadata propagation is covered with Registry platform/device/unique-ID assertions.
+2. Whole-home lighting rejects an action-only toggle button while preserving explicit off buttons.
+3. Numeric HA sensor strings are covered in both classifier and raw-provider tests.
+4. Entity rename recovery and identical native IDs across Providers have regression tests.
+5. Multiple manual sources remain ambiguous until the user chooses one.
+6. `weather`, `calendar`, and `sun` domain allowlists are covered at the Provider boundary.
 
-## Recommended fixture additions
+## Remaining fixture additions
 
-- A raw HA Registry fixture containing PVE, OpenWrt, System Monitor, State Grid, `sun.sun`,
-  `calendar.family`, weather and a renamed entity with a stable `unique_id`.
-- A multi-provider fixture with identical external IDs and distinct provider-scoped stable refs.
+- State Grid and gas raw Registry fixtures with real units and account attributes.
+- A full multi-provider entity collection with identical external IDs and distinct stable refs.
 - A lighting fixture with explicit on/off buttons, a toggle-only button and a state sensor.
 - Complete router and Internet fixtures with explicit units and unavailable/unknown variants.
 - Air-quality fixtures for AQI, PM2.5, PM10, CO2, VOC, TVOC and HCHO from one physical device.

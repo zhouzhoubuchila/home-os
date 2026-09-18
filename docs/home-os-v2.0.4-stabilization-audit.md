@@ -19,8 +19,9 @@ The current ownership is appropriate:
 - `@navet/app/features/home-os`: semantic roles, mapping, projections, cards and persisted Home OS
   configuration.
 
-The main stability risk is the boundary between the first and third layers: Home OS classifiers
-ask for stable Registry metadata, but the HA mapper does not currently preserve all of it.
+The main baseline stability risk was the boundary between the first and third layers: Home OS
+classifiers ask for stable Registry metadata, but the HA mapper did not preserve all of it. The
+stabilization changes now carry the required metadata through that boundary.
 
 ## 2. Entity mapping data flow
 
@@ -67,22 +68,25 @@ Risks:
 | Card | Semantic role(s) | Expected entity | Required attributes | Optional attributes | Fallback | Current resolver | Potential problem |
 |---|---|---|---|---|---|---|---|
 | Household | `family.person`, `family.tracker` | `person.*`, `device_tracker.*` | state, provider ID | person link, location, battery, image | person state only | family adapter | Tracker-to-person link is rarely present in normalized state |
-| Lighting | `lighting.light`, `lighting.switch` | `light.*`, approved switch/button | capabilities, state | device/room, brightness, color | manual functional device | light circuit builder | Toggle-only button is unsafe for whole-home off |
+| Lighting | `lighting.light`, `lighting.switch` | `light.*`, approved switch/button | capabilities, state | device/room, brightness, color | manual functional device | light circuit builder | Fixed: whole-home off requires deterministic off behavior |
 | Alerts | security/diagnostic/homelab roles | sensor/binary sensor | role, state, timestamps | unit, device/room | custom rule by entity ID | alert engine | Missing `last_changed` weakens duration accuracy |
-| PVE | `homelab.pve.*` | Proxmox sensors | platform/device context, numeric value/unit | device ID/name | manual mapping | compatibility matrix + physical adapter | Raw numeric states are strings; Registry metadata is dropped |
-| Home Assistant | `homelab.home_assistant.*` | System Monitor/version/connectivity sensors | platform and metric meaning | unit | manual mapping | classifier | Generic System Monitor metrics can become false online state |
-| Router | `network.router.*` | OpenWrt/UniFi/router sensors | platform/device context, metric evidence | unit, device ID | manual mapping | router compatibility | Real platform metadata is not transported |
+| PVE | `homelab.pve.*` | Proxmox sensors | platform/device context, numeric value/unit | device ID/name | manual mapping | compatibility matrix + physical adapter | Fixed: numeric strings and Registry metadata are covered |
+| Home Assistant | `homelab.home_assistant.*` | System Monitor/version/connectivity sensors | platform and metric meaning | unit | manual mapping | classifier | Fixed: unrelated System Monitor metrics do not become online state |
+| Router | `network.router.*` | OpenWrt/UniFi/router sensors | platform/device context, metric evidence | unit, device ID | manual mapping | router compatibility | Fixed: Registry platform metadata is transported |
 | Internet | `network.internet.*` | WAN probe/latency/loss sensors | metric evidence and unit | platform/device | low-confidence name fallback | classifier + metric resolver | Online role has no strong automatic rule; multiple probes can conflict |
 | Electricity | `energy.electricity.*` | grid/energy sensors | unit/state class and source integration | device ID | name fallback/manual | classifier | Only `today` has an automatic fallback; integration metadata is lost |
 | Gas | `energy.gas.current` | gas account/usage sensor | source context and unit | account metadata | name fallback/manual | classifier | Usage and balance are not distinguished |
-| Weather | `weather.current` | provider weather or `weather.*` | condition/current values | forecast and units | normalized weather entity | provider service then weather resolver | Provider fallback entity is dropped by current normalized mapper |
+| Weather | `weather.current` | provider weather or `weather.*` | condition/current values | forecast and units | normalized weather entity | provider service then weather resolver | Fixed: raw HA fallback reaches the weather resolver |
 | Air Quality | `environment.air_quality.*` | sensor metrics | device class or strong metric name/unit | device grouping | none | classifier + air source resolver | Multiple metrics are displayed without physical-device grouping |
-| Calendar | `family.calendar` | `calendar.*` | state | message/start/end | none | domain classifier | Domain is currently dropped by HA normalized mapper |
+| Calendar | `family.calendar` | `calendar.*` | state | message/start/end | none | domain classifier | Fixed: calendar domain and event attributes are preserved |
 | Modes | `home.mode` | `scene.*` | state/capability | room | none | domain classifier | Broad scene mapping may include non-household scenes |
 | Cleaning | `home.cleaning` | `vacuum.*`, `lawn_mower.*` | state | battery/vendor attributes | none | domain classifier + provider mapper | Normalized vendor status coverage is broader than Home OS fixture coverage |
-| Lunar / Astronomy | astronomy domain entities | `sun.sun`, Moon sensor | sun attributes / Moon phase state | coordinates, rise/set | local lunar date only | astronomy facade | `sun` is dropped by HA normalized mapper |
+| Lunar / Astronomy | astronomy domain entities | `sun.sun`, Moon sensor | sun attributes / Moon phase state | coordinates, rise/set | local lunar date only | astronomy facade | Fixed: raw `sun.sun` reaches astronomy projection |
 
 ## 5. Findings and priority
+
+All P0/P1 findings below are fixed on this branch and protected by regression tests. The generic
+System Monitor false-online P2 finding was also fixed because it shared the same classifier path.
 
 ### P0
 
@@ -113,8 +117,8 @@ Risks:
 1. Missing or invalid timestamps can be treated as fresh by `resolveMetric`; future timestamps are
    also accepted.
 2. Physical PVE metrics overwrite duplicate roles according to input order.
-3. Home Assistant health defaults any unmatched System Monitor entity to `online`, which can bind a
-   disk or network sensor incorrectly.
+3. Home Assistant health previously defaulted any unmatched System Monitor entity to `online`.
+   This is fixed; only explicit online/status/connectivity evidence receives that role.
 4. Electricity and gas taxonomies are incomplete for real provider variants and units.
 5. Some cards consume all role matches while detail diagnostics require an accepted mapping, so an
    entity under review may appear in one surface and be absent in another.
@@ -165,7 +169,7 @@ Existing mapping settings show entity ID, domain, room, first auto role, confide
 role and source. The editor shows the first candidate reason. Metric detail shows candidates and
 the selected entity for a subset of cards.
 
-Missing structured diagnostics:
+The baseline was missing structured diagnostics:
 
 - all detected roles and role-specific reasons;
 - explicit auto/manual source per final role;
@@ -173,27 +177,43 @@ Missing structured diagnostics:
 - ambiguous sources;
 - required card roles with no source.
 
-The stabilization change should add a pure structured diagnostic builder and expose its snapshot
-only in development mode. It must not add production UI or persisted fields.
+The stabilization change adds a pure structured diagnostic builder and exposes its snapshot as
+`globalThis.__NAVET_HOME_OS_DIAGNOSTICS__` only in development mode. It does not add production UI
+or persisted fields.
 
 ## 10. Real environment coverage
 
-See [REAL_ENVIRONMENT_COVERAGE.md](home-os-v2/REAL_ENVIRONMENT_COVERAGE.md). The largest current
-gap is the absence of a raw HA state + Registry fixture that reaches semantic resolution and
-product projection.
+See [REAL_ENVIRONMENT_COVERAGE.md](home-os-v2/REAL_ENVIRONMENT_COVERAGE.md). A raw HA state +
+Registry fixture now reaches semantic resolution, weather fallback and product projection.
 
-## 11. Planned low-risk fixes
+## 11. Implemented low-risk fixes
 
-1. P0: exclude toggle-only buttons from whole-home off actions.
-2. P1: preserve stable HA Registry/device metadata and supported domains in normalized entities.
-3. P1: accept finite numeric HA state strings in PVE numeric compatibility checks.
-4. P1: respect Provider identity in manual mappings and report duplicate manual sources as
-   ambiguous.
-5. Add a raw HA real-environment fixture and end-to-end regressions.
-6. Add development-only structured diagnostics without changing production UI or persistence.
+1. P0: toggle-only buttons are excluded from whole-home off actions.
+2. P1: stable HA Registry/device metadata and supported domains survive normalization.
+3. P1: finite numeric HA state strings pass PVE numeric compatibility checks.
+4. P1: manual mapping lookup, persistence and removal respect Provider identity; duplicate manual
+   sources report ambiguity.
+5. A raw HA real-environment fixture covers Provider-to-projection regressions.
+6. Development-only structured diagnostics were added without production UI or persistence changes.
 
 ## 12. Compatibility constraints
 
 The proposed work does not rename roles/card IDs, change Docker/Nginx, modify `/data`, change the
 Home OS configuration schema, remove manual overrides or change dashboard persistence. Existing
 schema-v2 mappings without new stable metadata remain readable.
+
+## 13. Verification results
+
+- `pnpm typecheck`: passed.
+- `pnpm test --run`: 487 files and 3,093 tests passed.
+- `pnpm check`: passed across 1,984 package files.
+- `pnpm test:tier1`: 50 files and 658 tests passed.
+- Home OS plus HA mapper regression selection: 21 files and 165 tests passed.
+- `pnpm build`: standalone production build and built-module syntax check passed.
+- `pnpm check:bundle-budget`: passed.
+- `pnpm check:docker`: not runnable because the validation host has no Docker CLI or daemon.
+- `pnpm check:provider-boundaries`: still reports pre-existing violations in untouched climate,
+  dashboard, lighting, service and provider-type files; no V2.0.4 stabilization file remains in
+  the report.
+- `pnpm check:i18n`: still reports 78 pre-existing dashboard/energy localization issues; no V2.0.4
+  stabilization file remains in the report.
