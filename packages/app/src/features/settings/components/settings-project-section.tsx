@@ -1,6 +1,7 @@
 import { AppReleaseBadge } from '@navet/app/components/shared/app-release-badge';
 import {
   APP_BUILD_METADATA,
+  formatAppBuildDate,
   getAppBuildChannelLabel,
 } from '@navet/app/constants/app-build-metadata';
 import { APP_VERSION } from '@navet/app/constants/app-version';
@@ -87,9 +88,9 @@ function SimpleDisclosure({
 }
 
 export function SettingsProjectSection({ controller }: SettingsProjectSectionProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const { setShowLicense, setShowTerms, showLicense, showTerms, styles } = controller;
-  const buildDate = APP_BUILD_METADATA.buildDate.slice(0, 10);
+  const buildDate = formatAppBuildDate();
   const buildMeta = [
     `${getAppBuildChannelLabel(APP_VERSION)} ${APP_BUILD_METADATA.buildVersion}`,
     APP_BUILD_METADATA.gitShaShort,
@@ -135,17 +136,26 @@ export function SettingsProjectSection({ controller }: SettingsProjectSectionPro
               }
               styles={styles}
             />
-            <CompactMetaRow label="Home OS" value={HOME_OS_VERSION} styles={styles} />
             <CompactMetaRow
-              label="Home OS build"
+              label={language === 'zh' ? 'Home OS 版本' : 'Home OS version'}
+              value={HOME_OS_VERSION}
+              styles={styles}
+            />
+            <CompactMetaRow
+              label={language === 'zh' ? 'Home OS 构建信息' : 'Home OS build'}
               value={
                 <span className="font-mono text-[0.82rem]">
-                  {APP_BUILD_METADATA.gitShaShort} · {buildDate}
+                  {APP_BUILD_METADATA.gitShaShort} · {buildDate} ·{' '}
+                  {APP_BUILD_METADATA.releaseChannel}
                 </span>
               }
               styles={styles}
             />
-            <CompactMetaRow label="Navet base" value={APP_VERSION} styles={styles} />
+            <CompactMetaRow
+              label={language === 'zh' ? 'Navet 基础版本' : 'Navet base'}
+              value={APP_VERSION}
+              styles={styles}
+            />
           </div>
         </SettingsItem>
 

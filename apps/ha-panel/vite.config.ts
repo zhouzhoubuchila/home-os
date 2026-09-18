@@ -42,7 +42,7 @@ function resolveFallbackBuildDate() {
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
   } catch {
-    return new Date(0).toISOString();
+    return 'unknown';
   }
 }
 

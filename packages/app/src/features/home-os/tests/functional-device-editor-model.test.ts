@@ -142,6 +142,110 @@ describe('functional device editor model', () => {
     });
   });
 
+  it('prefers a unique online-like router binary sensor over client metrics', () => {
+    const entities = [
+      resolved('sensor.router_total_clients', 'Total clients', 'network.router.clients'),
+      resolved('sensor.router_wan', 'WAN IPv4', 'network.router.wan_ipv4'),
+      resolved('sensor.router_lan', 'LAN IPv4', 'network.router.lan_ipv4'),
+      resolved('binary_sensor.192_168_8_1', '192.168.8.1', 'diagnostic.connectivity', {
+        integration: 'ping',
+      }),
+    ];
+    const draft = createFunctionalDeviceEditorDraft(
+      undefined,
+      entities,
+      entities.map((item) => item.entity.externalId)
+    );
+
+    expect(draft.kind).toBe('router');
+    expect(draft.stateEntityId).toBe('binary_sensor.192_168_8_1');
+    expect(draft.stateEntityId).not.toBe('sensor.router_total_clients');
+  });
+
+  it('auto-fills one mobile tracker and one other tracker for a new person', () => {
+    const entities = [
+      resolved('person.li_li', '粒粒', 'family.person'),
+      resolved('device_tracker.li_li_lily', '粒粒Lily', 'family.tracker', {
+        platform: 'mobile_app',
+      }),
+      resolved('device_tracker.iphone', 'iPhone', 'family.tracker', {
+        platform: 'tplink_router',
+      }),
+    ];
+    const draft = createFunctionalDeviceEditorDraft(
+      undefined,
+      entities,
+      entities.map((item) => item.entity.externalId)
+    );
+
+    expect(draft).toMatchObject({
+      kind: 'person',
+      stateEntityId: 'person.li_li',
+      metrics: {
+        phone_tracker: 'device_tracker.li_li_lily',
+        additional_tracker: 'device_tracker.iphone',
+      },
+    });
+  });
+
+  it('leaves ambiguous person tracker slots empty', () => {
+    const entities = [
+      resolved('person.li_li', '粒粒', 'family.person'),
+      resolved('device_tracker.phone_a', 'Phone A', 'family.tracker', {
+        platform: 'mobile_app',
+      }),
+      resolved('device_tracker.phone_b', 'Phone B', 'family.tracker', {
+        platform: 'mobile_app',
+      }),
+      resolved('device_tracker.router_a', 'Router A', 'family.tracker', {
+        platform: 'router',
+      }),
+      resolved('device_tracker.router_b', 'Router B', 'family.tracker', {
+        platform: 'router',
+      }),
+    ];
+    const draft = createFunctionalDeviceEditorDraft(
+      undefined,
+      entities,
+      entities.map((item) => item.entity.externalId)
+    );
+
+    expect(draft.kind).toBe('person');
+    expect(draft.metrics.phone_tracker).toBeUndefined();
+    expect(draft.metrics.additional_tracker).toBeUndefined();
+  });
+
+  it('never overwrites existing person tracker choices', () => {
+    const existing: HomeOsFunctionalDevice = {
+      id: 'person-li-li',
+      kind: 'person',
+      name: '粒粒',
+      stateEntityId: 'person.li_li',
+      metrics: {
+        phone_tracker: 'device_tracker.manual_phone',
+        additional_tracker: 'device_tracker.manual_router',
+      },
+      sourceEntityIds: ['person.li_li'],
+    };
+    const automaticCandidates = [
+      resolved('person.li_li', '粒粒', 'family.person'),
+      resolved('device_tracker.new_phone', 'New phone', 'family.tracker', {
+        platform: 'mobile_app',
+      }),
+      resolved('device_tracker.new_router', 'New router tracker', 'family.tracker', {
+        platform: 'router',
+      }),
+    ];
+
+    expect(
+      createFunctionalDeviceEditorDraft(
+        existing,
+        automaticCandidates,
+        automaticCandidates.map((item) => item.entity.externalId)
+      ).metrics
+    ).toEqual(existing.metrics);
+  });
+
   it('normalizes unassigned room placeholders', () => {
     expect(normalizeFunctionalDeviceRoom('Unassigned')).toBe('');
     expect(normalizeFunctionalDeviceRoom('未分配房间')).toBe('');

@@ -134,6 +134,25 @@ export function inferFunctionalDeviceKind(
 ): HomeOsFunctionalDeviceKind {
   if (!selected.length) return 'other';
 
+  const domains = new Set(selected.map((item) => item.entity.externalId.split('.')[0]));
+  if (
+    [...domains].every((domain) => domain === 'person' || domain === 'device_tracker') &&
+    selected.filter((item) => item.entity.externalId.startsWith('person.')).length === 1
+  ) {
+    return 'person';
+  }
+
+  if (
+    selected.some((item) => hasRolePrefix(item, 'network.router.')) &&
+    selected.every(
+      (item) =>
+        hasRolePrefix(item, 'network.router.') ||
+        item.entity.externalId.startsWith('binary_sensor.')
+    )
+  ) {
+    return 'router';
+  }
+
   const sharedRegistry = sharedRegistryIdentity(selected);
   const allPveIntegration = selected.every((item) => /proxmox|pve/.test(integrationOf(item)));
   const coherentPveSelection = selected.length === 1 || Boolean(sharedRegistry);
@@ -153,12 +172,52 @@ export function inferFunctionalDeviceKind(
   const semanticKind = semanticKinds.find(([prefix]) => allHaveRolePrefix(selected, prefix));
   if (semanticKind) return semanticKind[1];
 
-  const domains = new Set(selected.map((item) => item.entity.externalId.split('.')[0]));
   if (domains.size === 1) {
     const domain = [...domains][0];
     if (domain === 'light' || domain === 'switch' || domain === 'fan') return domain;
   }
   return 'other';
+}
+
+function looksLikeRouterOnline(item: ResolvedSemanticEntity) {
+  if (item.roles.includes(HOME_OS_ROLES.networkRouterOnline)) return true;
+  if (!item.entity.externalId.startsWith('binary_sensor.')) return false;
+  const attributes = item.entity.attributes;
+  const text = [
+    item.entity.externalId,
+    item.displayName,
+    integrationOf(item),
+    readString(attributes.deviceClass ?? attributes.device_class),
+    readString(attributes.originalName ?? attributes.original_name),
+  ]
+    .join(' ')
+    .toLowerCase();
+  return /online|ping|connectivity|reachable|reachability|在线|连通|可达/.test(text);
+}
+
+function inferRouterStateEntity(selected: readonly ResolvedSemanticEntity[]) {
+  const explicit = selected.filter((item) =>
+    item.roles.includes(HOME_OS_ROLES.networkRouterOnline)
+  );
+  if (explicit.length === 1) return explicit[0];
+  const onlineBinarySensors = selected.filter(looksLikeRouterOnline);
+  if (onlineBinarySensors.length === 1) return onlineBinarySensors[0];
+  const binarySensors = selected.filter((item) =>
+    item.entity.externalId.startsWith('binary_sensor.')
+  );
+  return binarySensors.length === 1 ? binarySensors[0] : undefined;
+}
+
+function inferPersonMetrics(selected: readonly ResolvedSemanticEntity[]) {
+  const trackers = selected.filter((item) => item.entity.externalId.startsWith('device_tracker.'));
+  const phoneCandidates = trackers.filter((item) => integrationOf(item) === 'mobile_app');
+  const phone = phoneCandidates.length === 1 ? phoneCandidates[0] : undefined;
+  const additionalCandidates = trackers.filter((item) => integrationOf(item) !== 'mobile_app');
+  const additional = additionalCandidates.length === 1 ? additionalCandidates[0] : undefined;
+  return {
+    ...(phone ? { phone_tracker: phone.entity.externalId } : {}),
+    ...(additional ? { additional_tracker: additional.entity.externalId } : {}),
+  };
 }
 
 function chooseUniqueRoleCandidate(
@@ -222,14 +281,30 @@ export function createFunctionalDeviceEditorDraft(
   const primary = selected[0];
   const kind = inferFunctionalDeviceKind(selected);
   const control = selected.find((item) => /^(light|switch|button)\./.test(item.entity.externalId));
-  const metrics = kind === 'pve' ? inferPveMetrics(selected, entities) : {};
+  const metrics: Record<string, string> =
+    kind === 'pve'
+      ? inferPveMetrics(selected, entities)
+      : kind === 'person'
+        ? inferPersonMetrics(selected)
+        : {};
   const onlineEntityId = metrics.online ?? '';
+  const routerStateEntity = kind === 'router' ? inferRouterStateEntity(selected) : undefined;
+  const personStateEntity =
+    kind === 'person'
+      ? selected.find((item) => item.entity.externalId.startsWith('person.'))
+      : undefined;
 
   return {
     name: kind === 'pve' ? inferredPveName(selected) : (primary?.displayName ?? ''),
     room: normalizeFunctionalDeviceRoom(primary?.room),
     kind,
-    stateEntityId: onlineEntityId || control?.entity.externalId || primary?.entity.externalId || '',
+    stateEntityId:
+      onlineEntityId ||
+      routerStateEntity?.entity.externalId ||
+      personStateEntity?.entity.externalId ||
+      control?.entity.externalId ||
+      primary?.entity.externalId ||
+      '',
     turnOnEntityId: '',
     turnOffEntityId: '',
     toggleEntityId: '',
