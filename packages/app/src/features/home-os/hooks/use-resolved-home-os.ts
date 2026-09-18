@@ -2,6 +2,7 @@ import { useIntegrationStore } from '@navet/app/hooks';
 import { integrationSelectors } from '@navet/app/stores/selectors';
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { buildHomeOsDiagnostics, exposeHomeOsDiagnostics } from '../mapping/diagnostics';
 import { buildHomeOsIndexes } from '../mapping/home-os-indexes';
 import { resolveSemanticEntities } from '../mapping/semantic-resolver';
 import { useHomeOsConfigStore } from '../stores/home-os-config-store';
@@ -23,6 +24,7 @@ function resolveSharedModel(
   cachedMappings = mappings;
   cachedResolved = resolveSemanticEntities(Object.values(entitiesById), mappings);
   cachedIndexes = buildHomeOsIndexes(cachedResolved);
+  if (import.meta.env.DEV) exposeHomeOsDiagnostics(buildHomeOsDiagnostics(cachedResolved));
   return cachedResolved;
 }
 
