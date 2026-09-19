@@ -27,15 +27,27 @@ function pagesFor(model: MoonCardModel, language: string): DataItem[][] {
   return [
     [
       {
-        key: 'illumination',
-        label: zh ? '照明' : 'Illumination',
-        value: `${model.illuminationPercent}%`,
-      },
-      {
         key: 'age',
         label: zh ? '月龄' : 'Moon age',
         value: `${model.ageDays.toFixed(1)} ${zh ? '天' : 'days'}`,
       },
+      {
+        key: 'rise',
+        label: zh ? '月出' : 'Moonrise',
+        value: formatTime(model.moonrise, locale),
+      },
+      {
+        key: 'set',
+        label: zh ? '月落' : 'Moonset',
+        value: formatTime(model.moonset, locale),
+      },
+      {
+        key: 'illumination',
+        label: zh ? '照明' : 'Illumination',
+        value: `${model.illuminationPercent}%`,
+      },
+    ],
+    [
       { key: 'altitude', label: zh ? '高度' : 'Altitude', value: degree(model.altitude) },
       {
         key: 'direction',
@@ -43,10 +55,6 @@ function pagesFor(model: MoonCardModel, language: string): DataItem[][] {
         value: degree(model.azimuth),
         direction: model.azimuth,
       },
-    ],
-    [
-      { key: 'rise', label: zh ? '月出' : 'Moonrise', value: formatTime(model.moonrise, locale) },
-      { key: 'set', label: zh ? '月落' : 'Moonset', value: formatTime(model.moonset, locale) },
       {
         key: 'high',
         label: zh ? '最高点' : 'Moon high',
@@ -122,14 +130,13 @@ export function MoonDataSwiper({ model, language }: { model: MoonCardModel; lang
       <div className="swiper-wrapper">
         {pages.map((page, index) => (
           <div className="swiper-slide" key={`page-${index + 1}`} data-lunar-data-page={index + 1}>
-            <div className="w-full pb-4">
+            <div className="grid w-full grid-cols-2 gap-x-4 gap-y-2 pb-4 pt-1">
               {page.map((item) => (
-                <div
-                  className="flex items-center justify-between gap-3 border-b border-current/10 py-1 text-[0.68rem] last:border-b-0"
-                  key={item.key}
-                >
-                  <span className="truncate text-current/55">{item.label}</span>
-                  <span className="flex shrink-0 items-center gap-1 font-medium tabular-nums">
+                <div className="flex min-w-0 flex-col gap-0.5 text-[0.68rem]" key={item.key}>
+                  <span className="truncate text-[0.58rem] uppercase tracking-[0.1em] text-current/42">
+                    {item.label}
+                  </span>
+                  <span className="flex min-w-0 items-center gap-1 font-medium tabular-nums">
                     {item.value}
                     {item.direction === undefined ? null : (
                       <span
@@ -147,7 +154,7 @@ export function MoonDataSwiper({ model, language }: { model: MoonCardModel; lang
           </div>
         ))}
       </div>
-      <div className="swiper-pagination !bottom-0 !flex !h-3 !items-center !justify-center" />
+      <div className="swiper-pagination !bottom-0 !flex !h-2 !items-center !justify-start !pl-0.5" />
     </div>
   );
 }

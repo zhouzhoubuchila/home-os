@@ -71,7 +71,7 @@ export function CompactMoonCalendar({
               aria-pressed={selected}
               aria-label={date.toLocaleDateString(locale)}
               className={`flex min-w-0 flex-col items-center rounded-lg px-0.5 py-1 transition-colors ${
-                selected ? 'bg-white/14 ring-1 ring-current/25' : 'hover:bg-white/8'
+                selected ? 'bg-current/[0.08] ring-1 ring-current/20' : 'hover:bg-current/[0.04]'
               }`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -87,14 +87,14 @@ export function CompactMoonCalendar({
           );
         })}
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-current/10 pt-1.5 text-[0.68rem]">
+      <div className="flex items-center justify-between gap-2 pt-2 text-[0.68rem]">
         <span className="truncate text-current/60">
           {selectedDate.toLocaleDateString(locale, { month: 'long', day: 'numeric' })} ·{' '}
           {model.illuminationPercent}%
         </span>
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1 rounded-full border border-current/15 px-2 py-1 hover:bg-white/10"
+          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-current/55 hover:bg-current/[0.05]"
           onClick={(event) => {
             event.stopPropagation();
             onOpenFull();
@@ -203,8 +203,8 @@ export function FullMoonCalendar({
               aria-pressed={selected}
               className={`relative flex min-h-0 flex-col items-center justify-center rounded-[4px] transition-colors ${
                 selected
-                  ? 'bg-white/16 ring-1 ring-inset ring-current/30'
-                  : 'bg-black/10 hover:bg-white/8'
+                  ? 'bg-current/[0.08] ring-1 ring-inset ring-current/20'
+                  : 'hover:bg-current/[0.04]'
               } ${currentMonth ? '' : 'opacity-35'}`}
               onClick={() => onSelect(date)}
             >

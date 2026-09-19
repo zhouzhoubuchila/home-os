@@ -126,6 +126,12 @@ export const EntityUnavailableCalculatedFallback: Story = {
 export const Small: Story = { args: { size: 'small' } };
 export const Medium: Story = { args: { size: 'medium' } };
 export const Large: Story = { args: { size: 'large' } };
+export const MediumBase: Story = { args: { size: 'medium', initialSection: 'base' } };
+export const MediumHorizon: Story = { args: { size: 'medium', initialSection: 'horizon' } };
+export const MediumCalendar: Story = { args: { size: 'medium', initialSection: 'calendar' } };
+export const LargeBase: Story = { args: { size: 'large', initialSection: 'base' } };
+export const LargeHorizon: Story = { args: { size: 'large', initialSection: 'horizon' } };
+export const LargeCalendar: Story = { args: { size: 'large', initialSection: 'calendar' } };
 export const InteractiveMedium: Story = {
   args: { size: 'medium', initialSection: 'base' },
   parameters: {
@@ -150,3 +156,21 @@ export const InteractiveLarge: Story = {
 };
 export const Light: Story = { args: { theme: 'light' } };
 export const Dark: Story = { args: { theme: 'dark' } };
+export const InteractiveMotion: Story = {
+  args: { size: 'medium', initialSection: 'base' },
+  parameters: {
+    docs: {
+      description: { story: 'Move the pointer over the moon to test restrained RAF parallax.' },
+    },
+  },
+};
+export const ReducedMotion: Story = {
+  args: { size: 'medium', initialSection: 'base' },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Use the browser prefers-reduced-motion setting to validate the static fallback.',
+      },
+    },
+  },
+};

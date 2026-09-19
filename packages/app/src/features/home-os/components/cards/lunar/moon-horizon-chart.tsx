@@ -19,7 +19,7 @@ function markerPlugin(
   const drawMarker = (
     chart: Chart<'line'>,
     value: number,
-    label: string,
+    _label: string,
     color: string,
     row = 0
   ) => {
@@ -31,21 +31,15 @@ function markerPlugin(
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = 1;
-    ctx.setLineDash([3, 4]);
+    ctx.setLineDash([2, 5]);
     ctx.beginPath();
     ctx.moveTo(x, chartArea.top + 4);
     ctx.lineTo(x, chartArea.bottom - 8);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = '10px system-ui';
-    const width = ctx.measureText(label).width;
-    ctx.textAlign =
-      x - width / 2 < chartArea.left
-        ? 'left'
-        : x + width / 2 > chartArea.right
-          ? 'right'
-          : 'center';
-    ctx.fillText(label, x, chartArea.bottom - 2 - row * 11);
+    ctx.beginPath();
+    ctx.arc(x, chartArea.bottom - 8, row === 0 ? 2.5 : 1.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   };
   return {
