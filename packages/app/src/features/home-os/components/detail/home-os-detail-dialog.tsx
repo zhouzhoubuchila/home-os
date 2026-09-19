@@ -2,7 +2,6 @@ import { dispatchEntityCommand } from '@navet/app/commands';
 import { BaseCard, Button, ModalSurface } from '@navet/app/components/primitives';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { useI18n, useTheme } from '@navet/app/hooks';
-import { Solar } from 'lunar-javascript';
 import type { ReactNode } from 'react';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
 import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-device-adapter';
@@ -474,19 +473,8 @@ export function HomeOsDetailDialog({
     );
   } else if (kind === 'lunar') {
     const now = new Date();
-    const lunar = Solar.fromDate(now).getLunar();
     const moon = buildMoonCardModel(entities, now);
-    content = (
-      <div className="grid gap-4">
-        <MoonCardDetail model={moon} language={language} />
-        <p>
-          {now.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')} · {lunar.toString()}
-        </p>
-        <p className={surface.textSecondary}>
-          {copy.solarTerm}: {lunar.getJieQi() || lunar.getNextJieQi()?.getName() || '—'}
-        </p>
-      </div>
-    );
+    content = <MoonCardDetail model={moon} language={language} />;
   } else if (kind === 'weather') {
     const current = weatherSource?.current;
     const rows = [

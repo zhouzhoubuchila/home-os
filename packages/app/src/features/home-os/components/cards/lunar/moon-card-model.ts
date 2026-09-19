@@ -1,10 +1,12 @@
 import { getAstronomySnapshot } from '../../../astronomy/astronomy-visual';
+import { HomeOsHassFacade } from '../../../astronomy/home-os-hass-facade';
 import {
   getMoonPhase,
   getMoonPhaseFromEntity,
   type MoonPhaseModel,
 } from '../../../astronomy/moon-phase';
 import type { ResolvedSemanticEntity } from '../../../core/types';
+import { calculateLunarSnapshot, type LunarLocation } from './lunar-engine';
 import { getUpstreamMoonImageUrl } from './moon-assets';
 
 export type MoonPhaseKey =
@@ -40,6 +42,7 @@ const PHASE_NAMES: Record<MoonPhaseKey, { en: string; zh: string }> = {
 };
 
 export interface MoonCardModel {
+  date: Date;
   phase: number;
   phaseKey: MoonPhaseKey;
   phaseImageIndex: number;
@@ -56,6 +59,13 @@ export interface MoonCardModel {
   daylightDurationMs?: number;
   azimuth?: number;
   altitude?: number;
+  distanceKm?: number;
+  moonrise?: Date;
+  moonset?: Date;
+  moonHighest?: Date;
+  nextFullMoon?: Date;
+  nextNewMoon?: Date;
+  location?: LunarLocation;
 }
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -90,15 +100,33 @@ function nextEventKind(nextEvent: Date | undefined, sunrise?: Date, sunset?: Dat
   return undefined;
 }
 
+function readNumber(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function resolveLocation(entities: readonly ResolvedSemanticEntity[]): LunarLocation | undefined {
+  const facade = new HomeOsHassFacade(entities);
+  const zone = facade.getState('zone.home');
+  const sun = facade.getState('sun.sun');
+  const latitude = readNumber(zone?.attributes.latitude ?? sun?.attributes.latitude);
+  const longitude = readNumber(zone?.attributes.longitude ?? sun?.attributes.longitude);
+  return latitude === undefined || longitude === undefined ? undefined : { latitude, longitude };
+}
+
 function toModel(
   moon: MoonPhaseModel,
   source: MoonCardModel['source'],
-  astronomy: ReturnType<typeof getAstronomySnapshot>
+  astronomy: ReturnType<typeof getAstronomySnapshot>,
+  date: Date,
+  location?: LunarLocation
 ): MoonCardModel {
   const illumination = clamp01(moon.illumination);
   const phase = ((moon.phase % 1) + 1) % 1;
   const image = getUpstreamMoonImageUrl(phase);
+  const calculated = calculateLunarSnapshot(date, location);
   return {
+    date,
     phase,
     phaseKey: getMoonPhaseKey(moon.phase),
     phaseImageIndex: image.phaseIndex,
@@ -113,8 +141,15 @@ function toModel(
     nextEvent: astronomy.nextEvent,
     nextEventKind: nextEventKind(astronomy.nextEvent, astronomy.sunrise, astronomy.sunset),
     daylightDurationMs: astronomy.daylightDurationMs,
-    azimuth: astronomy.azimuth,
-    altitude: astronomy.elevation,
+    azimuth: calculated?.azimuth,
+    altitude: calculated?.altitude,
+    distanceKm: calculated?.distanceKm,
+    moonrise: calculated?.rise,
+    moonset: calculated?.set,
+    moonHighest: calculated?.highest,
+    nextFullMoon: calculated?.nextFullMoon,
+    nextNewMoon: calculated?.nextNewMoon,
+    location,
   };
 }
 
@@ -124,9 +159,60 @@ export function buildMoonCardModel(
 ): MoonCardModel {
   const astronomy = getAstronomySnapshot(entities, now);
   const entityMoon = availableEntityMoon(entities);
+  const location = resolveLocation(entities);
   return entityMoon
-    ? toModel(entityMoon, 'entity', astronomy)
-    : toModel(getMoonPhase(now), 'calculated', astronomy);
+    ? toModel(entityMoon, 'entity', astronomy, now, location)
+    : toModel(getMoonPhase(now), 'calculated', astronomy, now, location);
+}
+
+export function buildMoonCardModelForDate(base: MoonCardModel, date: Date): MoonCardModel {
+  const calculated = calculateLunarSnapshot(date, base.location);
+  if (!calculated) {
+    const fallback = getMoonPhase(date);
+    const phase = ((fallback.phase % 1) + 1) % 1;
+    const image = getUpstreamMoonImageUrl(phase);
+    return {
+      ...base,
+      date,
+      source: 'calculated',
+      phase,
+      phaseKey: getMoonPhaseKey(phase),
+      phaseImageIndex: image.phaseIndex,
+      moonImageUrl: image.url,
+      illumination: fallback.illumination,
+      illuminationPercent: Math.round(fallback.illumination * 100),
+      ageDays: fallback.age,
+      azimuth: undefined,
+      altitude: undefined,
+      distanceKm: undefined,
+      moonrise: undefined,
+      moonset: undefined,
+      moonHighest: undefined,
+      nextFullMoon: undefined,
+      nextNewMoon: undefined,
+    };
+  }
+  const image = getUpstreamMoonImageUrl(calculated.phase);
+  return {
+    ...base,
+    date,
+    source: 'calculated',
+    phase: calculated.phase,
+    phaseKey: getMoonPhaseKey(calculated.phase),
+    phaseImageIndex: image.phaseIndex,
+    moonImageUrl: image.url,
+    illumination: calculated.illumination,
+    illuminationPercent: Math.round(calculated.illumination * 100),
+    ageDays: calculated.ageDays,
+    azimuth: calculated.azimuth,
+    altitude: calculated.altitude,
+    distanceKm: calculated.distanceKm,
+    moonrise: calculated.rise,
+    moonset: calculated.set,
+    moonHighest: calculated.highest,
+    nextFullMoon: calculated.nextFullMoon,
+    nextNewMoon: calculated.nextNewMoon,
+  };
 }
 
 export function createMoonCardFixture(
@@ -137,6 +223,7 @@ export function createMoonCardFixture(
   const image = getUpstreamMoonImageUrl(phase);
   const illumination = clamp01((1 - Math.cos(phase * Math.PI * 2)) / 2);
   return {
+    date: new Date('2026-09-19T12:00:00+09:00'),
     phase,
     phaseKey,
     phaseImageIndex: image.phaseIndex,
@@ -151,6 +238,15 @@ export function createMoonCardFixture(
     nextEvent: new Date('2026-09-19T18:24:00+09:00'),
     nextEventKind: 'sunset',
     daylightDurationMs: 12 * 60 * 60 * 1000 + 12 * 60 * 1000,
+    moonrise: new Date('2026-09-19T04:15:00+09:00'),
+    moonset: new Date('2026-09-19T13:41:00+09:00'),
+    moonHighest: new Date('2026-09-19T08:58:00+09:00'),
+    nextFullMoon: new Date('2026-09-26T22:51:00+09:00'),
+    nextNewMoon: new Date('2026-10-11T17:13:00+09:00'),
+    azimuth: 195.4,
+    altitude: 25,
+    distanceKm: 405892,
+    location: { latitude: 35.6762, longitude: 139.6503 },
     ...overrides,
   };
 }

@@ -579,10 +579,22 @@ export function HomeOsWidget({
           data-home-os-detail={definition.detail?.presentation}
           data-home-os-summary-only={definition.summaryOnly ? 'true' : undefined}
           onClick={(event) => {
-            if ((event.target as Element).closest('button,a,input,select,textarea')) return;
+            if (
+              (event.target as Element).closest(
+                'button,a,input,select,textarea,[data-card-interactive]'
+              )
+            )
+              return;
             openDetail();
           }}
           onKeyDown={(event) => {
+            if (
+              event.target !== event.currentTarget &&
+              (event.target as Element).closest(
+                'button,a,input,select,textarea,[data-card-interactive]'
+              )
+            )
+              return;
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               openDetail();

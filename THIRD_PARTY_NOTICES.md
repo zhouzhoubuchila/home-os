@@ -17,17 +17,19 @@ upstream custom element, `ha-card`, editor, or Home Assistant-only UI.
 
 - Repository: https://github.com/ngocjohn/lunar-phase-card
 - Pinned source commit: `3a9eafd39cea1efb32da9aa2bb13af1e28324d5a`
-- Adapted source: upstream `src/model/moon.ts`, `src/lunar-phase-card/components/moon-image.ts`,
-  `src/lunar-phase-card/components/moon-base.ts`, and `src/lunar-phase-card/components/moon-compact-view.ts`
+- Adapted source: upstream `src/model/moon.ts`, section state machine, `moon-image`, `moon-base`,
+  `moon-compact-view`, `moon-data-info`, `moon-chart-dynamic`, `moon-calendar-footer`,
+  `moon-calendar-popup`, `lunar-phase-header`, and `lunar-star-particles`
 - Vendored resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/moon_pic/`
 - License: MIT, preserved in the adjacent `LICENSE` file
 - Home OS rendering: `packages/app/src/features/home-os/components/cards/lunar/`
 
 The Home OS implementation ports the upstream 31-image phase selection, moon image treatment,
-left-image/right-data composition, compact information hierarchy, and numeric formatting ideas.
-It removes the upstream Lit custom element, `hass` object, Lovelace editor/configuration,
-Home Assistant theme plumbing, Swiper, and chart pages. Home OS's existing astronomy model
-remains the data source.
+section switching and 500ms transition, Swiper data pages, Chart.js dynamic horizon behavior,
+calendar navigation/date selection, lazy star particles, left-image/right-data composition,
+compact hierarchy, and SunCalc3 model behavior. The port replaces the upstream Lit base class,
+`hass` object, `ha-card`/`ha-icon`, Lovelace editor/configuration, and Home Assistant theme/location
+plumbing with React and Home OS adapters; it does not include the Home Assistant frontend runtime.
 
 ## Audited visual references (no source copied)
 

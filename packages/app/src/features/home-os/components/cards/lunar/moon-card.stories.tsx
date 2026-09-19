@@ -1,6 +1,7 @@
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { EntityCardStoryFrame } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { LunarSection } from './moon-card';
 import { MoonCard } from './moon-card';
 import { createMoonCardFixture, type MoonCardModel, type MoonPhaseKey } from './moon-card-model';
 
@@ -12,6 +13,7 @@ interface MoonCardStudioProps {
   isDay: boolean;
   source: MoonCardModel['source'];
   theme: ThemeType;
+  initialSection: LunarSection;
 }
 
 function MoonCardStudio({
@@ -22,6 +24,7 @@ function MoonCardStudio({
   isDay,
   source,
   theme,
+  initialSection,
 }: MoonCardStudioProps) {
   const normalizedIllumination = Math.min(1, Math.max(0, illumination));
   const model = createMoonCardFixture(phase, {
@@ -32,7 +35,13 @@ function MoonCardStudio({
   });
   return (
     <EntityCardStoryFrame size={size}>
-      <MoonCard size={size} model={model} language={language} theme={theme} />
+      <MoonCard
+        size={size}
+        model={model}
+        language={language}
+        theme={theme}
+        initialSection={initialSection}
+      />
     </EntityCardStoryFrame>
   );
 }
@@ -70,6 +79,7 @@ const meta = {
     isDay: { control: 'boolean' },
     source: { control: 'inline-radio', options: ['entity', 'calculated'] },
     theme: { control: 'inline-radio', options: ['dark', 'light'] },
+    initialSection: { control: 'inline-radio', options: ['base', 'horizon', 'calendar'] },
   },
   args: {
     size: 'medium',
@@ -79,6 +89,7 @@ const meta = {
     isDay: false,
     source: 'entity',
     theme: 'dark',
+    initialSection: 'base',
   },
 } satisfies Meta<typeof MoonCardStudio>;
 
@@ -115,5 +126,27 @@ export const EntityUnavailableCalculatedFallback: Story = {
 export const Small: Story = { args: { size: 'small' } };
 export const Medium: Story = { args: { size: 'medium' } };
 export const Large: Story = { args: { size: 'large' } };
+export const InteractiveMedium: Story = {
+  args: { size: 'medium', initialSection: 'base' },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use the Phase, Horizon and Calendar controls; swipe or keyboard-navigate the data pages.',
+      },
+    },
+  },
+};
+export const InteractiveLarge: Story = {
+  args: { size: 'large', initialSection: 'base' },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Expanded interactive port with full calendar, lazy Chart.js horizon and star particles.',
+      },
+    },
+  },
+};
 export const Light: Story = { args: { theme: 'light' } };
 export const Dark: Story = { args: { theme: 'dark' } };
