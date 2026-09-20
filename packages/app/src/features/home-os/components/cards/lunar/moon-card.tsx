@@ -3,7 +3,7 @@ import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { useTheme } from '@navet/app/hooks';
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { CalendarDays, ChartNoAxesCombined, Moon } from 'lucide-react';
-import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { LunarBackground } from './lunar-background';
 import type { LunarBackgroundVariant } from './lunar-background-assets';
 import { UPSTREAM_LUNAR_PHASE_CARD_COMMIT } from './moon-assets';
@@ -37,19 +37,16 @@ function useReducedMotion() {
   return reduced;
 }
 
-function sourceLabel(source: MoonCardModel['source'], language: string) {
-  if (source === 'entity') return language === 'zh' ? '实体数据' : 'Entity data';
-  return 'SunCalc3';
-}
-
 export function MoonPhaseVisual({
   model,
   language,
   className = '',
+  style,
 }: {
   model: MoonCardModel;
   language: string;
   className?: string;
+  style?: CSSProperties;
 }) {
   const name = getMoonPhaseName(model.phaseKey, language);
   const [hovered, setHovered] = useState(false);
@@ -64,6 +61,7 @@ export function MoonPhaseVisual({
           : `${name}, ${model.illuminationPercent}% illuminated`
       }
       className={`relative aspect-square shrink-0 select-none ${hovered ? 'group' : ''} ${className}`}
+      style={style}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onMouseMove={(event) => {
@@ -94,6 +92,7 @@ export function MoonPhaseVisual({
         aria-hidden="true"
         draggable={false}
         className={`pointer-events-none relative h-full w-full object-contain grayscale drop-shadow-[2px_2px_6px_rgb(255_255_255/0.2)] ${hovered && !lightFraction ? 'brightness-200' : 'brightness-100'}`}
+        style={model.southernHemisphere ? { transform: 'scaleX(-1) scaleY(-1)' } : undefined}
       />
     </div>
   );
@@ -150,58 +149,39 @@ function PhaseBase({
   language: string;
   large: boolean;
 }) {
-  const phaseName = getMoonPhaseName(model.phaseKey, language);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [moonSize, setMoonSize] = useState(150);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const measure = () => {
+      const width = root.offsetWidth;
+      const availableHeight = width * 0.5 - root.offsetTop;
+      setMoonSize(Math.max(0, Math.min(width / 3.2, availableHeight, 150)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div
+      ref={rootRef}
       className="[container-type:inline-size] flex h-full min-h-0 items-center gap-4 sm:gap-6"
       data-lunar-section-content="base"
     >
-      <div className="flex w-[40%] min-w-[104px] max-w-[190px] items-center justify-center">
+      <div className="flex min-w-0 items-center justify-center" style={{ width: moonSize }}>
         <MoonPhaseVisual
           model={model}
           language={language}
-          className={
-            large
-              ? 'h-[clamp(8rem,22cqw,9.375rem)] w-[clamp(8rem,22cqw,9.375rem)]'
-              : 'h-[clamp(6rem,18cqw,7.5rem)] w-[clamp(6rem,18cqw,7.5rem)]'
-          }
+          className="h-full w-full"
+          style={{ maxWidth: moonSize, maxHeight: moonSize }}
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
-        <span className="mb-1 text-[0.62rem] uppercase tracking-[0.18em] text-current/42">
-          {language === 'zh' ? '月相' : 'Lunar phase'}
-        </span>
-        <h2 className="truncate text-[1.2rem] font-semibold tracking-[-0.025em]">{phaseName}</h2>
-        <div className="mt-1 flex items-end gap-1.5">
-          <span className="text-[2.15rem] font-medium leading-none tracking-[-0.055em] tabular-nums">
-            {model.illuminationPercent}
-            <span className="ml-0.5 text-[1.35rem] font-normal tracking-[-0.02em] text-current/75">
-              %
-            </span>
-          </span>
-          <span className="mb-0.5 text-[0.62rem] text-current/48">
-            {language === 'zh' ? '照明' : 'illuminated'}
-          </span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[0.68rem]">
-          <div>
-            <span className="block text-[0.6rem] text-current/42">
-              {language === 'zh' ? '月龄' : 'Moon age'}
-            </span>
-            <span className="tabular-nums">
-              {model.ageDays.toFixed(1)} {language === 'zh' ? '天' : 'days'}
-            </span>
-          </div>
-          <div>
-            <span className="block text-[0.6rem] text-current/42">
-              {language === 'zh' ? '来源' : 'Source'}
-            </span>
-            <span className="truncate text-current/65">{sourceLabel(model.source, language)}</span>
-          </div>
-        </div>
-        <div className="mt-3 h-[4.5rem] min-h-0">
-          <MoonDataSwiper model={model} language={language} />
-        </div>
+        <MoonDataSwiper model={model} language={language} chunkedLimit={large ? 6 : 5} />
       </div>
     </div>
   );
@@ -213,6 +193,7 @@ export interface InteractiveLunarCardProps {
   language: string;
   /** Home OS shell title; upstream's internal phase header stays in content. */
   title?: string;
+  hideStarfield?: boolean;
   theme?: ThemeType;
   mode?: LunarCardMode;
   initialSection?: LunarSection;
@@ -225,6 +206,7 @@ export function InteractiveLunarCard({
   model,
   language,
   title,
+  hideStarfield = false,
   theme,
   mode = 'dashboard',
   initialSection = 'base',
@@ -239,6 +221,7 @@ export function InteractiveLunarCard({
   const [activeSection, setActiveSection] = useState<LunarSection>(small ? 'base' : initialSection);
   const [changing, setChanging] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date(model.date));
+  const [compactDetails, setCompactDetails] = useState(false);
   const selectedModel = useMemo(
     () =>
       sameDay(selectedDate, model.date) ? model : buildMoonCardModelForDate(model, selectedDate),
@@ -254,22 +237,54 @@ export function InteractiveLunarCard({
   };
   useEffect(() => {
     if (!changing) return;
-    const timer = window.setTimeout(() => setChanging(false), reducedMotion ? 0 : 240);
+    const timer = window.setTimeout(() => setChanging(false), reducedMotion ? 0 : 500);
     return () => window.clearTimeout(timer);
   }, [changing, reducedMotion]);
 
   const content = small ? (
     <div
-      className="flex h-full min-h-0 flex-col items-center justify-center gap-1 p-3"
+      className="flex h-full min-h-0 flex-col justify-center gap-3 p-3"
       data-lunar-section-content="base"
     >
-      <MoonPhaseVisual model={selectedModel} language={language} className="h-16 w-16" />
-      <p className="max-w-full truncate text-sm font-semibold">
-        {getMoonPhaseName(selectedModel.phaseKey, language)}
-      </p>
-      <p className="text-xs text-current/55 tabular-nums">
-        {language === 'zh' ? '照明' : 'Illumination'} {selectedModel.illuminationPercent}%
-      </p>
+      <button
+        type="button"
+        className="flex items-center gap-3 text-left"
+        data-card-interactive
+        onClick={() => setCompactDetails((open) => !open)}
+      >
+        <MoonPhaseVisual model={selectedModel} language={language} className="h-20 w-20" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">
+            {getMoonPhaseName(selectedModel.phaseKey, language)}
+          </p>
+          <p className="mt-1 text-sm text-current/70 tabular-nums">
+            {selectedModel.illuminationPercent}% {language === 'zh' ? '照明' : 'illuminated'}
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[0.62rem]">
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月龄' : 'Age'}</span>
+              {selectedModel.ageDays.toFixed(1)}
+            </span>
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月出' : 'Rise'}</span>
+              {selectedModel.moonrise?.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }) ?? '—'}
+            </span>
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月落' : 'Set'}</span>
+              {selectedModel.moonset?.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }) ?? '—'}
+            </span>
+          </div>
+        </div>
+      </button>
+      {compactDetails ? (
+        <MoonDataSwiper model={selectedModel} language={language} chunkedLimit={4} />
+      ) : null}
     </div>
   ) : activeSection === 'base' ? (
     <PhaseBase model={selectedModel} language={language} large={large} />
@@ -284,7 +299,12 @@ export function InteractiveLunarCard({
         </div>
       }
     >
-      <LazyMoonHorizonChart date={selectedDate} location={model.location} language={language} />
+      <LazyMoonHorizonChart
+        date={selectedDate}
+        location={selectedModel.location}
+        language={language}
+        model={selectedModel}
+      />
     </Suspense>
   ) : activeSection === 'full_calendar' ? (
     <FullMoonCalendar
@@ -335,7 +355,7 @@ export function InteractiveLunarCard({
         data-theme={theme ?? activeTheme}
         style={resolvedBackground === 'none' ? undefined : { color: '#e1e1e1' }}
       >
-        {large ? (
+        {!small && !hideStarfield ? (
           <Suspense fallback={null}>
             <LazyLunarStarfield density={large ? 'large' : 'medium'} />
           </Suspense>
@@ -360,15 +380,15 @@ export function InteractiveLunarCard({
                 onSelect={changeSection}
               />
               <SectionControl
-                section="horizon"
-                active={activeSection === 'horizon'}
+                section="calendar"
+                active={activeSection === 'calendar'}
                 disabled={changing}
                 language={language}
                 onSelect={changeSection}
               />
               <SectionControl
-                section="calendar"
-                active={activeSection === 'calendar'}
+                section="horizon"
+                active={activeSection === 'horizon'}
                 disabled={changing}
                 language={language}
                 onSelect={changeSection}
@@ -379,9 +399,7 @@ export function InteractiveLunarCard({
         <div
           className={`relative z-10 min-h-0 flex-1 overflow-hidden ${
             small ? '' : activeSection === 'full_calendar' ? 'p-1.5' : 'px-3 pb-2'
-          } transition-all ${
-            changing ? 'translate-y-1 opacity-0' : 'translate-y-0 opacity-100'
-          } ${reducedMotion ? 'duration-0' : 'duration-[240ms]'}`}
+          } ${changing ? 'opacity-0' : 'opacity-100'} ${reducedMotion ? 'duration-0' : 'duration-[500ms]'} transition-opacity ease-in-out`}
         >
           {content}
         </div>

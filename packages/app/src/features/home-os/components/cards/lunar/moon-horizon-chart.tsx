@@ -1,6 +1,8 @@
 import { Chart, type Plugin, type ScriptableLineSegmentContext } from 'chart.js/auto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildHorizonSeries, getMoonEvents, type LunarLocation } from './lunar-engine';
+import type { MoonCardModel } from './moon-card-model';
+import { MoonDataSwiper } from './moon-data-swiper';
 
 function nearestIndex(times: number[], value: number) {
   let best = 0;
@@ -82,14 +84,17 @@ export default function MoonHorizonChart({
   date,
   location,
   language,
+  model,
 }: {
   date: Date;
   location?: LunarLocation;
   language: string;
+  model?: MoonCardModel;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart<'line'> | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'unsupported'>('loading');
+  const [moreInfo, setMoreInfo] = useState(false);
   const series = useMemo(
     () => (location ? buildHorizonSeries(date, location) : []),
     [date, location]
@@ -214,22 +219,47 @@ export default function MoonHorizonChart({
 
   return (
     <div
-      className="relative h-full min-h-[90px] w-full"
+      className="relative flex h-full min-h-[90px] w-full flex-col"
       data-card-interactive
       data-lunar-horizon
       data-chart-module="chart.js"
       data-chart-status={status}
       data-current-marker="true"
     >
-      <canvas
-        ref={canvasRef}
-        aria-label={language === 'zh' ? '动态月轨图' : 'Dynamic moon horizon chart'}
-        role="img"
-      />
+      <div className="relative min-h-0 flex-1">
+        <canvas
+          ref={canvasRef}
+          aria-label={language === 'zh' ? '动态月轨图' : 'Dynamic moon horizon chart'}
+          role="img"
+        />
+      </div>
       {status === 'unsupported' ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-current/45">
           {language === 'zh' ? '当前环境无法绘制月轨' : 'Chart unavailable in this environment'}
         </div>
+      ) : null}
+      {model ? (
+        <>
+          <button
+            type="button"
+            className="flex h-8 items-center justify-center bg-black/14 text-xs text-current/65 backdrop-blur-[10px]"
+            aria-expanded={moreInfo}
+            onClick={() => setMoreInfo((open) => !open)}
+          >
+            {moreInfo
+              ? language === 'zh'
+                ? '收起数据'
+                : 'Hide data'
+              : language === 'zh'
+                ? '显示数据'
+                : 'Show data'}
+          </button>
+          <div
+            className={`overflow-hidden px-2 transition-[max-height,opacity] duration-500 ${moreInfo ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
+          >
+            <MoonDataSwiper model={model} language={language} />
+          </div>
+        </>
       ) : null}
     </div>
   );

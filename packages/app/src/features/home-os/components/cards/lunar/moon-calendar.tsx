@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { calculatePhase } from './lunar-engine';
 import { getUpstreamMoonImageUrl } from './moon-assets';
 import type { MoonCardModel } from './moon-card-model';
+import { getMoonPhaseName } from './moon-card-model';
+import { MoonDataSwiper } from './moon-data-swiper';
 
 function startOfDay(value: Date) {
   const date = new Date(value);
@@ -51,58 +53,107 @@ export function CompactMoonCalendar({
   onOpenFull: () => void;
 }) {
   const locale = language === 'zh' ? 'zh-CN' : 'en-US';
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(selectedDate, index - 3)),
-    [selectedDate]
-  );
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const phase = calculatePhase(selectedDate);
   return (
     <div
-      className="flex h-full min-h-0 flex-col justify-between"
+      className="relative flex h-full min-h-0 flex-col"
       data-card-interactive
       data-lunar-calendar="compact"
     >
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((date) => {
-          const selected = sameDay(date, selectedDate);
-          return (
-            <button
-              type="button"
-              key={date.toISOString()}
-              aria-pressed={selected}
-              aria-label={date.toLocaleDateString(locale)}
-              className={`flex min-w-0 flex-col items-center rounded-lg px-0.5 py-1 transition-colors ${
-                selected ? 'bg-current/[0.08] ring-1 ring-current/20' : 'hover:bg-current/[0.04]'
-              }`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSelect(date);
-              }}
-            >
-              <span className="text-[0.58rem] uppercase text-current/45">
-                {date.toLocaleDateString(locale, { weekday: 'narrow' })}
+      <div className="flex min-h-0 flex-1 items-center gap-4 px-3 py-2">
+        <MoonDayImage date={selectedDate} className="h-28 w-28 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 text-sm font-medium">
+            {selectedDate.toLocaleDateString(locale, { month: 'long', day: 'numeric' })}
+          </div>
+          <div className="text-xs text-current/65">
+            {language === 'zh' ? '照明' : 'Illumination'} {Math.round(phase.illumination * 100)}%
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[0.68rem]">
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月龄' : 'Age'}</span>
+              <span className="tabular-nums">{model.ageDays.toFixed(1)}</span>
+            </span>
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月出' : 'Rise'}</span>
+              <span>
+                {model.moonrise?.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }) ?? '—'}
               </span>
-              <MoonDayImage date={date} className="my-0.5 h-6 w-6" />
-              <span className="text-[0.62rem] tabular-nums">{date.getDate()}</span>
-            </button>
-          );
-        })}
+            </span>
+            <span>
+              <span className="block text-current/45">{language === 'zh' ? '月落' : 'Set'}</span>
+              <span>
+                {model.moonset?.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }) ?? '—'}
+              </span>
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center justify-between gap-2 pt-2 text-[0.68rem]">
-        <span className="truncate text-current/60">
-          {selectedDate.toLocaleDateString(locale, { month: 'long', day: 'numeric' })} ·{' '}
-          {model.illuminationPercent}%
+      <div
+        className="flex h-9 items-center justify-between bg-black/14 px-1 text-current/70"
+        data-lunar-calendar-footer
+      >
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '完整月历' : 'Full calendar'}
+            className="rounded p-1"
+            onClick={onOpenFull}
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '返回今天' : 'Restore today'}
+            className="rounded p-1"
+            onClick={() => onSelect(new Date())}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '前一天' : 'Previous day'}
+            className="rounded p-1"
+            onClick={() => onSelect(addDays(selectedDate, -1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+        <span className="text-xs">
+          {selectedDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
         </span>
-        <button
-          type="button"
-          className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-current/55 hover:bg-current/[0.05]"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenFull();
-          }}
-        >
-          <Maximize2 className="h-3 w-3" />
-          {language === 'zh' ? '完整月历' : 'Full calendar'}
-        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '后一天' : 'Next day'}
+            aria-pressed={false}
+            className="rounded p-1"
+            onClick={() => onSelect(addDays(selectedDate, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={language === 'zh' ? '切换详情' : 'Toggle details'}
+            aria-expanded={detailsOpen}
+            className="rounded p-1"
+            onClick={() => setDetailsOpen((open) => !open)}
+          >
+            {detailsOpen ? '⌃' : '⌄'}
+          </button>
+        </div>
+      </div>
+      <div
+        className={`overflow-hidden px-3 transition-[max-height,opacity] duration-500 ${detailsOpen ? 'max-h-64 py-2 opacity-100' : 'max-h-0 opacity-0'}`}
+      >
+        <MoonDataSwiper model={model} language={language} />
       </div>
     </div>
   );
@@ -123,13 +174,18 @@ export function FullMoonCalendar({
   const [viewDate, setViewDate] = useState(
     () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 12)
   );
+  const [tooltipDate, setTooltipDate] = useState<Date | null>(null);
   useEffect(() => {
     setViewDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1, 12));
   }, [selectedDate]);
   const cells = useMemo(() => {
     const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1, 12);
     const mondayOffset = (first.getDay() + 6) % 7;
-    return Array.from({ length: 42 }, (_, index) => addDays(first, index - mondayOffset));
+    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+    return {
+      filler: Array.from({ length: mondayOffset }, (_, index) => `filler-${index}`),
+      days: Array.from({ length: daysInMonth }, (_, index) => addDays(first, index)),
+    };
   }, [viewDate]);
   const weekdays = Array.from({ length: 7 }, (_, index) =>
     addDays(new Date(2026, 0, 5, 12), index).toLocaleDateString(locale, { weekday: 'narrow' })
@@ -139,7 +195,7 @@ export function FullMoonCalendar({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col"
+      className="relative flex h-full min-h-0 flex-col"
       data-card-interactive
       data-lunar-calendar="full"
       data-calendar-view={`${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`}
@@ -183,7 +239,7 @@ export function FullMoonCalendar({
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] gap-px">
+      <div className="grid min-h-0 flex-1 grid-cols-7 auto-rows-fr gap-px">
         {weekdays.map((day, index) => (
           <span
             className="text-center text-[0.55rem] uppercase text-current/40"
@@ -192,33 +248,81 @@ export function FullMoonCalendar({
             {day}
           </span>
         ))}
-        {cells.map((date) => {
+        {cells.filler.map((key) => (
+          <span key={key} />
+        ))}
+        {cells.days.map((date) => {
           const selected = sameDay(date, selectedDate);
-          const currentMonth = date.getMonth() === viewDate.getMonth();
+          const phase = calculatePhase(date);
+          const emoji =
+            phase.illumination < 0.03
+              ? '🌑'
+              : phase.illumination > 0.97
+                ? '🌕'
+                : phase.phase < 0.5
+                  ? '🌒'
+                  : '🌘';
           return (
             <button
               type="button"
               key={date.toISOString()}
               aria-label={date.toLocaleDateString(locale)}
               aria-pressed={selected}
-              className={`relative flex min-h-0 flex-col items-center justify-center rounded-[4px] transition-colors ${
+              className={`relative flex min-h-0 flex-col items-center justify-center rounded-[4px] border border-transparent transition-colors ${
                 selected
                   ? 'bg-current/[0.08] ring-1 ring-inset ring-current/20'
                   : 'hover:bg-current/[0.04]'
-              } ${currentMonth ? '' : 'opacity-35'}`}
-              onClick={() => onSelect(date)}
+              }`}
+              onClick={() => {
+                onSelect(date);
+                setTooltipDate(date);
+              }}
             >
               <span className="absolute right-0.5 top-0 text-[0.48rem] tabular-nums text-current/55">
                 {date.getDate()}
               </span>
-              <MoonDayImage
-                date={date}
-                className="h-[clamp(10px,2.6vh,24px)] w-[clamp(10px,2.6vh,24px)]"
-              />
+              <span className="text-[clamp(1rem,3vw,2rem)] leading-none">{emoji}</span>
             </button>
           );
         })}
       </div>
+      {tooltipDate ? (
+        <div
+          className="absolute inset-x-3 bottom-3 z-20 rounded-lg border border-current/10 bg-black/80 p-3 text-center shadow-lg backdrop-blur-[10px]"
+          data-lunar-calendar-tooltip
+        >
+          <button
+            type="button"
+            className="absolute right-2 top-1 text-current/60"
+            aria-label={language === 'zh' ? '关闭提示' : 'Close tooltip'}
+            onClick={() => setTooltipDate(null)}
+          >
+            ×
+          </button>
+          <div className="text-xs text-current/60">
+            {tooltipDate.toLocaleDateString(locale, { dateStyle: 'medium' })}
+          </div>
+          <div className="font-medium">
+            {getMoonPhaseName(getPhaseKey(calculatePhase(tooltipDate).phase), language)}
+          </div>
+          <MoonDayImage date={tooltipDate} className="mx-auto my-2 h-20 w-20" />
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function getPhaseKey(phase: number) {
+  const normalized = ((phase % 1) + 1) % 1;
+  const keys = [
+    'new_moon',
+    'waxing_crescent',
+    'first_quarter',
+    'waxing_gibbous',
+    'full_moon',
+    'waning_gibbous',
+    'last_quarter',
+    'waning_crescent',
+  ] as const;
+  return keys[Math.round(normalized * 8) % 8] ?? 'new_moon';
 }

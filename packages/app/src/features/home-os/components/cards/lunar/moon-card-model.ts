@@ -67,6 +67,7 @@ export interface MoonCardModel {
   nextNewMoon?: Date;
   location?: LunarLocation;
   locationSource: 'ha-config' | 'zone-home' | 'manual' | 'none';
+  southernHemisphere?: boolean;
 }
 
 export interface MoonCardModelOptions {
