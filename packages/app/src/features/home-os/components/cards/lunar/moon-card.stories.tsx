@@ -1,6 +1,7 @@
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { EntityCardStoryFrame } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { LunarBackgroundVariant } from './lunar-background-assets';
 import type { LunarSection } from './moon-card';
 import { MoonCard } from './moon-card';
 import { createMoonCardFixture, type MoonCardModel, type MoonPhaseKey } from './moon-card-model';
@@ -14,6 +15,7 @@ interface MoonCardStudioProps {
   source: MoonCardModel['source'];
   theme: ThemeType;
   initialSection: LunarSection;
+  backgroundVariant: LunarBackgroundVariant;
 }
 
 function MoonCardStudio({
@@ -25,6 +27,7 @@ function MoonCardStudio({
   source,
   theme,
   initialSection,
+  backgroundVariant,
 }: MoonCardStudioProps) {
   const normalizedIllumination = Math.min(1, Math.max(0, illumination));
   const model = createMoonCardFixture(phase, {
@@ -41,6 +44,7 @@ function MoonCardStudio({
         language={language}
         theme={theme}
         initialSection={initialSection}
+        backgroundVariant={backgroundVariant}
       />
     </EntityCardStoryFrame>
   );
@@ -80,6 +84,7 @@ const meta = {
     source: { control: 'inline-radio', options: ['entity', 'calculated'] },
     theme: { control: 'inline-radio', options: ['dark', 'light'] },
     initialSection: { control: 'inline-radio', options: ['base', 'horizon', 'calendar'] },
+    backgroundVariant: { control: 'inline-radio', options: ['none', 'bg0', 'bg1', 'bg2', 'bg3'] },
   },
   args: {
     size: 'medium',
@@ -90,6 +95,7 @@ const meta = {
     source: 'entity',
     theme: 'dark',
     initialSection: 'base',
+    backgroundVariant: 'bg0',
   },
 } satisfies Meta<typeof MoonCardStudio>;
 
@@ -132,6 +138,13 @@ export const MediumCalendar: Story = { args: { size: 'medium', initialSection: '
 export const LargeBase: Story = { args: { size: 'large', initialSection: 'base' } };
 export const LargeHorizon: Story = { args: { size: 'large', initialSection: 'horizon' } };
 export const LargeCalendar: Story = { args: { size: 'large', initialSection: 'calendar' } };
+export const MediumBackgroundBg0: Story = { args: { size: 'medium', backgroundVariant: 'bg0' } };
+export const MediumBackgroundBg1: Story = { args: { size: 'medium', backgroundVariant: 'bg1' } };
+export const MediumBackgroundBg2: Story = { args: { size: 'medium', backgroundVariant: 'bg2' } };
+export const MediumBackgroundBg3: Story = { args: { size: 'medium', backgroundVariant: 'bg3' } };
+export const MediumBackgroundCurrent: Story = {
+  args: { size: 'medium', backgroundVariant: 'none' },
+};
 export const InteractiveMedium: Story = {
   args: { size: 'medium', initialSection: 'base' },
   parameters: {

@@ -21,6 +21,7 @@ upstream custom element, `ha-card`, editor, or Home Assistant-only UI.
   `moon-compact-view`, `moon-data-info`, `moon-chart-dynamic`, `moon-calendar-footer`,
   `moon-calendar-popup`, `lunar-phase-header`, and `lunar-star-particles`
 - Vendored resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/moon_pic/`
+- Vendored background resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/background/moon_bg_0.webp` through `moon_bg_3.webp`
 - License: MIT, preserved in the adjacent `LICENSE` file
 - Home OS rendering: `packages/app/src/features/home-os/components/cards/lunar/`
 
@@ -30,6 +31,7 @@ calendar navigation/date selection, lazy star particles, left-image/right-data c
 compact hierarchy, and SunCalc3 model behavior. The port replaces the upstream Lit base class,
 `hass` object, `ha-card`/`ha-icon`, Lovelace editor/configuration, and Home Assistant theme/location
 plumbing with React and Home OS adapters; it does not include the Home Assistant frontend runtime.
+The four background images are used only as low-opacity, pointer-transparent card underlays.
 
 ## Audited visual references (no source copied)
 

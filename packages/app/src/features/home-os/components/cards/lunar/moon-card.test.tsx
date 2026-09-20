@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveSemanticEntities } from '../../../mapping/semantic-resolver';
 import { homeOsEntity } from '../../../tests/fixtures';
 import { HomeOsWidget } from '../home-os-widget';
+import { getLunarBackgroundVariant } from './lunar-background-assets';
 import { MoonCard, MoonCardDetail, MoonPhaseVisual } from './moon-card';
 import {
   buildMoonCardModel,
@@ -59,6 +60,14 @@ describe('interactive Lunar Phase Card port', () => {
       '下弦月',
       '残月',
     ]);
+  });
+
+  it('maps lunar sections to the subdued upstream background variants', () => {
+    expect(getLunarBackgroundVariant('base')).toBe('bg0');
+    expect(getLunarBackgroundVariant('horizon')).toBe('bg3');
+    expect(getLunarBackgroundVariant('calendar')).toBe('bg1');
+    expect(getLunarBackgroundVariant('full_calendar')).toBe('bg2');
+    expect(getLunarBackgroundVariant('base', true)).toBe('bg2');
   });
 
   it.each(PHASES)('renders the upstream %s image mapping', (phase) => {

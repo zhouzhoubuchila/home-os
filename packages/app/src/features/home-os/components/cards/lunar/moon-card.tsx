@@ -13,6 +13,8 @@ import {
   useRef,
   useState,
 } from 'react';
+import { LunarBackground } from './lunar-background';
+import { getLunarBackgroundVariant, type LunarBackgroundVariant } from './lunar-background-assets';
 import { UPSTREAM_LUNAR_PHASE_CARD_COMMIT } from './moon-assets';
 import { CompactMoonCalendar, FullMoonCalendar } from './moon-calendar';
 import { buildMoonCardModelForDate, getMoonPhaseName, type MoonCardModel } from './moon-card-model';
@@ -291,6 +293,7 @@ export interface InteractiveLunarCardProps {
   theme?: ThemeType;
   mode?: LunarCardMode;
   initialSection?: LunarSection;
+  backgroundVariant?: LunarBackgroundVariant;
 }
 
 /** React port preserving upstream's section, Swiper, chart, calendar and particles architecture. */
@@ -301,6 +304,7 @@ export function InteractiveLunarCard({
   theme,
   mode = 'dashboard',
   initialSection = 'base',
+  backgroundVariant,
 }: InteractiveLunarCardProps) {
   const { theme: activeTheme } = useTheme();
   const reducedMotion = useReducedMotion();
@@ -317,6 +321,8 @@ export function InteractiveLunarCard({
       sameDay(selectedDate, model.date) ? model : buildMoonCardModelForDate(model, selectedDate),
     [model, selectedDate]
   );
+  const resolvedBackground =
+    backgroundVariant ?? getLunarBackgroundVariant(activeSection, mode === 'expanded');
   const changeSection = (section: LunarSection) => {
     if (section === activeSection) return;
     setHasInteracted(true);
@@ -396,7 +402,14 @@ export function InteractiveLunarCard({
       contentClassName="h-full"
       disableDefaultSheen
       underlay={
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_26%_42%,rgba(226,232,240,0.07),transparent_38%)] dark:bg-[radial-gradient(circle_at_26%_42%,rgba(148,163,184,0.08),transparent_38%)]" />
+        <>
+          <LunarBackground
+            variant={resolvedBackground}
+            theme={theme ?? activeTheme}
+            section={activeSection}
+          />
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_26%_42%,rgba(226,232,240,0.07),transparent_38%)] dark:bg-[radial-gradient(circle_at_26%_42%,rgba(148,163,184,0.08),transparent_38%)]" />
+        </>
       }
     >
       <div
