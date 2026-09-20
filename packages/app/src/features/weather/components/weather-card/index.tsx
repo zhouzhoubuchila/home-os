@@ -3,10 +3,7 @@ import { CardWrapper } from '@navet/app/components/ui/card-wrapper';
 import { useAccentColor, useI18n } from '@navet/app/hooks';
 import { settingsSelectors } from '@navet/app/stores/selectors';
 import { useSettingsStore, type WeatherForecastMode } from '@navet/app/stores/settings-store';
-import {
-  formatTemperatureFromSourceUnit,
-  type TemperatureUnit,
-} from '@navet/app/utils/temperature';
+import type { TemperatureUnit } from '@navet/app/utils/temperature';
 import { Navigation } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useWeatherCardController } from './use-weather-card-controller';
@@ -16,6 +13,10 @@ import { WeatherForecastRow } from './weather-forecast-row';
 import { formatWeatherConditionLabel, type WeatherCondition, WeatherIcon } from './weather-icon';
 import { WeatherSettingsDialog } from './weather-settings-dialog';
 import { WeatherSunTimes } from './weather-sun-times';
+import {
+  formatWeatherTemperature,
+  resolveWeatherTemperatureUnit,
+} from './weather-temperature';
 import type { WeatherModel } from '@navet/app/features/weather/model/weather-model';
 import { WeatherCenter } from './weather-center';
 import { WeatherChart } from './weather-chart';
@@ -134,7 +135,8 @@ export const WeatherCard = memo(function WeatherCard({
 
   const current = model?.current;
   const resolvedTemperature = current?.temperature ?? temperature;
-  const resolvedTemperatureUnit = (current?.temperatureUnit as TemperatureUnit | undefined) ?? sourceTemperatureUnit;
+  const modelTemperatureUnit = resolveWeatherTemperatureUnit(current?.temperatureUnit);
+  const resolvedTemperatureUnit = modelTemperatureUnit ?? sourceTemperatureUnit;
   const resolvedFeelsLike = current?.apparentTemperature ?? feelsLikeTemperature;
   const resolvedFeelsLikeUnit = resolvedTemperatureUnit ?? feelsLikeTemperatureUnit;
   const resolvedHumidity = current?.humidity ?? humidity;
@@ -170,8 +172,8 @@ export const WeatherCard = memo(function WeatherCard({
         isDaytime: point.isDaytime,
         high: point.temperature,
         low: point.temperatureLow,
-        highUnit: resolvedTemperatureUnit,
-        lowUnit: resolvedTemperatureUnit,
+        highUnit: point.temperatureUnit ?? resolvedTemperatureUnit,
+        lowUnit: point.temperatureUnit ?? resolvedTemperatureUnit,
         precipitationAmount: point.precipitationAmount,
         precipitationProbability: point.precipitationProbability,
         precipitationUnit: point.precipitationUnit,
@@ -202,10 +204,8 @@ export const WeatherCard = memo(function WeatherCard({
   const compactTemperatureBlockClassName = isSmall ? 'mt-1' : isMedium ? 'mt-1' : 'mt-1.5';
   const compactTemperatureClassName = isSmall ? 'mb-0.5' : isMedium ? 'mb-0.5' : 'mb-1';
   const compactSummaryClassName = isSmall ? 'mt-0.5 max-w-18' : isMedium ? 'mt-0.5' : 'mt-1';
-  const formatWeatherTemperature = (value?: number, sourceUnit?: TemperatureUnit) =>
-    value === undefined
-      ? ''
-      : formatTemperatureFromSourceUnit(value, sourceUnit, temperatureUnit).replace('°', ' °');
+  const formatCardTemperature = (value?: number, sourceUnit?: unknown) =>
+    formatWeatherTemperature(value, sourceUnit, temperatureUnit);
   const textPrimary = weatherTextTreatment.primary;
   const textSecondary = weatherTextTreatment.secondary;
   const shellGlowOpacityClass =
@@ -317,15 +317,15 @@ export const WeatherCard = memo(function WeatherCard({
                     className={`font-bold leading-none ${compactTemperatureTextClassName} ${compactTemperatureClassName}`}
                     style={titleStyle}
                   >
-                    {formatWeatherTemperature(resolvedTemperature, resolvedTemperatureUnit)}
+                    {formatCardTemperature(resolvedTemperature, resolvedTemperatureUnit)}
                   </div>
                   <div className={compactMetaTextClassName} style={subtitleStyle}>
-                    {highTemp !== undefined ? `H:${formatWeatherTemperature(highTemp, highTempUnit)}` : null}
+                    {highTemp !== undefined ? `H:${formatCardTemperature(highTemp, highTempUnit)}` : null}
                     {highTemp !== undefined && lowTemp !== undefined ? ' ' : null}
-                    {lowTemp !== undefined ? `L:${formatWeatherTemperature(lowTemp, lowTempUnit)}` : null}
+                    {lowTemp !== undefined ? `L:${formatCardTemperature(lowTemp, lowTempUnit)}` : null}
                     {typeof resolvedFeelsLike === 'number'
                       ? ` · ${t('weather.feelsLikeShort', {
-                          temp: formatWeatherTemperature(
+                          temp: formatCardTemperature(
                             resolvedFeelsLike,
                             resolvedFeelsLikeUnit
                           ),
@@ -336,7 +336,7 @@ export const WeatherCard = memo(function WeatherCard({
               ) : (
                 <div className="mt-1 text-2xl font-semibold leading-none" style={titleStyle}>
                   {resolvedTemperature !== undefined
-                    ? formatWeatherTemperature(resolvedTemperature, resolvedTemperatureUnit)
+                    ? formatCardTemperature(resolvedTemperature, resolvedTemperatureUnit)
                     : null}
                 </div>
               )}
@@ -362,8 +362,8 @@ export const WeatherCard = memo(function WeatherCard({
             <div className="mt-auto flex items-center justify-between gap-3">
               <div className="min-w-0 text-sm font-medium" style={subtitleStyle}>{summaryLabel}</div>
               <div className="text-right text-xs" style={subtitleStyle}>
-                {highTemp !== undefined ? `H:${formatWeatherTemperature(highTemp, highTempUnit)} ` : null}
-                {lowTemp !== undefined ? `L:${formatWeatherTemperature(lowTemp, lowTempUnit)}` : null}
+                {highTemp !== undefined ? `H:${formatCardTemperature(highTemp, highTempUnit)} ` : null}
+                {lowTemp !== undefined ? `L:${formatCardTemperature(lowTemp, lowTempUnit)}` : null}
               </div>
             </div>
           ) : isSmall || isMedium ? (
@@ -479,6 +479,8 @@ export const WeatherCard = memo(function WeatherCard({
                 <WeatherChart
                   forecast={model.forecast.hourly.slice(0, size === 'extra-wide' ? 24 : 12)}
                   theme={theme}
+                  sourceTemperatureUnit={resolvedTemperatureUnit}
+                  displayTemperatureUnit={temperatureUnit}
                 />
               ) : null}
 

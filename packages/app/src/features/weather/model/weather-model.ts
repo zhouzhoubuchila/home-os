@@ -1,3 +1,5 @@
+import type { TemperatureUnit } from '@navet/app/utils/temperature';
+
 export type WeatherForecastType = 'hourly' | 'daily' | 'twice_daily';
 
 export interface WeatherForecastCollections {
@@ -17,6 +19,7 @@ export interface WeatherForecastPoint {
   condition?: string;
   isDaytime?: boolean;
   temperature?: number;
+  temperatureUnit?: TemperatureUnit;
   temperatureLow?: number;
   apparentTemperature?: number;
   precipitationAmount?: number;
@@ -40,7 +43,7 @@ export interface WeatherModel {
     condition?: string;
     isDay?: boolean;
     temperature?: number;
-    temperatureUnit?: string;
+    temperatureUnit?: TemperatureUnit;
     apparentTemperature?: number;
     humidity?: number;
     pressure?: number;

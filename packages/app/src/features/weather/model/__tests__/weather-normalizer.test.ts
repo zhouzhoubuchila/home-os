@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import {
+  formatWeatherTemperature,
+  formatWeatherTemperatureValue,
+} from '../../components/weather-card/weather-temperature';
 import { normalizeWeatherModel } from '../weather-normalizer';
 import { getDailyForecastType, supportsForecastType } from '../weather-model';
 
@@ -85,5 +89,35 @@ describe('normalizeWeatherModel', () => {
     expect(model.current.temperature).toBeUndefined();
     expect(model.current.humidity).toBeUndefined();
     expect(model.current.precipitationAmount).toBeUndefined();
+  });
+
+  it('normalizes Celsius units at the model boundary without shifting temperatures', () => {
+    const model = normalizeWeatherModel({
+      entityId: 'weather.home',
+      entity: {
+        state: 'sunny',
+        attributes: { temperature: 23, temperature_unit: '°C' },
+      },
+      forecasts: {
+        daily: [{ datetime: '2026-09-21T12:00:00Z', temperature: 29 }],
+      },
+    });
+
+    expect(model.current.temperatureUnit).toBe('celsius');
+    expect(formatWeatherTemperature(model.current.temperature, model.current.temperatureUnit, 'celsius')).toBe('23 °C');
+    expect(formatWeatherTemperatureValue(model.forecast.daily[0].temperature, model.forecast.daily[0].temperatureUnit, 'celsius')).toBe('29 °C');
+  });
+
+  it('converts Fahrenheit source values after normalization', () => {
+    const model = normalizeWeatherModel({
+      entityId: 'weather.home',
+      entity: {
+        state: 'sunny',
+        attributes: { temperature: 73.4, temperature_unit: '°F' },
+      },
+    });
+
+    expect(model.current.temperatureUnit).toBe('fahrenheit');
+    expect(formatWeatherTemperature(model.current.temperature, model.current.temperatureUnit, 'celsius')).toBe('23 °C');
   });
 });
