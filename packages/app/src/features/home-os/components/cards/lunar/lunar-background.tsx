@@ -70,8 +70,18 @@ export function LunarBackground({
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(90deg, rgb(4 7 16 / 0.12) 0%, rgb(4 7 16 / 0.24) 38%, rgb(4 7 16 / 0.58) 70%, rgb(4 7 16 / 0.72) 100%)',
+            'linear-gradient(90deg, rgb(3 6 14 / 0.06) 0%, rgb(3 6 14 / 0.16) 32%, rgb(3 6 14 / 0.46) 62%, rgb(3 6 14 / 0.70) 100%)',
           opacity: theme === 'light' ? 0.12 : 1,
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          boxShadow:
+            theme === 'light'
+              ? 'inset 0 0 34px rgb(1 4 10 / 0.08)'
+              : 'inset 0 0 34px rgb(1 4 10 / 0.28)',
         }}
         aria-hidden="true"
       />

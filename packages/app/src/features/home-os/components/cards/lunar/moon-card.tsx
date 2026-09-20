@@ -153,12 +153,12 @@ export function MoonPhaseVisual({
       data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
     >
       <span
-        className="pointer-events-none absolute inset-[18%] rounded-full bg-[rgb(226_232_240/0.12)] blur-2xl transition-transform duration-500 motion-reduce:transition-none"
+        className="pointer-events-none absolute inset-[21%] rounded-full bg-[rgb(226_232_240/0.065)] blur-2xl transition-transform duration-500 motion-reduce:transition-none"
         style={{ transform: 'translate(var(--glow-x), var(--glow-y))' }}
         aria-hidden="true"
       />
       <span
-        className="pointer-events-none absolute inset-[25%] rounded-full bg-black/20 blur-xl transition-transform duration-500 motion-reduce:transition-none"
+        className="pointer-events-none absolute inset-[27%] rounded-full bg-black/14 blur-xl transition-transform duration-500 motion-reduce:transition-none"
         style={{ transform: 'translate(var(--shadow-x), var(--shadow-y))' }}
         aria-hidden="true"
       />
@@ -246,7 +246,7 @@ function PhaseBase({
         <MoonPhaseVisual
           model={model}
           language={language}
-          className={large ? 'h-40 w-40' : 'h-[7.1rem] w-[7.1rem]'}
+          className={large ? 'h-40 w-40' : 'h-[6.7rem] w-[6.7rem]'}
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
@@ -256,7 +256,10 @@ function PhaseBase({
         <h2 className="truncate text-[1.2rem] font-semibold tracking-[-0.025em]">{phaseName}</h2>
         <div className="mt-1 flex items-end gap-1.5">
           <span className="text-[2.15rem] font-medium leading-none tracking-[-0.055em] tabular-nums">
-            {model.illuminationPercent}%
+            {model.illuminationPercent}
+            <span className="ml-0.5 text-[1.35rem] font-normal tracking-[-0.02em] text-current/75">
+              %
+            </span>
           </span>
           <span className="mb-0.5 text-[0.62rem] text-current/48">
             {language === 'zh' ? '照明' : 'illuminated'}
@@ -422,7 +425,7 @@ export function InteractiveLunarCard({
         data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
         data-theme={theme ?? activeTheme}
       >
-        <style>{`@keyframes navet-lunar-breathe { 0%,100% { transform: translateY(-1px); opacity: .98; } 50% { transform: translateY(1px); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .navet-lunar-breathe { animation: none !important; } }`}</style>
+        <style>{`@keyframes navet-lunar-breathe { 0%,100% { transform: translateY(-0.5px); opacity: .995; } 50% { transform: translateY(0.5px); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .navet-lunar-breathe { animation: none !important; } }`}</style>
         {hasInteracted && large ? (
           <Suspense fallback={null}>
             <LazyLunarStarfield density={large ? 'large' : 'medium'} />

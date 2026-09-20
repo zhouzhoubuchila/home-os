@@ -30,23 +30,23 @@ export const LUNAR_BACKGROUND_CONFIG: Record<
 > = {
   bg0: {
     position: '50% 52%',
-    opacity: 0.32,
-    filter: 'saturate(.76) brightness(.76) contrast(.96)',
+    opacity: 0.26,
+    filter: 'saturate(.70) brightness(.70) contrast(.96)',
   },
   bg1: {
     position: '50% 32%',
-    opacity: 0.28,
-    filter: 'saturate(.74) brightness(.74) contrast(.96)',
+    opacity: 0.2,
+    filter: 'saturate(.68) brightness(.68) contrast(.96)',
   },
   bg2: {
     position: '50% 42%',
-    opacity: 0.2,
-    filter: 'saturate(.60) brightness(.62) contrast(.92)',
+    opacity: 0.14,
+    filter: 'saturate(.54) brightness(.58) contrast(.92)',
   },
   bg3: {
-    position: '38% 48%',
-    opacity: 0.22,
-    filter: 'saturate(.66) brightness(.68) contrast(.94)',
+    position: '32% 46%',
+    opacity: 0.17,
+    filter: 'saturate(.58) brightness(.64) contrast(.94)',
   },
 };
 

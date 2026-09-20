@@ -145,6 +145,40 @@ export const MediumBackgroundBg3: Story = { args: { size: 'medium', backgroundVa
 export const MediumBackgroundCurrent: Story = {
   args: { size: 'medium', backgroundVariant: 'none' },
 };
+export const MediumFinalComparison: Story = {
+  render: () => {
+    const model = createMoonCardFixture('waxing_gibbous', {
+      illumination: 0.82,
+      illuminationPercent: 82,
+    });
+    return (
+      <div className="grid min-h-screen grid-cols-1 gap-5 bg-slate-950 p-6 text-white md:grid-cols-2">
+        {(['none', 'bg0', 'bg1', 'bg3'] as const).map((variant) => (
+          <div className="min-w-0" key={variant}>
+            <p className="mb-2 text-xs uppercase tracking-[0.16em] text-white/55">
+              {variant === 'none' ? 'Current' : `${variant.toUpperCase()} tuned`}
+            </p>
+            <MoonCard
+              size="medium"
+              model={model}
+              language="en"
+              theme="dark"
+              backgroundVariant={variant}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Same 82% waxing-gibbous model and Medium size; only the atmosphere variant changes.',
+      },
+    },
+  },
+};
 export const InteractiveMedium: Story = {
   args: { size: 'medium', initialSection: 'base' },
   parameters: {
@@ -186,4 +220,10 @@ export const ReducedMotion: Story = {
       },
     },
   },
+};
+export const VeryBrightMoon: Story = {
+  args: { size: 'medium', phase: 'full_moon', illumination: 0.98, backgroundVariant: 'bg0' },
+};
+export const VeryDarkMoon: Story = {
+  args: { size: 'medium', phase: 'new_moon', illumination: 0.04, backgroundVariant: 'bg0' },
 };
