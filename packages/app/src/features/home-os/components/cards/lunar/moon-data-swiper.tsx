@@ -2,7 +2,7 @@ import Swiper from 'swiper';
 import { Keyboard, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MoonCardModel } from './moon-card-model';
 
 interface DataItem {
@@ -20,7 +20,12 @@ function formatDate(value: Date | undefined, locale: string) {
   return value?.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) ?? '—';
 }
 
-function pagesFor(model: MoonCardModel, language: string, chunkedLimit: number): DataItem[][] {
+function pagesFor(
+  model: MoonCardModel,
+  language: string,
+  chunkedLimit: number,
+  hideItems: readonly string[]
+): DataItem[][] {
   const zh = language === 'zh';
   const locale = zh ? 'zh-CN' : 'en-US';
   const degree = (value?: number) => (value === undefined ? '—' : `${value.toFixed(1)}°`);
@@ -83,9 +88,10 @@ function pagesFor(model: MoonCardModel, language: string, chunkedLimit: number):
       value: formatDate(model.nextFullMoon ?? model.nextNewMoon, locale),
     },
   ];
+  const visibleItems = items.filter((item) => !hideItems.includes(item.key));
   const pages: DataItem[][] = [];
-  for (let index = 0; index < items.length; index += chunkedLimit) {
-    pages.push(items.slice(index, index + chunkedLimit));
+  for (let index = 0; index < visibleItems.length; index += chunkedLimit) {
+    pages.push(visibleItems.slice(index, index + chunkedLimit));
   }
   return pages;
 }
@@ -95,14 +101,36 @@ export function MoonDataSwiper({
   model,
   language,
   chunkedLimit = 5,
+  maxDataPerPage,
+  hideItems = [],
+  cardWidth: cardWidthOverride,
 }: {
   model: MoonCardModel;
   language: string;
   chunkedLimit?: number;
+  maxDataPerPage?: number;
+  hideItems?: readonly string[];
+  cardWidth?: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<Swiper | null>(null);
-  const pages = pagesFor(model, language, chunkedLimit);
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const resolvedLimit =
+    maxDataPerPage ?? ((cardWidthOverride ?? measuredWidth) > 460 ? 6 : chunkedLimit);
+  const pages = useMemo(
+    () => pagesFor(model, language, resolvedLimit, hideItems),
+    [hideItems, language, model, resolvedLimit]
+  );
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const measure = () => setMeasuredWidth(root.getBoundingClientRect().width);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -128,12 +156,12 @@ export function MoonDataSwiper({
 
   useEffect(() => {
     swiperRef.current?.update();
-  }, [model]);
+  }, [model, pages.length]);
 
   return (
     <div
       ref={rootRef}
-      className="swiper relative h-auto min-h-0 w-full overflow-hidden [--swiper-pagination-bullet-inactive-color:currentColor] [--swiper-pagination-bullet-inactive-opacity:0.22] [--swiper-theme-color:currentColor] [&_.swiper-pagination-bullet]:!transition-all [&_.swiper-pagination-bullet-active]:!w-3 [&_.swiper-pagination-bullet-active]:!rounded-full"
+      className="swiper relative h-auto min-h-0 w-full overflow-hidden [--swiper-pagination-bullet-inactive-color:currentColor] [--swiper-pagination-bullet-inactive-opacity:0.22] [--swiper-theme-color:currentColor] [&_.swiper-pagination]:!relative [&_.swiper-pagination]:!bottom-0 [&_.swiper-pagination]:!left-0 [&_.swiper-pagination]:!flex [&_.swiper-pagination]:!h-auto [&_.swiper-pagination]:!min-h-0 [&_.swiper-pagination]:!w-full [&_.swiper-pagination]:!items-center [&_.swiper-pagination]:!justify-center [&_.swiper-pagination]:!py-1 [&_.swiper-pagination-bullet]:!transition-all [&_.swiper-pagination-bullet-active]:!w-3 [&_.swiper-pagination-bullet-active]:!rounded-full [&_.swiper-pagination-bullet-active]:!opacity-70"
       data-card-interactive
       data-lunar-swiper
       data-lunar-swiper-grab-cursor="true"
@@ -142,7 +170,7 @@ export function MoonDataSwiper({
       <div className="swiper-wrapper">
         {pages.map((page, index) => (
           <div className="swiper-slide" key={`page-${index + 1}`} data-lunar-data-page={index + 1}>
-            <div className="flex w-full flex-col pb-2 pt-1">
+            <div className="flex w-full flex-col">
               {page.map((item) => (
                 <div
                   className="flex w-full items-center border-b border-current/10 py-[3px] text-[0.68rem] last:border-b-0"

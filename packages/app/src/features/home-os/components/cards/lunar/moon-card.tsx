@@ -2,7 +2,7 @@ import { BaseCard } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { useTheme } from '@navet/app/hooks';
 import type { ThemeType } from '@navet/app/hooks/use-theme';
-import { CalendarDays, ChartNoAxesCombined, Moon } from 'lucide-react';
+import { CalendarDays, ChartNoAxesCombined, Clock3, Moon, Sunrise, Sunset } from 'lucide-react';
 import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { LunarBackground } from './lunar-background';
 import type { LunarBackgroundVariant } from './lunar-background-assets';
@@ -16,6 +16,8 @@ const LazyLunarStarfield = lazy(() => import('./lunar-starfield'));
 
 export type LunarSection = 'base' | 'calendar' | 'horizon' | 'full_calendar';
 export type LunarCardMode = 'dashboard' | 'expanded';
+export type LunarCompactMode = 'standard' | 'minimal' | 'moon-only';
+export type LunarMoonPosition = 'left' | 'center' | 'right';
 
 function sameDay(left: Date, right: Date) {
   return (
@@ -62,6 +64,10 @@ export function MoonPhaseVisual({
       }
       className={`relative aspect-square shrink-0 select-none ${hovered ? 'group' : ''} ${className}`}
       style={style}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: the upstream moon image exposes keyboard focus for hover parity
+      tabIndex={0}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onMouseMove={(event) => {
@@ -71,6 +77,19 @@ export function MoonPhaseVisual({
           y: ((event.clientY - bounds.top) / bounds.height) * 100,
         });
       }}
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setHovered(true);
+        setPointer({
+          x: ((touch.clientX - bounds.left) / bounds.width) * 100,
+          y: ((touch.clientY - bounds.top) / bounds.height) * 100,
+        });
+      }}
+      onTouchEnd={() => setHovered(false)}
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
       data-moon-phase={model.phaseKey}
       data-moon-direction={model.phase < 0.5 ? 'waxing' : 'waning'}
       data-upstream-moon-image="true"
@@ -124,10 +143,8 @@ function SectionControl({
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
-      className={`flex h-9 w-9 items-center justify-center rounded-md text-[0.6rem] transition-[background-color,opacity] disabled:opacity-50 ${
-        active
-          ? 'bg-current/[0.07] text-current/78'
-          : 'text-current/38 hover:bg-current/[0.04] hover:text-current/65'
+      className={`flex h-9 w-9 items-center justify-center rounded-md text-[0.6rem] transition-[color,opacity] disabled:opacity-50 ${
+        active ? 'text-[var(--accent-color)] opacity-90' : 'text-current/38 hover:text-current/65'
       }`}
       onClick={(event) => {
         event.stopPropagation();
@@ -143,45 +160,73 @@ function SectionControl({
 function PhaseBase({
   model,
   language,
-  large,
+  vertical = false,
+  moonPosition = 'left',
+  moonSize: moonSizeOverride,
+  maxDataPerPage,
+  hideItems,
 }: {
   model: MoonCardModel;
   language: string;
-  large: boolean;
+  vertical?: boolean;
+  moonPosition?: LunarMoonPosition;
+  moonSize?: number;
+  maxDataPerPage?: number;
+  hideItems?: readonly string[];
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [moonSize, setMoonSize] = useState(150);
+  const [computedMoonSize, setMoonSize] = useState(150);
+  const [cardWidth, setCardWidth] = useState(0);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const measure = () => {
       const width = root.offsetWidth;
+      setCardWidth(width);
       const availableHeight = width * 0.5 - root.offsetTop;
-      setMoonSize(Math.max(0, Math.min(width / 3.2, availableHeight, 150)));
+      setMoonSize(moonSizeOverride ?? Math.min(width / 3.2, availableHeight, 150));
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     return () => observer.disconnect();
-  }, []);
+  }, [moonSizeOverride]);
 
   return (
     <div
       ref={rootRef}
-      className="[container-type:inline-size] flex h-full min-h-0 items-center gap-4 sm:gap-6"
+      className={`[container-type:inline-size] flex h-full min-h-0 gap-4 px-2 sm:gap-6 ${
+        vertical || moonPosition === 'center'
+          ? 'grid grid-rows-[auto_auto] items-end justify-items-center gap-2'
+          : moonPosition === 'right'
+            ? 'flex-row-reverse items-center'
+            : 'items-center'
+      }`}
       data-lunar-section-content="base"
+      data-lunar-base="upstream"
     >
-      <div className="flex min-w-0 items-center justify-center" style={{ width: moonSize }}>
+      <div
+        className={`flex h-auto min-w-0 items-center justify-center ${vertical || moonPosition === 'center' ? 'w-full' : 'w-full'}`}
+        style={{ maxWidth: vertical || moonPosition === 'center' ? '100%' : computedMoonSize }}
+      >
         <MoonPhaseVisual
           model={model}
           language={language}
           className="h-full w-full"
-          style={{ maxWidth: moonSize, maxHeight: moonSize }}
+          style={{ maxWidth: computedMoonSize, maxHeight: computedMoonSize }}
         />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
-        <MoonDataSwiper model={model} language={language} chunkedLimit={large ? 6 : 5} />
+      <div
+        className={`inline-grid min-w-0 w-full grid-rows-[auto_auto] content-center ${vertical || moonPosition === 'center' ? 'px-1' : 'flex-1'}`}
+      >
+        <MoonDataSwiper
+          model={model}
+          language={language}
+          maxDataPerPage={maxDataPerPage}
+          hideItems={hideItems}
+          cardWidth={cardWidth}
+        />
       </div>
     </div>
   );
@@ -194,6 +239,29 @@ export interface InteractiveLunarCardProps {
   /** Home OS shell title; upstream's internal phase header stays in content. */
   title?: string;
   hideStarfield?: boolean;
+  hideBackground?: boolean;
+  customBackground?: string;
+  hideButtons?: boolean;
+  compactView?: boolean;
+  compactMode?: LunarCompactMode;
+  compactMenuButton?: boolean;
+  moonPosition?: LunarMoonPosition;
+  moonSize?: number;
+  hideItems?: readonly string[];
+  maxDataPerPage?: number;
+  southernHemisphere?: boolean;
+  hide_background?: boolean;
+  custom_background?: string;
+  hide_starfield?: boolean;
+  hide_buttons?: boolean;
+  compact_view?: boolean;
+  compact_mode?: LunarCompactMode;
+  compact_menu_button?: boolean;
+  moon_position?: LunarMoonPosition;
+  moon_size?: number;
+  hide_items?: readonly string[];
+  max_data_per_page?: number;
+  southern_hemisphere?: boolean;
   theme?: ThemeType;
   mode?: LunarCardMode;
   initialSection?: LunarSection;
@@ -207,18 +275,59 @@ export function InteractiveLunarCard({
   language,
   title,
   hideStarfield = false,
+  hideBackground = false,
+  customBackground,
+  hideButtons = false,
+  compactView = false,
+  compactMode,
+  compactMenuButton = false,
+  moonPosition = 'left',
+  moonSize,
+  hideItems = [],
+  maxDataPerPage,
+  southernHemisphere,
+  hide_background: hideBackgroundAlias,
+  custom_background: customBackgroundAlias,
+  hide_starfield: hideStarfieldAlias,
+  hide_buttons: hideButtonsAlias,
+  compact_view: compactViewAlias,
+  compact_mode: compactModeAlias,
+  compact_menu_button: compactMenuButtonAlias,
+  moon_position: moonPositionAlias,
+  moon_size: moonSizeAlias,
+  hide_items: hideItemsAlias,
+  max_data_per_page: maxDataPerPageAlias,
+  southern_hemisphere: southernHemisphereAlias,
   theme,
   mode = 'dashboard',
   initialSection = 'base',
   backgroundVariant,
 }: InteractiveLunarCardProps) {
+  hideBackground = hideBackground || hideBackgroundAlias === true;
+  customBackground = customBackground ?? customBackgroundAlias;
+  hideStarfield = hideStarfield || hideStarfieldAlias === true;
+  hideButtons = hideButtons || hideButtonsAlias === true;
+  compactView = compactView || compactViewAlias === true;
+  compactMode = compactMode ?? compactModeAlias;
+  compactMenuButton = compactMenuButton || compactMenuButtonAlias === true;
+  moonPosition = moonPositionAlias ?? moonPosition;
+  moonSize = moonSizeAlias ?? moonSize;
+  hideItems = hideItemsAlias ?? hideItems;
+  maxDataPerPage = maxDataPerPageAlias ?? maxDataPerPage;
+  southernHemisphere = southernHemisphereAlias ?? southernHemisphere;
   const { theme: activeTheme } = useTheme();
   const reducedMotion = useReducedMotion();
-  const small =
-    mode === 'dashboard' && (size === 'small' || size === 'tiny' || size === 'extra-small');
+  const compact =
+    mode === 'dashboard' &&
+    (compactView || size === 'small' || size === 'tiny' || size === 'extra-small');
+  const resolvedCompactMode =
+    compactMode ??
+    (size === 'tiny' ? 'moon-only' : size === 'extra-small' ? 'minimal' : 'standard');
   const large =
     mode === 'expanded' || size === 'large' || size === 'extra-large' || size === 'extra-wide';
-  const [activeSection, setActiveSection] = useState<LunarSection>(small ? 'base' : initialSection);
+  const [activeSection, setActiveSection] = useState<LunarSection>(
+    compact ? 'base' : initialSection
+  );
   const [changing, setChanging] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date(model.date));
   const [compactDetails, setCompactDetails] = useState(false);
@@ -227,9 +336,31 @@ export function InteractiveLunarCard({
       sameDay(selectedDate, model.date) ? model : buildMoonCardModelForDate(model, selectedDate),
     [model, selectedDate]
   );
+  const displayModel = useMemo(
+    () =>
+      southernHemisphere === undefined ? selectedModel : { ...selectedModel, southernHemisphere },
+    [selectedModel, southernHemisphere]
+  );
   // Upstream defaults every section to BLUE_BG (moon_bg_0). Alternate assets
   // are only used when the caller explicitly selects custom_background.
   const resolvedBackground = backgroundVariant ?? 'bg0';
+  const compactTime = (value?: Date) =>
+    value?.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }) ?? '—';
+  const compactItem = (icon: typeof Clock3, label: string, value: string) => {
+    const Icon = icon;
+    return (
+      <div className="flex min-w-0 flex-col items-center gap-0.5 text-[0.65rem]" key={label}>
+        <div className="flex items-center gap-1 tabular-nums">
+          <Icon className="h-3.5 w-3.5 text-current/60" />
+          <span>{value}</span>
+        </div>
+        <span className="truncate text-current/55">{label}</span>
+      </div>
+    );
+  };
   const changeSection = (section: LunarSection) => {
     if (section === activeSection) return;
     setChanging(true);
@@ -241,53 +372,145 @@ export function InteractiveLunarCard({
     return () => window.clearTimeout(timer);
   }, [changing, reducedMotion]);
 
-  const content = small ? (
+  const compactDetailsContent = (
     <div
-      className="flex h-full min-h-0 flex-col justify-center gap-3 p-3"
-      data-lunar-section-content="base"
+      className="flex h-full min-h-0 flex-col justify-center gap-2 p-2"
+      data-lunar-compact-details
     >
       <button
         type="button"
-        className="flex items-center gap-3 text-left"
+        className="mx-auto text-xs text-current/60"
         data-card-interactive
-        onClick={() => setCompactDetails((open) => !open)}
+        onClick={() => setCompactDetails(false)}
       >
-        <MoonPhaseVisual model={selectedModel} language={language} className="h-20 w-20" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">
-            {getMoonPhaseName(selectedModel.phaseKey, language)}
-          </p>
-          <p className="mt-1 text-sm text-current/70 tabular-nums">
-            {selectedModel.illuminationPercent}% {language === 'zh' ? '照明' : 'illuminated'}
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-[0.62rem]">
-            <span>
-              <span className="block text-current/45">{language === 'zh' ? '月龄' : 'Age'}</span>
-              {selectedModel.ageDays.toFixed(1)}
-            </span>
-            <span>
-              <span className="block text-current/45">{language === 'zh' ? '月出' : 'Rise'}</span>
-              {selectedModel.moonrise?.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }) ?? '—'}
-            </span>
-            <span>
-              <span className="block text-current/45">{language === 'zh' ? '月落' : 'Set'}</span>
-              {selectedModel.moonset?.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }) ?? '—'}
-            </span>
-          </div>
-        </div>
+        {language === 'zh' ? '返回月相' : 'Back to moon'}
       </button>
-      {compactDetails ? (
-        <MoonDataSwiper model={selectedModel} language={language} chunkedLimit={4} />
-      ) : null}
+      <div className="flex items-center justify-center gap-1 text-xs text-current/60">
+        <Clock3 className="h-3.5 w-3.5" />
+        <span>{displayModel.date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}</span>
+      </div>
+      <MoonDataSwiper
+        model={displayModel}
+        language={language}
+        chunkedLimit={4}
+        maxDataPerPage={4}
+        hideItems={hideItems}
+      />
     </div>
+  );
+  const compactMainContent =
+    resolvedCompactMode === 'moon-only' ? (
+      <button
+        type="button"
+        className={`flex h-full min-h-0 w-full items-center p-2 ${
+          moonPosition === 'left'
+            ? 'justify-start'
+            : moonPosition === 'right'
+              ? 'justify-end'
+              : 'justify-center'
+        }`}
+        style={{ '--moon-size': `${moonSize ?? 100}%` } as CSSProperties}
+        data-card-interactive
+        data-lunar-compact-mode="moon-only"
+        onClick={() => setCompactDetails(true)}
+      >
+        <MoonPhaseVisual
+          model={displayModel}
+          language={language}
+          className="h-auto w-[var(--moon-size)] max-w-[150px]"
+        />
+      </button>
+    ) : resolvedCompactMode === 'minimal' ? (
+      <div
+        className="grid h-full min-h-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-2"
+        data-lunar-compact-mode="minimal"
+      >
+        <button
+          type="button"
+          className="flex flex-col items-center text-center text-xs"
+          data-card-interactive
+          onClick={() => setCompactDetails(true)}
+        >
+          <span className="text-current/55">{language === 'zh' ? '月出' : 'Rise'}</span>
+          <span className="font-medium tabular-nums">{compactTime(displayModel.moonrise)}</span>
+        </button>
+        <button
+          type="button"
+          className="flex flex-col items-center"
+          data-card-interactive
+          onClick={() => setCompactDetails(true)}
+        >
+          <MoonPhaseVisual model={displayModel} language={language} className="h-16 w-16" />
+          <span className="mt-1 truncate text-xs font-medium">
+            {getMoonPhaseName(displayModel.phaseKey, language)}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="flex flex-col items-center text-center text-xs"
+          data-card-interactive
+          onClick={() => setCompactDetails(true)}
+        >
+          <span className="text-current/55">{language === 'zh' ? '月落' : 'Set'}</span>
+          <span className="font-medium tabular-nums">{compactTime(displayModel.moonset)}</span>
+        </button>
+      </div>
+    ) : (
+      <div
+        className="flex h-full min-h-0 flex-col justify-center gap-2 px-2"
+        data-lunar-compact-mode="standard"
+      >
+        <button
+          type="button"
+          className="flex min-h-0 items-center gap-3 text-left"
+          data-card-interactive
+          onClick={() => setCompactDetails(true)}
+        >
+          <MoonPhaseVisual model={displayModel} language={language} className="h-20 w-20" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">
+              {getMoonPhaseName(displayModel.phaseKey, language)}
+            </div>
+            <div className="mt-1 text-sm text-current/70 tabular-nums">
+              {displayModel.illuminationPercent}% {language === 'zh' ? '照明' : 'illuminated'}
+            </div>
+          </div>
+        </button>
+        <div className="grid grid-cols-3 gap-2">
+          {compactItem(
+            Clock3,
+            language === 'zh' ? '月龄' : 'Moon age',
+            `${displayModel.ageDays.toFixed(1)}d`
+          )}
+          {compactItem(
+            Sunrise,
+            language === 'zh' ? '月出' : 'Moonrise',
+            compactTime(displayModel.moonrise)
+          )}
+          {compactItem(
+            Sunset,
+            language === 'zh' ? '月落' : 'Moonset',
+            compactTime(displayModel.moonset)
+          )}
+        </div>
+      </div>
+    );
+  const content = compact ? (
+    compactDetails ? (
+      compactDetailsContent
+    ) : (
+      compactMainContent
+    )
   ) : activeSection === 'base' ? (
-    <PhaseBase model={selectedModel} language={language} large={large} />
+    <PhaseBase
+      model={displayModel}
+      language={language}
+      vertical={size === 'medium-vertical'}
+      moonPosition={moonPosition}
+      moonSize={moonSize}
+      maxDataPerPage={maxDataPerPage}
+      hideItems={hideItems}
+    />
   ) : activeSection === 'horizon' ? (
     <Suspense
       fallback={
@@ -301,21 +524,23 @@ export function InteractiveLunarCard({
     >
       <LazyMoonHorizonChart
         date={selectedDate}
-        location={selectedModel.location}
+        location={displayModel.location}
         language={language}
-        model={selectedModel}
+        model={displayModel}
       />
     </Suspense>
   ) : activeSection === 'full_calendar' ? (
     <FullMoonCalendar
       selectedDate={selectedDate}
+      model={displayModel}
       language={language}
       onSelect={setSelectedDate}
       onClose={() => changeSection('calendar')}
     />
-  ) : large ? (
+  ) : activeSection === 'calendar' && large && initialSection === 'calendar' ? (
     <FullMoonCalendar
       selectedDate={selectedDate}
+      model={displayModel}
       language={language}
       onSelect={setSelectedDate}
       onClose={() => changeSection('base')}
@@ -323,7 +548,7 @@ export function InteractiveLunarCard({
   ) : (
     <CompactMoonCalendar
       selectedDate={selectedDate}
-      model={selectedModel}
+      model={displayModel}
       language={language}
       onSelect={setSelectedDate}
       onOpenFull={() => changeSection('full_calendar')}
@@ -341,7 +566,11 @@ export function InteractiveLunarCard({
       }`}
       contentClassName="h-full"
       disableDefaultSheen
-      underlay={<LunarBackground variant={resolvedBackground} />}
+      underlay={
+        hideBackground ? null : (
+          <LunarBackground variant={resolvedBackground} customBackground={customBackground} />
+        )
+      }
     >
       <div
         className="relative flex h-full min-h-0 flex-col"
@@ -349,18 +578,20 @@ export function InteractiveLunarCard({
         data-lunar-mode={mode}
         data-lunar-size={size}
         data-lunar-active-section={activeSection}
-        data-moon-source={selectedModel.source}
-        data-lunar-location-source={selectedModel.locationSource}
+        data-moon-source={displayModel.source}
+        data-lunar-location-source={displayModel.locationSource}
         data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
         data-theme={theme ?? activeTheme}
-        style={resolvedBackground === 'none' ? undefined : { color: '#e1e1e1' }}
+        style={hideBackground || resolvedBackground === 'none' ? undefined : { color: '#e1e1e1' }}
       >
-        {!small && !hideStarfield ? (
+        {!hideStarfield ? (
           <Suspense fallback={null}>
             <LazyLunarStarfield density={large ? 'large' : 'medium'} />
           </Suspense>
         ) : null}
-        {!small && activeSection !== 'full_calendar' ? (
+        {!hideButtons &&
+        (!compact || resolvedCompactMode === 'standard') &&
+        activeSection !== 'full_calendar' ? (
           <header
             className="relative z-10 flex h-9 shrink-0 items-center gap-2 px-3"
             data-card-interactive
@@ -371,6 +602,7 @@ export function InteractiveLunarCard({
             <nav
               className="flex items-center gap-0.5"
               aria-label={language === 'zh' ? '月相卡片视图' : 'Lunar card sections'}
+              data-lunar-compact-menu={compactMenuButton}
             >
               <SectionControl
                 section="base"
@@ -379,26 +611,30 @@ export function InteractiveLunarCard({
                 language={language}
                 onSelect={changeSection}
               />
-              <SectionControl
-                section="calendar"
-                active={activeSection === 'calendar'}
-                disabled={changing}
-                language={language}
-                onSelect={changeSection}
-              />
-              <SectionControl
-                section="horizon"
-                active={activeSection === 'horizon'}
-                disabled={changing}
-                language={language}
-                onSelect={changeSection}
-              />
+              {!compact ? (
+                <>
+                  <SectionControl
+                    section="calendar"
+                    active={activeSection === 'calendar'}
+                    disabled={changing}
+                    language={language}
+                    onSelect={changeSection}
+                  />
+                  <SectionControl
+                    section="horizon"
+                    active={activeSection === 'horizon'}
+                    disabled={changing}
+                    language={language}
+                    onSelect={changeSection}
+                  />
+                </>
+              ) : null}
             </nav>
           </header>
         ) : null}
         <div
           className={`relative z-10 min-h-0 flex-1 overflow-hidden ${
-            small ? '' : activeSection === 'full_calendar' ? 'p-1.5' : 'px-3 pb-2'
+            compact ? '' : activeSection === 'full_calendar' ? 'p-1.5' : 'px-3 pb-2'
           } ${changing ? 'opacity-0' : 'opacity-100'} ${reducedMotion ? 'duration-0' : 'duration-[500ms]'} transition-opacity ease-in-out`}
         >
           {content}

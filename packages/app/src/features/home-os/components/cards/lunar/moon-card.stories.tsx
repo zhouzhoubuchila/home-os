@@ -1,13 +1,14 @@
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { EntityCardStoryFrame } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { LunarBackgroundVariant } from './lunar-background-assets';
 import type { LunarSection } from './moon-card';
-import { MoonCard } from './moon-card';
+import { MoonCard, MoonCardDetail } from './moon-card';
 import { createMoonCardFixture, type MoonCardModel, type MoonPhaseKey } from './moon-card-model';
 
 interface MoonCardStudioProps {
-  size: 'small' | 'medium' | 'large';
+  size: CardSize;
   language: 'zh' | 'en';
   phase: MoonPhaseKey;
   illumination: number;
@@ -64,7 +65,10 @@ const meta = {
     },
   },
   argTypes: {
-    size: { control: 'inline-radio', options: ['small', 'medium', 'large'] },
+    size: {
+      control: 'inline-radio',
+      options: ['tiny', 'extra-small', 'small', 'medium', 'medium-vertical', 'large'],
+    },
     language: { control: 'inline-radio', options: ['zh', 'en'] },
     phase: {
       control: 'select',
@@ -130,7 +134,11 @@ export const EntityUnavailableCalculatedFallback: Story = {
   args: { source: 'calculated', phase: 'waxing_crescent', illumination: 0.2 },
 };
 export const Small: Story = { args: { size: 'small' } };
+export const TinyMoonOnly: Story = { args: { size: 'tiny' } };
+export const ExtraSmallMinimal: Story = { args: { size: 'extra-small' } };
+export const SmallStandard: Story = { args: { size: 'small' } };
 export const Medium: Story = { args: { size: 'medium' } };
+export const MediumVertical: Story = { args: { size: 'medium-vertical' } };
 export const Large: Story = { args: { size: 'large' } };
 export const MediumBase: Story = { args: { size: 'medium', initialSection: 'base' } };
 export const MediumHorizon: Story = { args: { size: 'medium', initialSection: 'horizon' } };
@@ -200,6 +208,14 @@ export const InteractiveLarge: Story = {
       },
     },
   },
+};
+export const Expanded: Story = {
+  render: (args) => (
+    <EntityCardStoryFrame size="large">
+      <MoonCardDetail model={createMoonCardFixture(args.phase)} language={args.language} />
+    </EntityCardStoryFrame>
+  ),
+  args: { size: 'large', initialSection: 'base' },
 };
 export const Light: Story = { args: { theme: 'light' } };
 export const Dark: Story = { args: { theme: 'dark' } };

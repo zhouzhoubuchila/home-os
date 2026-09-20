@@ -15,13 +15,13 @@ function nearestIndex(times: number[], value: number) {
 function markerPlugin(
   date: Date,
   times: number[],
-  events: { rise?: Date; set?: Date },
+  events: { rise?: Date; set?: Date; highest?: Date },
   language: string
 ): Plugin<'line'> {
   const drawMarker = (
     chart: Chart<'line'>,
     value: number,
-    _label: string,
+    label: string,
     color: string,
     row = 0
   ) => {
@@ -42,6 +42,11 @@ function markerPlugin(
     ctx.beginPath();
     ctx.arc(x, chartArea.bottom - 8, row === 0 ? 2.5 : 1.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.globalAlpha = 0.78;
+    ctx.fillText(row === 0 ? `☾ ${label}` : label, x, chartArea.top + 4 + row * 12);
     ctx.restore();
   };
   return {
@@ -72,6 +77,14 @@ function markerPlugin(
           `${language === 'zh' ? '月落' : 'Set'} ${time(events.set)}`,
           '#cbd5e1',
           1
+        );
+      if (events.highest)
+        drawMarker(
+          chart,
+          events.highest.getTime(),
+          `${language === 'zh' ? '最高点' : 'Highest'} ${time(events.highest)}`,
+          '#f8fafc',
+          2
         );
       const midnight = new Date(date);
       midnight.setHours(24, 0, 0, 0);

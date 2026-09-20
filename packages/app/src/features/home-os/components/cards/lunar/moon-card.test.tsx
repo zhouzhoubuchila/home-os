@@ -371,4 +371,57 @@ describe('interactive Lunar Phase Card port', () => {
     expect(container.querySelector('[data-lunar-swiper]')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Horizon' })).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['tiny', 'moon-only'],
+    ['extra-small', 'minimal'],
+    ['small', 'standard'],
+  ] as const)('maps %s to the upstream %s compact mode', (size, mode) => {
+    const { container } = renderWithProviders(
+      <MoonCard size={size} model={createMoonCardFixture('waxing_crescent')} language="en" />
+    );
+    expect(container.querySelector(`[data-lunar-compact-mode="${mode}"]`)).toBeInTheDocument();
+  });
+
+  it('replaces compact main view with MoonDataInfo details on click', () => {
+    const { container } = renderWithProviders(
+      <MoonCard size="small" model={createMoonCardFixture('waxing_gibbous')} language="en" />
+    );
+    fireEvent.click(
+      container.querySelector('[data-lunar-compact-mode="standard"] button') as HTMLElement
+    );
+    expect(container.querySelector('[data-lunar-compact-details]')).toBeInTheDocument();
+    expect(container.querySelector('[data-lunar-compact-mode="standard"]')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to moon' }));
+    expect(container.querySelector('[data-lunar-compact-mode="standard"]')).toBeInTheDocument();
+  });
+
+  it('recalculates full-calendar tooltip data for the selected date', () => {
+    const { container } = renderWithProviders(
+      <MoonCard
+        size="medium"
+        model={createMoonCardFixture('waxing_gibbous')}
+        language="en"
+        initialSection="full_calendar"
+      />
+    );
+    const day = container.querySelector<HTMLButtonElement>(
+      '[data-lunar-calendar="full"] button[aria-pressed]'
+    );
+    expect(day).toBeTruthy();
+    fireEvent.click(day as HTMLElement);
+    expect(
+      container.querySelector('[data-lunar-calendar-tooltip] [data-lunar-swiper]')
+    ).toBeInTheDocument();
+  });
+
+  it('supports upstream southern-hemisphere moon flipping', () => {
+    const { container } = renderWithProviders(
+      <MoonPhaseVisual
+        model={createMoonCardFixture('first_quarter', { southernHemisphere: true })}
+        language="en"
+      />
+    );
+    expect(container.querySelector('img')).toHaveStyle({ transform: 'scaleX(-1) scaleY(-1)' });
+  });
 });
