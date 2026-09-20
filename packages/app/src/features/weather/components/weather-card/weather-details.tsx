@@ -5,25 +5,26 @@ import type { WeatherMetricId } from '@navet/app/stores/settings-store';
 import {
   formatTemperatureFromSourceUnit,
   formatTemperatureValueFromSourceUnit,
+  getTemperatureUnitSymbol,
   type TemperatureUnit,
 } from '@navet/app/utils/temperature';
 import type { CSSProperties } from 'react';
 
 interface WeatherDetailsProps {
-  temperature: number;
+  temperature?: number;
   temperatureUnit?: TemperatureUnit;
-  highTemp: number;
+  highTemp?: number;
   highTempUnit?: TemperatureUnit;
-  lowTemp: number;
+  lowTemp?: number;
   lowTempUnit?: TemperatureUnit;
   feelsLikeTemperature?: number;
   feelsLikeTemperatureUnit?: TemperatureUnit;
   displayTemperatureUnit: TemperatureUnit;
   rainForecast?: string;
-  precipitation: number;
-  precipitationUnit: string;
-  humidity: number;
-  windSpeed: number;
+  precipitation?: number;
+  precipitationUnit?: string;
+  humidity?: number;
+  windSpeed?: number;
   windSpeedUnit?: string;
   windGustSpeed?: number;
   pressure?: number;
@@ -67,29 +68,31 @@ export function WeatherDetails({
   subtitleStyle,
 }: WeatherDetailsProps) {
   const { t } = useI18n();
-  const precipitationValue = `${precipitation}${precipitationUnit ? ` ${precipitationUnit}` : ''}`;
+  const precipitationValue = precipitation !== undefined
+    ? `${precipitation}${precipitationUnit ? ` ${precipitationUnit}` : ''}`
+    : '';
+  const formatTemperature = (value: number, sourceUnit?: TemperatureUnit) =>
+    formatTemperatureFromSourceUnit(value, sourceUnit, displayTemperatureUnit).replace('°', ' °');
+  const formatTemperatureValue = (value: number, sourceUnit?: TemperatureUnit) =>
+    `${formatTemperatureValueFromSourceUnit(value, sourceUnit, displayTemperatureUnit)} ${getTemperatureUnitSymbol(displayTemperatureUnit)}`;
   const metricsById: Partial<Record<WeatherMetricId, { caption: string; value: string }>> = {
-    precipitation: {
+    precipitation: precipitation !== undefined ? {
       caption: t('weather.precipitation'),
       value: precipitationValue,
-    },
-    humidity: {
+    } : undefined,
+    humidity: humidity !== undefined ? {
       caption: t('weather.humidity'),
       value: `${humidity}%`,
-    },
-    wind: {
+    } : undefined,
+    wind: windSpeed !== undefined ? {
       caption: t('weather.wind'),
       value: `${windSpeed} ${windSpeedUnit}`,
-    },
+    } : undefined,
     feelsLike:
       typeof feelsLikeTemperature === 'number'
         ? {
             caption: t('weather.metric.feelsLike'),
-            value: formatTemperatureFromSourceUnit(
-              feelsLikeTemperature,
-              feelsLikeTemperatureUnit,
-              displayTemperatureUnit
-            ),
+            value: formatTemperature(feelsLikeTemperature, feelsLikeTemperatureUnit),
           }
         : undefined,
     windGust:
@@ -129,13 +132,18 @@ export function WeatherDetails({
   return (
     <div className="flex w-full items-end justify-between gap-4">
       <div className="min-w-0 shrink-0">
-        <div className="mb-1 text-3xl font-bold leading-none" style={titleStyle}>
-          {formatTemperatureFromSourceUnit(temperature, temperatureUnit, displayTemperatureUnit)}
-        </div>
-        <div className="mb-0.5 text-sm" style={subtitleStyle}>
-          H:{formatTemperatureValueFromSourceUnit(highTemp, highTempUnit, displayTemperatureUnit)}°
-          L:{formatTemperatureValueFromSourceUnit(lowTemp, lowTempUnit, displayTemperatureUnit)}°
-        </div>
+        {temperature !== undefined ? (
+          <div className="mb-1 text-3xl font-bold leading-none" style={titleStyle}>
+            {formatTemperature(temperature, temperatureUnit)}
+          </div>
+        ) : null}
+        {highTemp !== undefined || lowTemp !== undefined ? (
+          <div className="mb-0.5 text-sm" style={subtitleStyle}>
+            {highTemp !== undefined ? `H:${formatTemperatureValue(highTemp, highTempUnit)}` : null}
+            {highTemp !== undefined && lowTemp !== undefined ? ' ' : null}
+            {lowTemp !== undefined ? `L:${formatTemperatureValue(lowTemp, lowTempUnit)}` : null}
+          </div>
+        ) : null}
         {rainForecast ? (
           <div className="text-sm" style={subtitleStyle}>
             {rainForecast}

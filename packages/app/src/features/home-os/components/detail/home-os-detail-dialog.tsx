@@ -503,19 +503,12 @@ export function HomeOsDetailDialog({
     ].filter(([, value]) => value !== undefined);
     content = weatherSource ? (
       <div className="grid gap-3">
-        <p className={`text-xs ${surface.textMuted}`}>
-          {copy.weatherSource}:{' '}
-          {weatherSource.sourceType === 'provider'
-            ? copy.dataSourceProvider
-            : copy.dataSourceEntity}{' '}
-          · {weatherSource.id}
-        </p>
         {rows.map(([label, value, unit]) => (
           <div key={String(label)} className="flex justify-between gap-4 text-sm">
             <span>{label}</span>
             <strong>
               {String(value)}
-              {String(unit ?? '')}
+              {unit === undefined || unit === '' ? '' : ` ${String(unit)}`}
             </strong>
           </div>
         ))}

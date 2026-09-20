@@ -58,38 +58,49 @@ export function WeatherForecastRow({
           </div>
           <WeatherIcon
             condition={day.condition}
+            isNight={day.isDaytime === false}
             className={compactForecastIconClassName}
             style={{ color: textPrimary }}
           />
           {showHourlyForecast ? (
             <div className={`${compactForecastValueClassName} font-medium`} style={titleStyle}>
-              {formatTemperatureValueFromSourceUnit(
-                day.high,
-                day.highUnit ?? defaultTemperatureUnit,
-                temperatureUnit
-              )}
-              °
+              {day.high !== undefined
+                ? `${formatTemperatureValueFromSourceUnit(
+                    day.high,
+                    day.highUnit ?? defaultTemperatureUnit,
+                    temperatureUnit
+                  )}°`
+                : null}
             </div>
           ) : (
             <div className={`${weeklyValueClassName} ${compactForecastValueClassName}`}>
               <span className="font-medium" style={titleStyle}>
-                {formatTemperatureValueFromSourceUnit(
-                  day.high,
-                  day.highUnit ?? defaultTemperatureUnit,
-                  temperatureUnit
-                )}
-                °
+                {day.high !== undefined
+                  ? `${formatTemperatureValueFromSourceUnit(
+                      day.high,
+                      day.highUnit ?? defaultTemperatureUnit,
+                      temperatureUnit
+                    )}°`
+                  : null}
               </span>
               <span style={subtitleStyle}>
-                {formatTemperatureValueFromSourceUnit(
-                  day.low,
-                  day.lowUnit ?? defaultTemperatureUnit,
-                  temperatureUnit
-                )}
-                °
+                {day.low !== undefined
+                  ? `${formatTemperatureValueFromSourceUnit(
+                      day.low,
+                      day.lowUnit ?? defaultTemperatureUnit,
+                      temperatureUnit
+                    )}°`
+                  : null}
               </span>
             </div>
           )}
+          {day.precipitationProbability !== undefined ? (
+            <div className="mt-0.5 text-[10px] text-sky-500">{Math.round(day.precipitationProbability)}%</div>
+          ) : day.precipitationAmount !== undefined ? (
+            <div className="mt-0.5 text-[10px] text-sky-500">
+              {day.precipitationAmount}{day.precipitationUnit ? ` ${day.precipitationUnit}` : ''}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>

@@ -1,4 +1,41 @@
 import type { CSSProperties, ReactElement, ReactNode, SVGProps } from 'react';
+import { formatHomeOsWeatherCondition } from '@navet/app/features/home-os/i18n/display-state';
+import animatedClearDay from '../../third_party/weather-icons/line/svg/clear-day.svg';
+import animatedClearNight from '../../third_party/weather-icons/line/svg/clear-night.svg';
+import animatedCloudy from '../../third_party/weather-icons/line/svg/cloudy.svg';
+import animatedFogDay from '../../third_party/weather-icons/line/svg/fog-day.svg';
+import animatedFogNight from '../../third_party/weather-icons/line/svg/fog-night.svg';
+import animatedHail from '../../third_party/weather-icons/line/svg/hail.svg';
+import animatedPartlyCloudyDay from '../../third_party/weather-icons/line/svg/partly-cloudy-day.svg';
+import animatedPartlyCloudyDayRain from '../../third_party/weather-icons/line/svg/partly-cloudy-day-rain.svg';
+import animatedPartlyCloudyNight from '../../third_party/weather-icons/line/svg/partly-cloudy-night.svg';
+import animatedPartlyCloudyNightRain from '../../third_party/weather-icons/line/svg/partly-cloudy-night-rain.svg';
+import animatedRain from '../../third_party/weather-icons/line/svg/rain.svg';
+import animatedSleet from '../../third_party/weather-icons/line/svg/sleet.svg';
+import animatedSnow from '../../third_party/weather-icons/line/svg/snow.svg';
+import animatedThunderstormsDay from '../../third_party/weather-icons/line/svg/thunderstorms-day.svg';
+import animatedThunderstormsDayRain from '../../third_party/weather-icons/line/svg/thunderstorms-day-rain.svg';
+import animatedThunderstormsNight from '../../third_party/weather-icons/line/svg/thunderstorms-night.svg';
+import animatedThunderstormsNightRain from '../../third_party/weather-icons/line/svg/thunderstorms-night-rain.svg';
+import animatedWindsock from '../../third_party/weather-icons/line/svg/windsock.svg';
+import staticClearDay from '../../third_party/weather-icons/line/svg-static/clear-day.svg';
+import staticClearNight from '../../third_party/weather-icons/line/svg-static/clear-night.svg';
+import staticCloudy from '../../third_party/weather-icons/line/svg-static/cloudy.svg';
+import staticFogDay from '../../third_party/weather-icons/line/svg-static/fog-day.svg';
+import staticFogNight from '../../third_party/weather-icons/line/svg-static/fog-night.svg';
+import staticHail from '../../third_party/weather-icons/line/svg-static/hail.svg';
+import staticPartlyCloudyDay from '../../third_party/weather-icons/line/svg-static/partly-cloudy-day.svg';
+import staticPartlyCloudyDayRain from '../../third_party/weather-icons/line/svg-static/partly-cloudy-day-rain.svg';
+import staticPartlyCloudyNight from '../../third_party/weather-icons/line/svg-static/partly-cloudy-night.svg';
+import staticPartlyCloudyNightRain from '../../third_party/weather-icons/line/svg-static/partly-cloudy-night-rain.svg';
+import staticRain from '../../third_party/weather-icons/line/svg-static/rain.svg';
+import staticSleet from '../../third_party/weather-icons/line/svg-static/sleet.svg';
+import staticSnow from '../../third_party/weather-icons/line/svg-static/snow.svg';
+import staticThunderstormsDay from '../../third_party/weather-icons/line/svg-static/thunderstorms-day.svg';
+import staticThunderstormsDayRain from '../../third_party/weather-icons/line/svg-static/thunderstorms-day-rain.svg';
+import staticThunderstormsNight from '../../third_party/weather-icons/line/svg-static/thunderstorms-night.svg';
+import staticThunderstormsNightRain from '../../third_party/weather-icons/line/svg-static/thunderstorms-night-rain.svg';
+import staticWindsock from '../../third_party/weather-icons/line/svg-static/windsock.svg';
 
 export type WeatherCondition =
   | 'Clear'
@@ -15,6 +52,8 @@ interface WeatherIconProps {
   condition: WeatherCondition | string;
   className?: string;
   style?: CSSProperties;
+  isNight?: boolean;
+  animated?: boolean;
 }
 
 type WeatherIconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
@@ -23,7 +62,80 @@ function normalizeWeatherCondition(condition: WeatherCondition | string) {
   return condition.trim().toLowerCase().replace(/_/g, '-');
 }
 
-export function formatWeatherConditionLabel(condition: WeatherCondition | string) {
+function getWeatherIconAsset(
+  condition: WeatherCondition | string,
+  isNight: boolean,
+  animated: boolean
+) {
+  const name = normalizeWeatherCondition(condition);
+  const assets = animated
+    ? {
+        clearDay: animatedClearDay,
+        clearNight: animatedClearNight,
+        cloudy: animatedCloudy,
+        fogDay: animatedFogDay,
+        fogNight: animatedFogNight,
+        hail: animatedHail,
+        partlyDay: animatedPartlyCloudyDay,
+        partlyNight: animatedPartlyCloudyNight,
+        partlyRainDay: animatedPartlyCloudyDayRain,
+        partlyRainNight: animatedPartlyCloudyNightRain,
+        rain: animatedRain,
+        sleet: animatedSleet,
+        snow: animatedSnow,
+        stormDay: animatedThunderstormsDay,
+        stormNight: animatedThunderstormsNight,
+        stormRainDay: animatedThunderstormsDayRain,
+        stormRainNight: animatedThunderstormsNightRain,
+        wind: animatedWindsock,
+      }
+    : {
+        clearDay: staticClearDay,
+        clearNight: staticClearNight,
+        cloudy: staticCloudy,
+        fogDay: staticFogDay,
+        fogNight: staticFogNight,
+        hail: staticHail,
+        partlyDay: staticPartlyCloudyDay,
+        partlyNight: staticPartlyCloudyNight,
+        partlyRainDay: staticPartlyCloudyDayRain,
+        partlyRainNight: staticPartlyCloudyNightRain,
+        rain: staticRain,
+        sleet: staticSleet,
+        snow: staticSnow,
+        stormDay: staticThunderstormsDay,
+        stormNight: staticThunderstormsNight,
+        stormRainDay: staticThunderstormsDayRain,
+        stormRainNight: staticThunderstormsNightRain,
+        wind: staticWindsock,
+      };
+
+  if (name === 'clear-night' || name === 'night-clear' || name === 'night' || name === 'moony') {
+    return assets.clearNight;
+  }
+  if (name === 'clear' || name === 'sunny' || name === 'fair') {
+    return isNight ? assets.clearNight : assets.clearDay;
+  }
+  if (name === 'cloudy' || name === 'overcast') return assets.cloudy;
+  if (name === 'fog' || name === 'mist' || name === 'hazy') return isNight ? assets.fogNight : assets.fogDay;
+  if (name === 'partlycloudy-night' || name === 'partly-cloudy-night') return assets.partlyNight;
+  if (name === 'partlycloudy' || name === 'partly-cloudy' || name === 'partly cloudy') {
+    return isNight ? assets.partlyNight : assets.partlyDay;
+  }
+  if (name === 'rainy' || name === 'rain' || name === 'pouring' || name === 'showers') return assets.rain;
+  if (name === 'drizzle') return assets.partlyRainNight && isNight ? assets.partlyRainNight : assets.partlyRainDay;
+  if (name === 'snowy' || name === 'snow' || name === 'snow-night' || name === 'blizzard') return assets.snow;
+  if (name === 'snowy-rainy') return assets.sleet;
+  if (name === 'hail') return assets.hail;
+  if (name === 'lightning-rainy') return isNight ? assets.stormRainNight : assets.stormRainDay;
+  if (name === 'thunderstorm' || name === 'storm' || name === 'lightning' || name === 'exceptional') {
+    return isNight ? assets.stormNight : assets.stormDay;
+  }
+  if (name === 'windy' || name === 'windy-variant' || name === 'breezy') return assets.wind;
+  return undefined;
+}
+
+export function formatWeatherConditionLabel(condition: WeatherCondition | string, language = 'en') {
   const normalized = normalizeWeatherCondition(condition);
 
   switch (normalized) {
@@ -31,24 +143,24 @@ export function formatWeatherConditionLabel(condition: WeatherCondition | string
     case 'night-clear':
     case 'night':
     case 'moony':
-      return 'Clear night';
+      return formatHomeOsWeatherCondition('clear-night', language);
     case 'partlycloudy':
     case 'partly-cloudy':
     case 'partly cloudy':
-      return 'Partly cloudy';
+      return formatHomeOsWeatherCondition('partly-cloudy', language);
     case 'partlycloudy-night':
     case 'partly-cloudy-night':
-      return 'Partly cloudy night';
+      return formatHomeOsWeatherCondition('partly-cloudy', language);
     case 'lightning-rainy':
-      return 'Thunderstorms';
+      return formatHomeOsWeatherCondition('lightning-rainy', language);
     case 'snowy-rainy':
-      return 'Sleet';
+      return formatHomeOsWeatherCondition('snowy', language);
     case 'snow-night':
-      return 'Snowy night';
+      return formatHomeOsWeatherCondition('snowy', language);
     case 'windy-variant':
-      return 'Windy';
+      return formatHomeOsWeatherCondition('windy', language);
     default:
-      return normalized.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+      return formatHomeOsWeatherCondition(normalized, language) || normalized.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
   }
 }
 
@@ -316,7 +428,24 @@ export function getWeatherIconComponent(
  * Weather Icon Component
  * Returns appropriate icon based on weather condition
  */
-export const WeatherIcon = ({ condition, className = 'w-6 h-6', style }: WeatherIconProps) => {
-  const IconComponent = getWeatherIconComponent(condition);
-  return <IconComponent className={className} style={style} />;
+export const WeatherIcon = ({
+  condition,
+  className = 'w-6 h-6',
+  style,
+  isNight = false,
+  animated = false,
+}: WeatherIconProps) => {
+  const normalized = normalizeWeatherCondition(condition);
+  const effectiveCondition =
+    isNight && (normalized === 'sunny' || normalized === 'clear' || normalized === 'fair')
+      ? 'clear-night'
+      : isNight && normalized === 'partlycloudy'
+        ? 'partlycloudy-night'
+        : normalized;
+  const asset = getWeatherIconAsset(effectiveCondition, isNight, animated);
+  if (asset) {
+    return <img src={asset} alt="" aria-hidden="true" className={`${className} brightness-0 invert`} style={style} />;
+  }
+  const IconComponent = getWeatherIconComponent(effectiveCondition);
+  return <IconComponent className={`${className} ${animated ? 'motion-safe:animate-pulse' : ''}`} style={style} />;
 };

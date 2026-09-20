@@ -32,6 +32,24 @@ vi.mock('@navet/app/features/vacuum', () => ({
   VacuumCard: ({ id }: { id: string }) => <div data-testid="vacuum-card">{id}</div>,
 }));
 
+vi.mock('@navet/app/features/weather', () => ({
+  WeatherCard: ({
+    model,
+    size,
+  }: {
+    model?: { forecast?: { hourly?: unknown[]; daily?: unknown[]; twiceDaily?: unknown[] } };
+    size: string;
+  }) => (
+    <div
+      data-testid="weather-v1-card"
+      data-weather-size={size}
+      data-hourly={model?.forecast?.hourly?.length ?? 0}
+      data-daily={model?.forecast?.daily?.length ?? 0}
+      data-twice-daily={model?.forecast?.twiceDaily?.length ?? 0}
+    />
+  ),
+}));
+
 describe('card availability lookup', () => {
   beforeEach(async () => {
     await resetAppStores();
@@ -434,5 +452,54 @@ describe('card availability lookup', () => {
       'home_assistant:lawn_mower.backyard'
     );
     expect(screen.queryByTestId('vacuum-card')).not.toBeInTheDocument();
+  });
+
+  it('routes every dashboard weather size and WeatherModel into the Weather v1 card', async () => {
+    const sizes = [
+      'tiny',
+      'extra-small',
+      'small',
+      'medium',
+      'medium-vertical',
+      'large',
+      'extra-large',
+      'extra-wide',
+    ] as const;
+    for (const size of sizes) {
+      const card = renderCard({
+        device: {
+          id: 'home_assistant:weather.home',
+          name: 'Home weather',
+          room: 'Home',
+          type: 'weather',
+          temperature: 23,
+          condition: 'partlycloudy',
+          location: 'Home',
+          forecastMode: 'weekly',
+          forecast: [],
+          weatherModel: {
+            entityId: 'home_assistant:weather.home',
+            current: { condition: 'partlycloudy', temperature: 23 },
+            forecast: {
+              hourly: [{ datetime: '2026-09-21T12:00:00Z' }],
+              daily: [{ datetime: '2026-09-21T12:00:00Z' }],
+              twiceDaily: [],
+            },
+            capabilities: { hourly: true, daily: true, twiceDaily: false },
+          },
+        },
+        size,
+        handleSizeChange: () => undefined,
+        isEditMode: false,
+      });
+      expect(card).not.toBeNull();
+      if (!card) throw new Error('Expected Weather v1 card');
+      const rendered = renderWithProviders(card);
+      const weatherCard = await screen.findByTestId('weather-v1-card');
+      expect(weatherCard).toHaveAttribute('data-weather-size', size);
+      expect(weatherCard).toHaveAttribute('data-hourly', '1');
+      expect(weatherCard).toHaveAttribute('data-daily', '1');
+      rendered.unmount();
+    }
   });
 });

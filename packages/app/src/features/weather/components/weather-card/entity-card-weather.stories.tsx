@@ -135,7 +135,7 @@ const meta = {
     },
     size: {
       control: 'inline-radio',
-      options: ['small', 'medium', 'large'],
+      options: ['tiny', 'extra-small', 'small', 'medium', 'medium-vertical', 'large', 'extra-large', 'extra-wide'],
     },
   },
   args: {
@@ -168,6 +168,10 @@ export const Small: Story = {
   },
 };
 
+export const Tiny: Story = { args: { size: 'tiny' } };
+
+export const ExtraSmall: Story = { args: { size: 'extra-small' } };
+
 export const Medium: Story = {
   args: {
     size: 'medium',
@@ -180,6 +184,12 @@ export const Large: Story = {
     sunrise: '08:30',
   },
 };
+
+export const MediumVertical: Story = { args: { size: 'medium-vertical' } };
+
+export const ExtraLarge: Story = { args: { size: 'extra-large' } };
+
+export const ExtraWide: Story = { args: { size: 'extra-wide' } };
 
 export const Hourly: Story = {
   args: {
@@ -201,6 +211,22 @@ export const Sunny: Story = {
     forecastMode: 'weekly',
     size: 'medium',
     rainForecast: 'Dry and bright through the afternoon',
+  },
+};
+
+export const Night: Story = {
+  args: {
+    condition: 'clear-night',
+    size: 'medium',
+    rainForecast: 'Clear skies overnight',
+  },
+};
+
+export const Rain: Story = {
+  args: {
+    condition: 'pouring',
+    size: 'large',
+    rainForecast: 'Heavy rain expected',
   },
 };
 

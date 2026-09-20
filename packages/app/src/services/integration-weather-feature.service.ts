@@ -15,4 +15,17 @@ export const integrationWeatherFeatureService: ProviderWeatherFeatureService = {
     }
     return await service.getForecast(nativeEntityId, type, options);
   },
+  async subscribeForecast(entityId, type, listener, options) {
+    const { nativeEntityId, service } = resolveProviderFeatureService({
+      entityId,
+      feature: 'weather',
+      getService: (registration) => registration.weatherFeatureService,
+      unsupportedMessage: 'Weather forecasts are not supported for the current integration yet',
+      missingMessage: 'Weather support is not implemented yet for the current integration',
+    });
+    if (!nativeEntityId || !service.subscribeForecast) {
+      throw new Error('Weather forecast subscriptions are not supported for the current integration yet');
+    }
+    return await service.subscribeForecast(nativeEntityId, type, listener, options);
+  },
 };

@@ -30,6 +30,7 @@ export function useWeatherCardController({
   const { theme, accentColor } = useTheme();
   const { t: _t } = useI18n();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [weatherTintColors, setWeatherTintColors] = usePersistedState<Record<string, string>>(
     STORAGE_KEYS.weatherCardTintColors,
     {}
@@ -81,7 +82,7 @@ export function useWeatherCardController({
   const interaction = useEntityCardInteractionController({
     ariaLabel: cityName,
     isEditMode,
-    onOpenControls: () => setIsSettingsOpen(true),
+    onOpenControls: () => setIsExpanded(true),
     onOpenSettings: () => setIsSettingsOpen(true),
   });
   useEditModeSettingsRequest(id, () => setIsSettingsOpen(true), isEditMode);
@@ -112,6 +113,8 @@ export function useWeatherCardController({
     dashedBorder,
     isSettingsOpen,
     setIsSettingsOpen,
+    isExpanded,
+    setIsExpanded,
     interaction,
     cityName,
     selectedForecastMode,

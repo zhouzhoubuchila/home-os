@@ -130,8 +130,8 @@ describe('mapWeatherDevice', () => {
     expect(device.forecast[0]).toEqual(
       expect.objectContaining({
         condition: 'rainy',
-        high: 0,
-        low: 0,
+        high: undefined,
+        low: undefined,
       })
     );
   });

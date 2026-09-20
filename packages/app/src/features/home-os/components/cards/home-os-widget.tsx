@@ -2,6 +2,7 @@ import { dispatchEntityCommand } from '@navet/app/commands';
 import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
+import { WeatherCard } from '@navet/app/features/weather';
 import { useHomeAssistant, useI18n, useProviderWeatherDevices, useTheme } from '@navet/app/hooks';
 import type { TranslateFn } from '@navet/app/i18n';
 import { useNavigationStore } from '@navet/app/stores';
@@ -36,11 +37,9 @@ import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
 import {
   formatHomeOsDisplayState,
   formatHomeOsValueWithUnit,
-  formatHomeOsWeatherCondition,
 } from '../../i18n/display-state';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
 import {
-  type ResolvedWeatherSource,
   resolveAirQualitySources,
   resolveWeatherSource,
 } from '../../mapping/data-source-resolver';
@@ -123,77 +122,6 @@ function Metrics({
         </div>
       ))}
     </div>
-  );
-}
-
-function WeatherEnhancedCard({
-  size,
-  name,
-  source,
-  copy,
-  language,
-}: {
-  size: CardSize;
-  name: string;
-  source?: ResolvedWeatherSource;
-  copy: ReturnType<typeof getHomeOsCopy>;
-  language: string;
-}) {
-  const current = source?.current;
-  const metrics = current
-    ? [
-        [copy.humidity, current.humidity, '%'],
-        [copy.wind, current.windSpeed, current.windSpeedUnit],
-        [copy.pressure, current.pressure, current.pressureUnit],
-        [copy.visibility, current.visibility, 'km'],
-        [copy.dewPoint, current.dewPoint, current.temperatureUnit],
-      ].filter(([, value]) => value !== undefined)
-    : [];
-  return (
-    <BaseCard size={size} title={name} headerLeading={<CloudSun className="h-5 w-5" />}>
-      <div className="flex h-full min-h-0 flex-col justify-between gap-3">
-        {current && (current.condition || current.temperature !== undefined) ? (
-          <>
-            <div>
-              <strong className="text-3xl tabular-nums">
-                {formatHomeOsValueWithUnit(current.temperature, current.temperatureUnit)}
-              </strong>
-              <p className="text-sm text-current/65">
-                {formatHomeOsWeatherCondition(current.condition ?? '—', language)}
-              </p>
-              {current.feelsLikeTemperature !== undefined ? (
-                <p className="text-xs text-current/50">
-                  {copy.feelsLike}{' '}
-                  {formatHomeOsValueWithUnit(
-                    current.feelsLikeTemperature,
-                    current.feelsLikeTemperatureUnit ?? current.temperatureUnit
-                  )}
-                </p>
-              ) : null}
-            </div>
-            {size !== 'small' ? (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-current/60">
-                {metrics.slice(0, 4).map(([label, value, unit]) => (
-                  <span key={String(label)}>
-                    {label}:{' '}
-                    <strong className="text-current">
-                      {formatHomeOsValueWithUnit(value, unit)}
-                    </strong>
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <p className="truncate text-[10px] text-current/45">
-              {copy.weatherSource}:{' '}
-              {source?.sourceType === 'provider' ? copy.dataSourceProvider : copy.dataSourceEntity}{' '}
-              · {source?.id}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-current/55">{copy.noMappedData}</p>
-        )}
-      </div>
-    </BaseCard>
   );
 }
 
@@ -663,13 +591,42 @@ export function HomeOsWidget({
   const Icon = ICONS[definition.kind];
   const name = language === 'zh' ? definition.name.zh : definition.name.en;
   if (definition.kind === 'weather') {
-    return withDetail(
-      <WeatherEnhancedCard
+    const weather = providerWeather[0];
+    const source = resolveWeatherSource(providerWeather, entities);
+    return (
+      <WeatherCard
+        model={weather?.weatherModel}
+        id={weather?.id ?? source?.id ?? 'weather.home'}
+        title={name}
+        location={weather?.location ?? source?.id ?? name}
+        temperature={weather?.temperature ?? source?.current.temperature}
+        temperatureUnit={weather?.temperatureUnit}
+        feelsLikeTemperature={weather?.feelsLikeTemperature ?? source?.current.feelsLikeTemperature}
+        feelsLikeTemperatureUnit={weather?.feelsLikeTemperatureUnit}
+        condition={weather?.condition ?? source?.current.condition ?? 'unknown'}
+        humidity={weather?.humidity ?? source?.current.humidity}
+        windSpeed={weather?.windSpeed ?? source?.current.windSpeed}
+        windSpeedUnit={weather?.windSpeedUnit ?? source?.current.windSpeedUnit}
+        windGustSpeed={weather?.windGustSpeed}
+        pressure={weather?.pressure ?? source?.current.pressure}
+        pressureUnit={weather?.pressureUnit ?? source?.current.pressureUnit}
+        uvIndex={weather?.uvIndex}
+        cloudCoverage={weather?.cloudCoverage}
+        precipitation={weather?.precipitation}
+        precipitationUnit={weather?.precipitationUnit}
+        sunrise={weather?.sunrise ?? ''}
+        sunset={weather?.sunset ?? ''}
+        daylight={weather?.daylight ?? ''}
+        rainForecast={weather?.rainForecast ?? ''}
+        forecast={weather?.forecast ?? []}
+        forecastMode={weather?.forecastMode ?? 'weekly'}
+        highTemp={weather?.highTemp}
+        highTempUnit={weather?.highTempUnit}
+        lowTemp={weather?.lowTemp}
+        lowTempUnit={weather?.lowTempUnit}
         size={size}
-        name={name.replace('Home OS · ', '')}
-        source={resolveWeatherSource(providerWeather, entities)}
-        copy={copy}
-        language={language}
+        onSizeChange={() => undefined}
+        isEditMode={isEditMode}
       />
     );
   }

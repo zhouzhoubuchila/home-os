@@ -11,6 +11,7 @@ import type { WeatherForecastMode } from '../stores/settings-store';
 import type { TemperatureUnit } from '../utils/temperature';
 import type { ProductProjectionMetadata } from './product-projection';
 import type { IntegrationProviderId } from './provider';
+import type { WeatherModel } from '../features/weather/model/weather-model';
 
 export type SecurityKind =
   | 'alarm'
@@ -88,7 +89,7 @@ export interface FanDevice extends BaseDevice {
 // Climate device
 export interface ClimateDevice extends BaseDevice {
   room: string;
-  temperature: number;
+  temperature?: number;
   currentTemperature: number;
   hasCurrentTemperature?: boolean;
   temperatureUnit?: TemperatureUnit;
@@ -112,33 +113,34 @@ export interface WeatherDevice extends BaseDevice {
   feelsLikeTemperatureUnit?: TemperatureUnit;
   location: string;
   condition: string;
-  humidity: number;
-  windSpeed: number;
+  humidity?: number;
+  windSpeed?: number;
   windSpeedUnit?: string;
   windGustSpeed?: number;
-  pressure: number;
+  pressure?: number;
   pressureUnit?: string;
   uvIndex?: number;
   cloudCoverage?: number;
-  precipitation: number;
-  precipitationUnit: string;
+  precipitation?: number;
+  precipitationUnit?: string;
   sunrise: string;
   sunset: string;
   daylight: string;
   rainForecast: string;
-  highTemp: number;
+  highTemp?: number;
   highTempUnit?: TemperatureUnit;
-  lowTemp: number;
+  lowTemp?: number;
   lowTempUnit?: TemperatureUnit;
   forecastMode: WeatherForecastMode;
   forecast: Array<{
     day: string;
     condition: string;
-    high: number;
+    high?: number;
     highUnit?: TemperatureUnit;
-    low: number;
+    low?: number;
     lowUnit?: TemperatureUnit;
   }>;
+  weatherModel?: WeatherModel;
 }
 
 // Media device

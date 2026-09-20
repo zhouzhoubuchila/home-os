@@ -218,9 +218,15 @@ export interface ProviderCalendarFeatureService {
 export interface ProviderWeatherFeatureService {
   getForecast: (
     entityId: string,
-    type: 'daily' | 'hourly',
+    type: 'daily' | 'hourly' | 'twice_daily',
     options?: PlatformWeatherRequestOptions
   ) => Promise<PlatformWeatherForecastEntry[]>;
+  subscribeForecast?: (
+    entityId: string,
+    type: 'daily' | 'hourly' | 'twice_daily',
+    listener: (forecast: PlatformWeatherForecastEntry[]) => void,
+    options?: PlatformWeatherRequestOptions
+  ) => Promise<() => void>;
 }
 
 export interface ProviderNotificationFeatureService {

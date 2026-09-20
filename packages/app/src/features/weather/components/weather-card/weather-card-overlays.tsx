@@ -231,6 +231,10 @@ export function WeatherBackground({
 
   const surface = getWeatherThemeSurface(theme, variant);
 
+  if (size === 'tiny' || size === 'extra-small') {
+    return <div className={`absolute inset-0 ${surface.baseGradient}`} />;
+  }
+
   if (variant === 'sunny') {
     const sunClassName = pickThemeValue(theme, {
       light: isLarge

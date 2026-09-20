@@ -722,7 +722,16 @@ function getAllowedSizes(
     case 'calendars':
       return ['small', 'medium', 'large'];
     case 'weather':
-      return ['small', 'medium', 'large'];
+      return [
+        'tiny',
+        'extra-small',
+        'small',
+        'medium',
+        'medium-vertical',
+        'large',
+        'extra-large',
+        'extra-wide',
+      ];
     case 'vacuums':
       return ['small', 'medium'];
     case 'switches':

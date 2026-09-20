@@ -573,6 +573,10 @@ export function mapNavetEntitiesToDeviceCollection(entities: NavetEntity[]): Dev
           forecast: Array.isArray(state.forecast)
             ? (state.forecast as DeviceCollection['weather'][number]['forecast'])
             : [],
+          weatherModel:
+            state.weatherModel && typeof state.weatherModel === 'object'
+              ? (state.weatherModel as DeviceCollection['weather'][number]['weatherModel'])
+              : undefined,
         });
         break;
       case 'media_player':

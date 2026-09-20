@@ -17,7 +17,10 @@ type WeatherForecastServiceEnvelope = WeatherForecastServicePayload & {
 };
 
 function getActiveMessageClient(
-  messageClient?: { sendMessagePromise<T>(message: unknown): Promise<T> } | null
+  messageClient?: {
+    sendMessagePromise<T>(message: unknown): Promise<T>;
+    subscribeMessage?<T>(callback: (event: T) => void, message: unknown): Promise<() => void>;
+  } | null
 ) {
   return messageClient ?? getHomeAssistantConnection();
 }
@@ -42,6 +45,28 @@ export const homeAssistantWeatherFeatureService: ProviderWeatherFeatureService =
       response.response?.[entityId]?.forecast ??
       response.result?.response?.[entityId]?.forecast ??
       []
+    );
+  },
+  async subscribeForecast(entityId, type, listener, options) {
+    const messageClient = getActiveMessageClient(options?.messageClient);
+    if (!messageClient?.subscribeMessage) {
+      throw new Error('Home Assistant forecast subscriptions are unavailable');
+    }
+
+    return await messageClient.subscribeMessage(
+      (event: WeatherForecastServiceEnvelope & { forecast?: WeatherForecastEntry[] }) => {
+        const forecast =
+          event.forecast ??
+          event.response?.[entityId]?.forecast ??
+          event.result?.response?.[entityId]?.forecast ??
+          [];
+        listener(forecast);
+      },
+      {
+        type: 'weather/subscribe_forecast',
+        forecast_type: type,
+        entity_id: entityId,
+      }
     );
   },
 };

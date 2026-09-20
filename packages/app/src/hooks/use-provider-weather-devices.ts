@@ -1,19 +1,14 @@
-import { SUN_ENTITY_ID, WEATHER_FORECAST_REFRESH_INTERVAL } from '@navet/app/constants';
+import { SUN_ENTITY_ID } from '@navet/app/constants';
 import { mapWeatherDevice } from '@navet/app/hooks/device-mappers';
 import { useI18n } from '@navet/app/i18n';
-import type {
-  PlatformWeatherDevice,
-  PlatformWeatherForecastEntry,
-} from '@navet/app/platform/provider-feature-models';
-import { integrationWeatherFeatureService } from '@navet/app/services/integration-weather-feature.service';
+import type { PlatformWeatherDevice } from '@navet/app/platform/provider-feature-models';
+import { weatherForecastStore } from '@navet/app/services/weather-forecast-store';
 import { settingsSelectors } from '@navet/app/stores/selectors';
 import { useSettingsStore } from '@navet/app/stores/settings-store';
 import type { IntegrationProviderId } from '@navet/app/types/provider';
 import { UNKNOWN_ROOM_LABEL } from '@navet/app/utils/device-location';
 import { createProviderScopedId } from '@navet/app/utils/provider-ids';
-import { areDataEqual } from '@navet/app/utils/structural-equality';
-import { subscribeVisibilityAwareAsyncTask } from '@navet/app/utils/visibility-aware-scheduler';
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useIntegrationStore } from './use-integration-store';
 import {
   useProviderEntityRegistryEntries,
@@ -24,13 +19,32 @@ import { useProviderFeature } from './use-provider-feature-support';
 const EMPTY_WEATHER_DEVICES: PlatformWeatherDevice[] = [];
 const WEATHER_ENTITY_PREFIXES = ['sun.', 'weather.'] as const;
 
-type WeatherForecastState = Record<
-  string,
-  {
-    daily: PlatformWeatherForecastEntry[];
-    hourly: PlatformWeatherForecastEntry[];
-  }
->;
+const EMPTY_FORECAST_SNAPSHOT = {
+  data: [],
+  loading: false,
+  error: null,
+  listeners: new Set<() => void>(),
+  generation: 0,
+} as ReturnType<typeof weatherForecastStore.getSnapshot>;
+
+function useForecastSnapshot(
+  entityId: string | null,
+  type: 'daily' | 'hourly' | 'twice_daily',
+  enabled: boolean
+) {
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      enabled && entityId
+        ? weatherForecastStore.subscribe(entityId, type, listener)
+        : () => undefined,
+    [enabled, entityId, type]
+  );
+  const getSnapshot = useCallback(
+    () => (enabled && entityId ? weatherForecastStore.getSnapshot(entityId, type) : EMPTY_FORECAST_SNAPSHOT),
+    [enabled, entityId, type]
+  );
+  return useSyncExternalStore(subscribe, getSnapshot, () => EMPTY_FORECAST_SNAPSHOT);
+}
 
 function resolveEntityName(
   entityId: string,
@@ -99,58 +113,31 @@ export function useProviderWeatherDevices(
     () => new Map(entityRegistry.map((entry) => [entry.entityId, entry])),
     [entityRegistry]
   );
-  const [weatherForecasts, setWeatherForecasts] = useState<WeatherForecastState>({});
-  const deferredWeatherForecasts = useDeferredValue(weatherForecasts);
+  const forecastEntity = primaryWeatherEntityId ? entities?.[primaryWeatherEntityId] : undefined;
+  const supportedFeatures = forecastEntity?.attributes?.supported_features;
+  const forecastTypes = (['daily', 'hourly', 'twice_daily'] as const).filter((type) => {
+    const flag = type === 'daily' ? 1 : type === 'hourly' ? 2 : 4;
+    return typeof supportedFeatures === 'number' && (supportedFeatures & flag) !== 0;
+  });
+  const scopedPrimaryId = primaryWeatherEntityId
+    ? createProviderScopedId(resolvedProviderId, primaryWeatherEntityId)
+    : null;
+  const dailySnapshot = useForecastSnapshot(
+    scopedPrimaryId,
+    'daily',
+    supportsWeather && forecastTypes.includes('daily')
+  );
+  const hourlySnapshot = useForecastSnapshot(
+    scopedPrimaryId,
+    'hourly',
+    supportsWeather && forecastTypes.includes('hourly')
+  );
+  const twiceDailySnapshot = useForecastSnapshot(
+    scopedPrimaryId,
+    'twice_daily',
+    supportsWeather && forecastTypes.includes('twice_daily')
+  );
   const lastResolvedDevicesRef = useRef<PlatformWeatherDevice[]>(EMPTY_WEATHER_DEVICES);
-
-  useEffect(() => {
-    if (!supportsWeather || !primaryWeatherEntityId) {
-      startTransition(() => {
-        setWeatherForecasts({});
-      });
-      return;
-    }
-
-    let cancelled = false;
-    const refreshForecasts = async () => {
-      try {
-        const scopedEntityId = createProviderScopedId(resolvedProviderId, primaryWeatherEntityId);
-        const [daily, hourly] = await Promise.all([
-          integrationWeatherFeatureService.getForecast(scopedEntityId, 'daily'),
-          integrationWeatherFeatureService.getForecast(scopedEntityId, 'hourly'),
-        ]);
-
-        if (!cancelled) {
-          startTransition(() => {
-            setWeatherForecasts((prev) => {
-              const nextEntry = { daily, hourly };
-              if (areDataEqual(prev[primaryWeatherEntityId], nextEntry)) {
-                return prev;
-              }
-
-              return {
-                ...prev,
-                [primaryWeatherEntityId]: nextEntry,
-              };
-            });
-          });
-        }
-      } catch {
-        // Keep existing data if the refresh fails.
-      }
-    };
-
-    const unsubscribe = subscribeVisibilityAwareAsyncTask(
-      refreshForecasts,
-      WEATHER_FORECAST_REFRESH_INTERVAL,
-      { runImmediately: true }
-    );
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [resolvedProviderId, primaryWeatherEntityId, supportsWeather]);
 
   const resolvedDevices = useMemo(() => {
     if (!entities || !primaryWeatherEntityId) {
@@ -177,7 +164,11 @@ export function useProviderWeatherDevices(
           sunEntity: entities[SUN_ENTITY_ID],
           config: null,
           weatherForecastMode,
-          storedForecasts: deferredWeatherForecasts[primaryWeatherEntityId],
+          storedForecasts: {
+            daily: dailySnapshot.data,
+            hourly: hourlySnapshot.data,
+            twice_daily: twiceDailySnapshot.data,
+          },
           locale,
           t,
           use24HourTime,
@@ -186,7 +177,9 @@ export function useProviderWeatherDevices(
     ];
   }, [
     resolvedProviderId,
-    deferredWeatherForecasts,
+    dailySnapshot.data,
+    hourlySnapshot.data,
+    twiceDailySnapshot.data,
     entities,
     entityRegistryMap,
     locale,

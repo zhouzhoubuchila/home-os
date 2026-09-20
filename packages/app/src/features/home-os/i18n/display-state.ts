@@ -23,17 +23,24 @@ const STATE_KEYS: Record<string, TranslationKey> = {
 };
 
 const WEATHER_CONDITIONS: Record<string, { en: string; zh: string }> = {
-  'clear-night': { en: 'Clear night', zh: '晴夜' },
+  'clear-night': { en: 'Clear night', zh: '晴朗夜间' },
   sunny: { en: 'Sunny', zh: '晴' },
   cloudy: { en: 'Cloudy', zh: '多云' },
   rainy: { en: 'Rainy', zh: '有雨' },
-  'partly-cloudy': { en: 'Partly cloudy', zh: '局部多云' },
+  pouring: { en: 'Pouring rain', zh: '大雨' },
+  lightning: { en: 'Lightning', zh: '雷电' },
+  'lightning-rainy': { en: 'Thunderstorms', zh: '雷雨' },
+  snowy: { en: 'Snowy', zh: '下雪' },
+  fog: { en: 'Fog', zh: '雾' },
+  windy: { en: 'Windy', zh: '有风' },
+  'partlycloudy': { en: 'Partly cloudy', zh: '多云间晴' },
+  'partly-cloudy': { en: 'Partly cloudy', zh: '多云间晴' },
 };
 
 export function formatHomeOsWeatherCondition(value: unknown, language: string) {
   const raw = String(value ?? '').trim();
   const condition = WEATHER_CONDITIONS[raw.toLowerCase()];
-  return condition ? condition[language === 'zh' ? 'zh' : 'en'] : raw;
+  return condition ? condition[language.toLowerCase().startsWith('zh') ? 'zh' : 'en'] : raw;
 }
 
 export function formatHomeOsValueWithUnit(value: unknown, unit: unknown) {

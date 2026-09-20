@@ -461,6 +461,7 @@ const cardRegistry: Partial<Record<string, CardRenderFn>> = {
 
   weather: ({ device, size, isEditMode }) => (
     <WeatherCard
+      model={device.weatherModel as import('@navet/app/features/weather/model/weather-model').WeatherModel | undefined}
       id={device.id as string}
       location={device.location as string}
       temperature={device.temperature as number}
