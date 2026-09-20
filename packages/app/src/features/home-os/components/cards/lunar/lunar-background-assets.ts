@@ -4,6 +4,13 @@
  * Backgrounds are vendored locally so the card never depends on a CDN.
  */
 export type LunarBackgroundVariant = 'bg0' | 'bg1' | 'bg2' | 'bg3' | 'none';
+export type LunarBackgroundTheme = 'dark' | 'light';
+
+type LunarBackgroundPreset = {
+  position: string;
+  opacity: number;
+  filter: string;
+};
 
 export const LUNAR_BACKGROUND_ASSETS: Record<Exclude<LunarBackgroundVariant, 'none'>, string> = {
   bg0: new URL(
@@ -26,29 +33,64 @@ export const LUNAR_BACKGROUND_ASSETS: Record<Exclude<LunarBackgroundVariant, 'no
 
 export const LUNAR_BACKGROUND_CONFIG: Record<
   Exclude<LunarBackgroundVariant, 'none'>,
-  { position: string; opacity: number; filter: string }
+  Record<LunarBackgroundTheme, LunarBackgroundPreset>
 > = {
   bg0: {
-    position: '50% 52%',
-    opacity: 0.26,
-    filter: 'saturate(.70) brightness(.70) contrast(.96)',
+    dark: {
+      position: '50% 52%',
+      opacity: 0.32,
+      filter: 'saturate(.76) brightness(.76) contrast(.96)',
+    },
+    light: {
+      position: '50% 52%',
+      opacity: 0.07,
+      filter: 'saturate(.46) brightness(1.08) contrast(.9)',
+    },
   },
   bg1: {
-    position: '50% 32%',
-    opacity: 0.2,
-    filter: 'saturate(.68) brightness(.68) contrast(.96)',
+    dark: {
+      position: '50% 32%',
+      opacity: 0.26,
+      filter: 'saturate(.72) brightness(.72) contrast(.96)',
+    },
+    light: {
+      position: '50% 32%',
+      opacity: 0.06,
+      filter: 'saturate(.44) brightness(1.08) contrast(.9)',
+    },
   },
   bg2: {
-    position: '50% 42%',
-    opacity: 0.14,
-    filter: 'saturate(.54) brightness(.58) contrast(.92)',
+    dark: {
+      position: '50% 42%',
+      opacity: 0.14,
+      filter: 'saturate(.54) brightness(.58) contrast(.92)',
+    },
+    light: {
+      position: '50% 42%',
+      opacity: 0.04,
+      filter: 'saturate(.38) brightness(1.08) contrast(.88)',
+    },
   },
   bg3: {
-    position: '32% 46%',
-    opacity: 0.17,
-    filter: 'saturate(.58) brightness(.64) contrast(.94)',
+    dark: {
+      position: '32% 46%',
+      opacity: 0.21,
+      filter: 'saturate(.62) brightness(.68) contrast(.94)',
+    },
+    light: {
+      position: '32% 46%',
+      opacity: 0.06,
+      filter: 'saturate(.42) brightness(1.08) contrast(.9)',
+    },
   },
 };
+
+export function getLunarBackgroundConfig(
+  variant: Exclude<LunarBackgroundVariant, 'none'>,
+  theme: LunarBackgroundTheme
+) {
+  return LUNAR_BACKGROUND_CONFIG[variant][theme];
+}
 
 export function getLunarBackgroundVariant(
   section: string,

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveSemanticEntities } from '../../../mapping/semantic-resolver';
 import { homeOsEntity } from '../../../tests/fixtures';
 import { HomeOsWidget } from '../home-os-widget';
-import { getLunarBackgroundVariant } from './lunar-background-assets';
+import { getLunarBackgroundConfig, getLunarBackgroundVariant } from './lunar-background-assets';
 import { MoonCard, MoonCardDetail, MoonPhaseVisual } from './moon-card';
 import {
   buildMoonCardModel,
@@ -68,6 +68,21 @@ describe('interactive Lunar Phase Card port', () => {
     expect(getLunarBackgroundVariant('calendar')).toBe('bg1');
     expect(getLunarBackgroundVariant('full_calendar')).toBe('bg2');
     expect(getLunarBackgroundVariant('base', true)).toBe('bg2');
+  });
+
+  it('uses stronger dark presets and clean low-opacity light presets', () => {
+    expect(getLunarBackgroundConfig('bg0', 'dark')).toMatchObject({
+      position: '50% 52%',
+      opacity: 0.32,
+      filter: 'saturate(.76) brightness(.76) contrast(.96)',
+    });
+    expect(getLunarBackgroundConfig('bg1', 'dark').opacity).toBe(0.26);
+    expect(getLunarBackgroundConfig('bg2', 'dark').opacity).toBe(0.14);
+    expect(getLunarBackgroundConfig('bg3', 'dark').opacity).toBe(0.21);
+    expect(getLunarBackgroundConfig('bg0', 'light').opacity).toBe(0.07);
+    expect(getLunarBackgroundConfig('bg1', 'light').opacity).toBe(0.06);
+    expect(getLunarBackgroundConfig('bg2', 'light').opacity).toBe(0.04);
+    expect(getLunarBackgroundConfig('bg3', 'light').opacity).toBe(0.06);
   });
 
   it.each(PHASES)('renders the upstream %s image mapping', (phase) => {

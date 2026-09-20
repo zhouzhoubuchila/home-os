@@ -1,8 +1,8 @@
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { useEffect, useState } from 'react';
 import {
+  getLunarBackgroundConfig,
   LUNAR_BACKGROUND_ASSETS,
-  LUNAR_BACKGROUND_CONFIG,
   type LunarBackgroundVariant,
 } from './lunar-background-assets';
 
@@ -39,8 +39,7 @@ export function LunarBackground({
 
   const renderLayer = (item: LunarBackgroundVariant, active: boolean) => {
     if (item === 'none') return null;
-    const config = LUNAR_BACKGROUND_CONFIG[item];
-    const opacity = theme === 'light' ? config.opacity * 0.08 : config.opacity;
+    const config = getLunarBackgroundConfig(item, theme === 'light' ? 'light' : 'dark');
     return (
       <img
         key={item}
@@ -50,7 +49,7 @@ export function LunarBackground({
         className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
         style={{
           objectPosition: config.position,
-          opacity: active ? opacity : 0,
+          opacity: active ? config.opacity : 0,
           filter: config.filter,
         }}
         data-lunar-background-image={item}
@@ -70,8 +69,9 @@ export function LunarBackground({
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(90deg, rgb(3 6 14 / 0.06) 0%, rgb(3 6 14 / 0.16) 32%, rgb(3 6 14 / 0.46) 62%, rgb(3 6 14 / 0.70) 100%)',
-          opacity: theme === 'light' ? 0.12 : 1,
+            theme === 'light'
+              ? 'transparent'
+              : 'linear-gradient(90deg, rgb(3 6 14 / 0.06) 0%, rgb(3 6 14 / 0.16) 32%, rgb(3 6 14 / 0.46) 62%, rgb(3 6 14 / 0.70) 100%)',
         }}
         aria-hidden="true"
       />
