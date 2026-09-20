@@ -2,7 +2,7 @@ import { dispatchEntityCommand } from '@navet/app/commands';
 import { BaseCard, Button } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
-import { useI18n, useProviderWeatherDevices, useTheme } from '@navet/app/hooks';
+import { useHomeAssistant, useI18n, useProviderWeatherDevices, useTheme } from '@navet/app/hooks';
 import type { TranslateFn } from '@navet/app/i18n';
 import { useNavigationStore } from '@navet/app/stores';
 import {
@@ -55,7 +55,10 @@ import {
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 import { MoonCard } from './lunar/moon-card';
-import { buildMoonCardModel } from './lunar/moon-card-model';
+import {
+  buildMoonCardModel,
+  getLunarLocationFromHomeAssistantConfig,
+} from './lunar/moon-card-model';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
 
 export interface HomeOsWidgetData extends PveHomeOsCardData {
@@ -533,6 +536,8 @@ export function HomeOsWidget({
   const { theme } = useTheme();
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
+  const homeAssistantConfig = useHomeAssistant((state) => state.config);
+  const lunarLocation = getLunarLocationFromHomeAssistantConfig(homeAssistantConfig);
   const functionalDevices = useHomeOsConfigStore((state) => state.config.functionalDevices ?? []);
   const resolvedFunctionalDevices = useMemo(
     () => resolveFinalFunctionalDevices(entities, functionalDevices),
@@ -640,7 +645,12 @@ export function HomeOsWidget({
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
   if (definition.kind === 'lunar')
     return withDetail(
-      <MoonCard size={size} language={language} model={buildMoonCardModel(entities)} />
+      <MoonCard
+        size={size}
+        language={language}
+        title={language === 'zh' ? '月相' : 'Lunar Phase'}
+        model={buildMoonCardModel(entities, new Date(), { location: lunarLocation })}
+      />
     );
   const matched = entities.filter(
     (entity) =>

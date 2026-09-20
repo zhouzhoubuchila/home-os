@@ -1,7 +1,7 @@
 import { dispatchEntityCommand } from '@navet/app/commands';
 import { BaseCard, Button, ModalSurface } from '@navet/app/components/primitives';
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
-import { useI18n, useTheme } from '@navet/app/hooks';
+import { useHomeAssistant, useI18n, useTheme } from '@navet/app/hooks';
 import type { ReactNode } from 'react';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
 import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-device-adapter';
@@ -27,7 +27,10 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { MoonCardDetail } from '../cards/lunar/moon-card';
-import { buildMoonCardModel } from '../cards/lunar/moon-card-model';
+import {
+  buildMoonCardModel,
+  getLunarLocationFromHomeAssistantConfig,
+} from '../cards/lunar/moon-card-model';
 
 function formatAlertDuration(durationMs: number, language: string) {
   const minutes = Math.max(1, Math.round(durationMs / 60_000));
@@ -228,6 +231,7 @@ export function HomeOsDetailDialog({
 }) {
   const { language, t } = useI18n();
   const { theme } = useTheme();
+  const homeAssistantConfig = useHomeAssistant((state) => state.config);
   const copy = getHomeOsCopy(language);
   const surface = getThemeSurfaceTokens(theme);
   const config = useHomeOsConfigStore((state) => state.config);
@@ -473,7 +477,9 @@ export function HomeOsDetailDialog({
     );
   } else if (kind === 'lunar') {
     const now = new Date();
-    const moon = buildMoonCardModel(entities, now);
+    const moon = buildMoonCardModel(entities, now, {
+      location: getLunarLocationFromHomeAssistantConfig(homeAssistantConfig),
+    });
     content = <MoonCardDetail model={moon} language={language} />;
   } else if (kind === 'weather') {
     const current = weatherSource?.current;

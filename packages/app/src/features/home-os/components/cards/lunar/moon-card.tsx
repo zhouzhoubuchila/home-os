@@ -125,7 +125,7 @@ function SectionControl({
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
-      className={`flex h-6 items-center gap-1 rounded-md px-1.5 text-[0.6rem] transition-[background-color,opacity] disabled:opacity-50 ${
+      className={`flex h-9 w-9 items-center justify-center rounded-md text-[0.6rem] transition-[background-color,opacity] disabled:opacity-50 ${
         active
           ? 'bg-current/[0.07] text-current/78'
           : 'text-current/38 hover:bg-current/[0.04] hover:text-current/65'
@@ -135,8 +135,8 @@ function SectionControl({
         onSelect(section);
       }}
     >
-      <Icon className="h-3 w-3" />
-      <span>{label}</span>
+      <Icon className="h-4 w-4" />
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
@@ -153,14 +153,18 @@ function PhaseBase({
   const phaseName = getMoonPhaseName(model.phaseKey, language);
   return (
     <div
-      className="flex h-full min-h-0 items-center gap-4 sm:gap-6"
+      className="[container-type:inline-size] flex h-full min-h-0 items-center gap-4 sm:gap-6"
       data-lunar-section-content="base"
     >
       <div className="flex w-[40%] min-w-[104px] max-w-[190px] items-center justify-center">
         <MoonPhaseVisual
           model={model}
           language={language}
-          className={large ? 'h-40 w-40' : 'h-[6.7rem] w-[6.7rem]'}
+          className={
+            large
+              ? 'h-[clamp(8rem,22cqw,9.375rem)] w-[clamp(8rem,22cqw,9.375rem)]'
+              : 'h-[clamp(6rem,18cqw,7.5rem)] w-[clamp(6rem,18cqw,7.5rem)]'
+          }
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
@@ -207,6 +211,8 @@ export interface InteractiveLunarCardProps {
   size: CardSize;
   model: MoonCardModel;
   language: string;
+  /** Home OS shell title; upstream's internal phase header stays in content. */
+  title?: string;
   theme?: ThemeType;
   mode?: LunarCardMode;
   initialSection?: LunarSection;
@@ -218,6 +224,7 @@ export function InteractiveLunarCard({
   size,
   model,
   language,
+  title,
   theme,
   mode = 'dashboard',
   initialSection = 'base',
@@ -306,6 +313,7 @@ export function InteractiveLunarCard({
   return (
     <BaseCard
       size={size}
+      title={title}
       fullBleed
       themeOverride={theme}
       frameClassName={`overflow-hidden !shadow-none ${
@@ -322,6 +330,7 @@ export function InteractiveLunarCard({
         data-lunar-size={size}
         data-lunar-active-section={activeSection}
         data-moon-source={selectedModel.source}
+        data-lunar-location-source={selectedModel.locationSource}
         data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
         data-theme={theme ?? activeTheme}
         style={resolvedBackground === 'none' ? undefined : { color: '#e1e1e1' }}
@@ -336,8 +345,8 @@ export function InteractiveLunarCard({
             className="relative z-10 flex h-9 shrink-0 items-center gap-2 px-3"
             data-card-interactive
           >
-            <span className="mr-auto text-[0.58rem] uppercase tracking-[0.18em] text-current/35">
-              {language === 'zh' ? '月相' : 'LUNAR'}
+            <span className="mr-auto truncate text-sm font-medium text-current/80">
+              {getMoonPhaseName(selectedModel.phaseKey, language)}
             </span>
             <nav
               className="flex items-center gap-0.5"

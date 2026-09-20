@@ -25,6 +25,12 @@ const PHASES: MoonPhaseKey[] = [
   'waning_crescent',
 ];
 
+const resolvedHomeOsEntity = (overrides: Parameters<typeof homeOsEntity>[0]) => {
+  const resolved = resolveSemanticEntities([homeOsEntity(overrides)])[0];
+  if (!resolved) throw new Error('Expected fixture entity to resolve');
+  return resolved;
+};
+
 beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.stubGlobal(
@@ -119,6 +125,46 @@ describe('interactive Lunar Phase Card port', () => {
     ).toBe(percent);
   });
 
+  it('uses Home Assistant config location without requiring zone.home mapping', () => {
+    const model = buildMoonCardModel([], new Date('2026-09-19T12:00:00Z'), {
+      location: { latitude: 35.6762, longitude: 139.6503 },
+    });
+    expect(model.location).toEqual({ latitude: 35.6762, longitude: 139.6503 });
+    expect(model.locationSource).toBe('ha-config');
+  });
+
+  it('falls back to zone.home when HA config location is unavailable', () => {
+    const model = buildMoonCardModel([
+      resolvedHomeOsEntity({
+        externalId: 'zone.home',
+        attributes: { latitude: 51.5072, longitude: -0.1276 },
+      }),
+    ]);
+    expect(model.location).toEqual({ latitude: 51.5072, longitude: -0.1276 });
+    expect(model.locationSource).toBe('zone-home');
+  });
+
+  it('prefers HA config location over zone.home', () => {
+    const model = buildMoonCardModel(
+      [
+        resolvedHomeOsEntity({
+          externalId: 'zone.home',
+          attributes: { latitude: 51.5072, longitude: -0.1276 },
+        }),
+      ],
+      new Date(),
+      { location: { latitude: 35.6762, longitude: 139.6503 } }
+    );
+    expect(model.location).toEqual({ latitude: 35.6762, longitude: 139.6503 });
+    expect(model.locationSource).toBe('ha-config');
+  });
+
+  it('leaves location undefined when neither source is available', () => {
+    const model = buildMoonCardModel([]);
+    expect(model.location).toBeUndefined();
+    expect(model.locationSource).toBe('none');
+  });
+
   it('prefers an available HA moon entity and Home location', () => {
     const entities = resolveSemanticEntities([
       homeOsEntity({
@@ -193,6 +239,7 @@ describe('interactive Lunar Phase Card port', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const cardSurface = container.querySelector<HTMLElement>('[data-home-os-detail]');
     expect(cardSurface).toBeInTheDocument();
+    expect(screen.getByText(/月相|Lunar Phase/)).toBeInTheDocument();
     if (cardSurface) fireEvent.click(cardSurface);
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });

@@ -66,6 +66,14 @@ export interface MoonCardModel {
   nextFullMoon?: Date;
   nextNewMoon?: Date;
   location?: LunarLocation;
+  locationSource: 'ha-config' | 'zone-home' | 'manual' | 'none';
+}
+
+export interface MoonCardModelOptions {
+  /** Home Assistant instance metadata supplied by the provider layer. */
+  location?: LunarLocation;
+  /** Optional explicit Home OS fallback for installations without HA metadata. */
+  manualLocation?: LunarLocation;
 }
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -105,13 +113,29 @@ function readNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function resolveLocation(entities: readonly ResolvedSemanticEntity[]): LunarLocation | undefined {
+export function getLunarLocationFromHomeAssistantConfig(
+  config: { latitude?: unknown; longitude?: unknown } | null | undefined
+): LunarLocation | undefined {
+  const latitude = readNumber(config?.latitude);
+  const longitude = readNumber(config?.longitude);
+  return latitude === undefined || longitude === undefined ? undefined : { latitude, longitude };
+}
+
+function resolveLocation(
+  entities: readonly ResolvedSemanticEntity[],
+  options?: MoonCardModelOptions
+): { location?: LunarLocation; source: MoonCardModel['locationSource'] } {
+  if (options?.location) return { location: options.location, source: 'ha-config' };
   const facade = new HomeOsHassFacade(entities);
   const zone = facade.getState('zone.home');
-  const sun = facade.getState('sun.sun');
-  const latitude = readNumber(zone?.attributes.latitude ?? sun?.attributes.latitude);
-  const longitude = readNumber(zone?.attributes.longitude ?? sun?.attributes.longitude);
-  return latitude === undefined || longitude === undefined ? undefined : { latitude, longitude };
+  const latitude = readNumber(zone?.attributes.latitude);
+  const longitude = readNumber(zone?.attributes.longitude);
+  if (latitude !== undefined && longitude !== undefined) {
+    return { location: { latitude, longitude }, source: 'zone-home' };
+  }
+  return options?.manualLocation
+    ? { location: options.manualLocation, source: 'manual' }
+    : { location: undefined, source: 'none' };
 }
 
 function toModel(
@@ -119,7 +143,8 @@ function toModel(
   source: MoonCardModel['source'],
   astronomy: ReturnType<typeof getAstronomySnapshot>,
   date: Date,
-  location?: LunarLocation
+  location: LunarLocation | undefined,
+  locationSource: MoonCardModel['locationSource']
 ): MoonCardModel {
   const illumination = clamp01(moon.illumination);
   const phase = ((moon.phase % 1) + 1) % 1;
@@ -150,19 +175,35 @@ function toModel(
     nextFullMoon: calculated?.nextFullMoon,
     nextNewMoon: calculated?.nextNewMoon,
     location,
+    locationSource,
   };
 }
 
 export function buildMoonCardModel(
   entities: readonly ResolvedSemanticEntity[],
-  now = new Date()
+  now = new Date(),
+  options?: MoonCardModelOptions
 ): MoonCardModel {
   const astronomy = getAstronomySnapshot(entities, now);
   const entityMoon = availableEntityMoon(entities);
-  const location = resolveLocation(entities);
+  const resolvedLocation = resolveLocation(entities, options);
   return entityMoon
-    ? toModel(entityMoon, 'entity', astronomy, now, location)
-    : toModel(getMoonPhase(now), 'calculated', astronomy, now, location);
+    ? toModel(
+        entityMoon,
+        'entity',
+        astronomy,
+        now,
+        resolvedLocation.location,
+        resolvedLocation.source
+      )
+    : toModel(
+        getMoonPhase(now),
+        'calculated',
+        astronomy,
+        now,
+        resolvedLocation.location,
+        resolvedLocation.source
+      );
 }
 
 export function buildMoonCardModelForDate(base: MoonCardModel, date: Date): MoonCardModel {
@@ -247,6 +288,7 @@ export function createMoonCardFixture(
     altitude: 25,
     distanceKm: 405892,
     location: { latitude: 35.6762, longitude: 139.6503 },
+    locationSource: 'manual',
     ...overrides,
   };
 }
