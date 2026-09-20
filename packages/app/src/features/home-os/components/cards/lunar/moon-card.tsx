@@ -182,10 +182,14 @@ function PhaseBase({
     const root = rootRef.current;
     if (!root) return;
     const measure = () => {
-      const width = root.offsetWidth;
+      const width = root.clientWidth;
+      const contentHeight = root.clientHeight;
       setCardWidth(width);
       const availableHeight = width * 0.5 - root.offsetTop;
-      setMoonSize(moonSizeOverride ?? Math.min(width / 3.2, availableHeight, 150));
+      const actualAvailableHeight = contentHeight > 0 ? contentHeight : Number.POSITIVE_INFINITY;
+      setMoonSize(
+        moonSizeOverride ?? Math.min(width / 3.2, availableHeight, actualAvailableHeight, 150)
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -198,7 +202,7 @@ function PhaseBase({
       ref={rootRef}
       className={`[container-type:inline-size] flex h-full min-h-0 gap-4 px-2 sm:gap-6 ${
         vertical || moonPosition === 'center'
-          ? 'grid grid-rows-[auto_auto] items-end justify-items-center gap-2'
+          ? 'grid grid-rows-[auto_auto] content-center items-center justify-items-center gap-2'
           : moonPosition === 'right'
             ? 'flex-row-reverse items-center'
             : 'items-center'
@@ -207,8 +211,9 @@ function PhaseBase({
       data-lunar-base="upstream"
     >
       <div
-        className={`flex h-auto min-w-0 items-center justify-center ${vertical || moonPosition === 'center' ? 'w-full' : 'w-full'}`}
-        style={{ maxWidth: vertical || moonPosition === 'center' ? '100%' : computedMoonSize }}
+        className={`flex h-auto min-w-0 items-center justify-center ${
+          vertical || moonPosition === 'center' ? 'w-full' : 'flex-1'
+        }`}
       >
         <MoonPhaseVisual
           model={model}
@@ -218,7 +223,9 @@ function PhaseBase({
         />
       </div>
       <div
-        className={`inline-grid min-w-0 w-full grid-rows-[auto_auto] content-center ${vertical || moonPosition === 'center' ? 'px-1' : 'flex-1'}`}
+        className={`flex h-full min-w-0 min-h-0 flex-col justify-center ${
+          vertical || moonPosition === 'center' ? 'w-full items-center px-1' : 'flex-1'
+        }`}
       >
         <MoonDataSwiper
           model={model}
