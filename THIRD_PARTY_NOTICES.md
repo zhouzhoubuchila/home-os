@@ -21,7 +21,8 @@ upstream custom element, `ha-card`, editor, or Home Assistant-only UI.
   `moon-compact-view`, `moon-data-info`, `moon-chart-dynamic`, `moon-calendar-footer`,
   `moon-calendar-popup`, `lunar-phase-header`, and `lunar-star-particles`
 - Vendored resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/moon_pic/`
-- Vendored background resources: `packages/app/src/features/home-os/astronomy/third_party/lunar-phase-card/background/moon_bg_0.webp` through `moon_bg_3.webp`
+- Vendored background resources: upstream PNGs `moon_bg_0.png` through `moon_bg_3.png`; `moon_bg_0` is the default and the other images are explicit custom-background options only
+- Background behavior: direct `cover`/`center`/`no-repeat` rendering with no opacity, filter, mask, vignette, crossfade, or section-based image switching
 - License: MIT, preserved in the adjacent `LICENSE` file
 - Home OS rendering: `packages/app/src/features/home-os/components/cards/lunar/`
 

@@ -59,7 +59,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'Home OS Card Studio reference for Moon Card V2. Use controls to review size, language, phase, illumination, day/night context, and entity fallback without Home Assistant.',
+          'Home OS React port of ngocjohn/lunar-phase-card at the pinned upstream commit. Backgrounds use the upstream default directly; alternate images are explicit custom backgrounds.',
       },
     },
   },
@@ -153,10 +153,10 @@ export const MediumFinalComparison: Story = {
     });
     return (
       <div className="grid min-h-screen grid-cols-1 gap-5 bg-slate-950 p-6 text-white md:grid-cols-2">
-        {(['none', 'bg0', 'bg1', 'bg3'] as const).map((variant) => (
+        {(['bg0', 'bg1', 'bg3'] as const).map((variant) => (
           <div className="min-w-0" key={variant}>
             <p className="mb-2 text-xs uppercase tracking-[0.16em] text-white/55">
-              {variant === 'none' ? 'Current' : `${variant.toUpperCase()} tuned`}
+              {variant === 'bg0' ? 'Upstream default · BG0' : `Custom ${variant.toUpperCase()}`}
             </p>
             <MoonCard
               size="medium"
@@ -174,7 +174,7 @@ export const MediumFinalComparison: Story = {
     docs: {
       description: {
         story:
-          'Same 82% waxing-gibbous model and Medium size; only the atmosphere variant changes.',
+          'Same 82% waxing-gibbous model and Medium size; BG0 is the upstream default and BG1/BG3 are explicit custom backgrounds.',
       },
     },
   },
@@ -207,7 +207,7 @@ export const InteractiveMotion: Story = {
   args: { size: 'medium', initialSection: 'base' },
   parameters: {
     docs: {
-      description: { story: 'Move the pointer over the moon to test restrained RAF parallax.' },
+      description: { story: 'Reference story for the upstream moon image and card interactions.' },
     },
   },
 };

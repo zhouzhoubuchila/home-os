@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveSemanticEntities } from '../../../mapping/semantic-resolver';
 import { homeOsEntity } from '../../../tests/fixtures';
 import { HomeOsWidget } from '../home-os-widget';
-import { getLunarBackgroundConfig, getLunarBackgroundVariant } from './lunar-background-assets';
+import { getLunarBackgroundAsset } from './lunar-background-assets';
 import { MoonCard, MoonCardDetail, MoonPhaseVisual } from './moon-card';
 import {
   buildMoonCardModel,
@@ -62,27 +62,33 @@ describe('interactive Lunar Phase Card port', () => {
     ]);
   });
 
-  it('maps lunar sections to the subdued upstream background variants', () => {
-    expect(getLunarBackgroundVariant('base')).toBe('bg0');
-    expect(getLunarBackgroundVariant('horizon')).toBe('bg3');
-    expect(getLunarBackgroundVariant('calendar')).toBe('bg1');
-    expect(getLunarBackgroundVariant('full_calendar')).toBe('bg2');
-    expect(getLunarBackgroundVariant('base', true)).toBe('bg2');
+  it('uses the upstream bg0 asset by default and direct cover rendering', () => {
+    expect(getLunarBackgroundAsset()).toContain('moon_bg_0.png');
+    const { container } = renderWithProviders(
+      <MoonCard size="medium" model={createMoonCardFixture('waxing_gibbous')} language="en" />
+    );
+    const background = container.querySelector('[data-lunar-background-image="bg0"]');
+    expect(background).toHaveClass('bg-cover', 'bg-center', 'bg-no-repeat');
+    expect(background).toHaveStyle({ boxShadow: 'none' });
+    expect((background as HTMLElement).style.opacity).toBe('');
+    expect((background as HTMLElement).style.filter).toBe('');
+    expect(background).not.toHaveAttribute('data-lunar-background-section');
   });
 
-  it('uses stronger dark presets and clean low-opacity light presets', () => {
-    expect(getLunarBackgroundConfig('bg0', 'dark')).toMatchObject({
-      position: '50% 52%',
-      opacity: 0.32,
-      filter: 'saturate(.76) brightness(.76) contrast(.96)',
-    });
-    expect(getLunarBackgroundConfig('bg1', 'dark').opacity).toBe(0.26);
-    expect(getLunarBackgroundConfig('bg2', 'dark').opacity).toBe(0.14);
-    expect(getLunarBackgroundConfig('bg3', 'dark').opacity).toBe(0.21);
-    expect(getLunarBackgroundConfig('bg0', 'light').opacity).toBe(0.07);
-    expect(getLunarBackgroundConfig('bg1', 'light').opacity).toBe(0.06);
-    expect(getLunarBackgroundConfig('bg2', 'light').opacity).toBe(0.04);
-    expect(getLunarBackgroundConfig('bg3', 'light').opacity).toBe(0.06);
+  it('keeps an explicit custom background across section changes', async () => {
+    const { container } = renderWithProviders(
+      <MoonCard
+        size="medium"
+        model={createMoonCardFixture('waxing_gibbous')}
+        language="en"
+        backgroundVariant="bg3"
+      />
+    );
+    expect(container.querySelector('[data-lunar-background-image="bg3"]')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Horizon' }));
+    await waitFor(() =>
+      expect(container.querySelector('[data-lunar-background-image="bg3"]')).toBeInTheDocument()
+    );
   });
 
   it.each(PHASES)('renders the upstream %s image mapping', (phase) => {

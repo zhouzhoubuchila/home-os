@@ -3,18 +3,9 @@ import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { useTheme } from '@navet/app/hooks';
 import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { CalendarDays, ChartNoAxesCombined, Moon } from 'lucide-react';
-import {
-  type CSSProperties,
-  lazy,
-  type PointerEvent,
-  Suspense,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type CSSProperties, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { LunarBackground } from './lunar-background';
-import { getLunarBackgroundVariant, type LunarBackgroundVariant } from './lunar-background-assets';
+import type { LunarBackgroundVariant } from './lunar-background-assets';
 import { UPSTREAM_LUNAR_PHASE_CARD_COMMIT } from './moon-assets';
 import { CompactMoonCalendar, FullMoonCalendar } from './moon-calendar';
 import { buildMoonCardModelForDate, getMoonPhaseName, type MoonCardModel } from './moon-card-model';
@@ -61,113 +52,40 @@ export function MoonPhaseVisual({
   className?: string;
 }) {
   const name = getMoonPhaseName(model.phaseKey, language);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const target = useRef({ x: 0, y: 0 });
-  const current = useRef({ x: 0, y: 0 });
-  const frame = useRef<number | undefined>(undefined);
-  const reducedMotion = useReducedMotion();
-  const [previousImage, setPreviousImage] = useState<string>();
-  const [imageVisible, setImageVisible] = useState(true);
-  const style = {
-    '--moon-x': '0px',
-    '--moon-y': '0px',
-    '--moon-rx': '0deg',
-    '--moon-ry': '0deg',
-    '--moon-scale': '1',
-    '--glow-x': '0px',
-    '--glow-y': '0px',
-    '--shadow-x': '0px',
-    '--shadow-y': '0px',
-  } as CSSProperties;
-
-  const animate = () => {
-    const nextX = current.current.x + (target.current.x - current.current.x) * 0.11;
-    const nextY = current.current.y + (target.current.y - current.current.y) * 0.11;
-    current.current = { x: nextX, y: nextY };
-    const node = rootRef.current;
-    if (node) {
-      node.style.setProperty('--moon-x', `${(nextX * 5).toFixed(2)}px`);
-      node.style.setProperty('--moon-y', `${(nextY * 4).toFixed(2)}px`);
-      node.style.setProperty('--moon-rx', `${(nextY * -1.5).toFixed(2)}deg`);
-      node.style.setProperty('--moon-ry', `${(nextX * 2).toFixed(2)}deg`);
-      node.style.setProperty('--moon-scale', `${(1 + Math.abs(nextX + nextY) * 0.006).toFixed(4)}`);
-      node.style.setProperty('--glow-x', `${(nextX * 2).toFixed(2)}px`);
-      node.style.setProperty('--glow-y', `${(nextY * 1.7).toFixed(2)}px`);
-      node.style.setProperty('--shadow-x', `${(nextX * -1).toFixed(2)}px`);
-      node.style.setProperty('--shadow-y', `${(nextY * -0.8).toFixed(2)}px`);
-    }
-    if (Math.abs(target.current.x - nextX) > 0.01 || Math.abs(target.current.y - nextY) > 0.01) {
-      frame.current = window.requestAnimationFrame(animate);
-    } else {
-      frame.current = undefined;
-    }
-  };
-
-  useEffect(() => {
-    setPreviousImage(model.moonImageUrl);
-    setImageVisible(false);
-    const timer = window.setTimeout(() => {
-      setPreviousImage(undefined);
-      setImageVisible(true);
-    }, 220);
-    return () => window.clearTimeout(timer);
-  }, [model.moonImageUrl]);
-
-  useEffect(
-    () => () => {
-      if (frame.current) window.cancelAnimationFrame(frame.current);
-    },
-    []
-  );
-
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (reducedMotion || event.pointerType === 'touch') return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    target.current = {
-      x: Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1)),
-      y: Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1)),
-    };
-    if (!frame.current) frame.current = window.requestAnimationFrame(animate);
-  };
-  const onPointerLeave = () => {
-    target.current = { x: 0, y: 0 };
-    if (!reducedMotion && !frame.current) frame.current = window.requestAnimationFrame(animate);
-  };
+  const [hovered, setHovered] = useState(false);
+  const [pointer, setPointer] = useState({ x: 50, y: 50 });
+  const lightFraction = model.illuminationPercent >= 60;
   return (
     <div
-      ref={rootRef}
       role="img"
       aria-label={
         language === 'zh'
           ? `${name}，照明 ${model.illuminationPercent}%`
           : `${name}, ${model.illuminationPercent}% illuminated`
       }
-      className={`group relative aspect-square shrink-0 select-none [perspective:700px] motion-safe:animate-[navet-lunar-breathe_5s_ease-in-out_infinite] ${className}`}
-      style={style}
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
+      className={`relative aspect-square shrink-0 select-none ${hovered ? 'group' : ''} ${className}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onMouseMove={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setPointer({
+          x: ((event.clientX - bounds.left) / bounds.width) * 100,
+          y: ((event.clientY - bounds.top) / bounds.height) * 100,
+        });
+      }}
       data-moon-phase={model.phaseKey}
       data-moon-direction={model.phase < 0.5 ? 'waxing' : 'waning'}
       data-upstream-moon-image="true"
       data-upstream-phase-index={model.phaseImageIndex}
       data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
     >
-      <span
-        className="pointer-events-none absolute inset-[21%] rounded-full bg-[rgb(226_232_240/0.065)] blur-2xl transition-transform duration-500 motion-reduce:transition-none"
-        style={{ transform: 'translate(var(--glow-x), var(--glow-y))' }}
-        aria-hidden="true"
-      />
-      <span
-        className="pointer-events-none absolute inset-[27%] rounded-full bg-black/14 blur-xl transition-transform duration-500 motion-reduce:transition-none"
-        style={{ transform: 'translate(var(--shadow-x), var(--shadow-y))' }}
-        aria-hidden="true"
-      />
-      {previousImage ? (
-        <img
-          src={previousImage}
-          alt=""
+      {hovered ? (
+        <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full object-contain grayscale opacity-100"
+          className="pointer-events-none absolute inset-0 z-[1] rounded-full border border-white/10 bg-[radial-gradient(circle_at_var(--pointer-x)_var(--pointer-y),rgb(255_255_255/0.2),rgb(0_0_0/0.4)_60%)]"
+          style={
+            { '--pointer-x': `${pointer.x}%`, '--pointer-y': `${pointer.y}%` } as CSSProperties
+          }
         />
       ) : null}
       <img
@@ -175,11 +93,7 @@ export function MoonPhaseVisual({
         alt=""
         aria-hidden="true"
         draggable={false}
-        className={`pointer-events-none relative h-full w-full object-contain grayscale brightness-[0.96] drop-shadow-[var(--shadow-x)_var(--shadow-y)_10px_rgb(15_23_42/0.24)] transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none ${imageVisible ? 'opacity-100' : 'opacity-0'}`}
-        style={{
-          transform:
-            'translate3d(var(--moon-x), var(--moon-y), 0) rotateX(var(--moon-rx)) rotateY(var(--moon-ry)) scale(var(--moon-scale))',
-        }}
+        className={`pointer-events-none relative h-full w-full object-contain grayscale drop-shadow-[2px_2px_6px_rgb(255_255_255/0.2)] ${hovered && !lightFraction ? 'brightness-200' : 'brightness-100'}`}
       />
     </div>
   );
@@ -318,17 +232,16 @@ export function InteractiveLunarCard({
   const [activeSection, setActiveSection] = useState<LunarSection>(small ? 'base' : initialSection);
   const [changing, setChanging] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date(model.date));
-  const [hasInteracted, setHasInteracted] = useState(false);
   const selectedModel = useMemo(
     () =>
       sameDay(selectedDate, model.date) ? model : buildMoonCardModelForDate(model, selectedDate),
     [model, selectedDate]
   );
-  const resolvedBackground =
-    backgroundVariant ?? getLunarBackgroundVariant(activeSection, mode === 'expanded');
+  // Upstream defaults every section to BLUE_BG (moon_bg_0). Alternate assets
+  // are only used when the caller explicitly selects custom_background.
+  const resolvedBackground = backgroundVariant ?? 'bg0';
   const changeSection = (section: LunarSection) => {
     if (section === activeSection) return;
-    setHasInteracted(true);
     setChanging(true);
     setActiveSection(section);
   };
@@ -343,11 +256,7 @@ export function InteractiveLunarCard({
       className="flex h-full min-h-0 flex-col items-center justify-center gap-1 p-3"
       data-lunar-section-content="base"
     >
-      <MoonPhaseVisual
-        model={selectedModel}
-        language={language}
-        className="h-16 w-16 motion-safe:animate-[navet-lunar-breathe_5s_ease-in-out_infinite]"
-      />
+      <MoonPhaseVisual model={selectedModel} language={language} className="h-16 w-16" />
       <p className="max-w-full truncate text-sm font-semibold">
         {getMoonPhaseName(selectedModel.phaseKey, language)}
       </p>
@@ -399,21 +308,12 @@ export function InteractiveLunarCard({
       size={size}
       fullBleed
       themeOverride={theme}
-      frameClassName={`overflow-hidden ${
+      frameClassName={`overflow-hidden !shadow-none ${
         mode === 'expanded' ? 'h-[min(28rem,62vh)] min-h-[22rem]' : ''
       }`}
       contentClassName="h-full"
       disableDefaultSheen
-      underlay={
-        <>
-          <LunarBackground
-            variant={resolvedBackground}
-            theme={theme ?? activeTheme}
-            section={activeSection}
-          />
-          <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_26%_42%,rgba(226,232,240,0.07),transparent_38%)] dark:bg-[radial-gradient(circle_at_26%_42%,rgba(148,163,184,0.08),transparent_38%)]" />
-        </>
-      }
+      underlay={<LunarBackground variant={resolvedBackground} />}
     >
       <div
         className="relative flex h-full min-h-0 flex-col"
@@ -424,9 +324,9 @@ export function InteractiveLunarCard({
         data-moon-source={selectedModel.source}
         data-upstream-commit={UPSTREAM_LUNAR_PHASE_CARD_COMMIT}
         data-theme={theme ?? activeTheme}
+        style={resolvedBackground === 'none' ? undefined : { color: '#e1e1e1' }}
       >
-        <style>{`@keyframes navet-lunar-breathe { 0%,100% { transform: translateY(-0.5px); opacity: .995; } 50% { transform: translateY(0.5px); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .navet-lunar-breathe { animation: none !important; } }`}</style>
-        {hasInteracted && large ? (
+        {large ? (
           <Suspense fallback={null}>
             <LazyLunarStarfield density={large ? 'large' : 'medium'} />
           </Suspense>
