@@ -14,6 +14,7 @@ import {
   type Plugin,
 } from 'chart.js';
 import { useEffect, useRef } from 'react';
+import { LUNAR_WEATHER_CARD_TOKENS } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { formatWeatherTemperature } from './weather-temperature';
 
 Chart.register(
@@ -138,9 +139,9 @@ export function WeatherChart({
         displayUnit
       );
     });
-    const lineColor = theme === 'light' ? '#b45309' : '#fbbf24';
-    const lowColor = theme === 'light' ? '#2563eb' : '#93c5fd';
-    const precipitationColor = theme === 'light' ? 'rgba(2,132,199,0.55)' : 'rgba(56,189,248,0.6)';
+    const lineColor = theme === 'light' ? '#2563eb' : '#7dd3fc';
+    const lowColor = theme === 'light' ? '#6366f1' : '#a5b4fc';
+    const precipitationColor = theme === 'light' ? 'rgba(14,116,204,0.34)' : 'rgba(56,189,248,0.42)';
     const labels = forecast.map((point) => getTimeLabel(point, mode, locale, use24HourTime));
     const datasets = isUv
       ? [
@@ -257,6 +258,13 @@ export function WeatherChart({
         plugins: {
           legend: { display: false },
           tooltip: {
+            backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(8,15,30,0.94)',
+            borderColor: theme === 'light' ? 'rgba(125,211,252,0.55)' : 'rgba(255,255,255,0.14)',
+            borderWidth: 1,
+            titleColor: theme === 'light' ? '#0f172a' : 'rgba(255,255,255,0.92)',
+            bodyColor: theme === 'light' ? '#334155' : 'rgba(255,255,255,0.78)',
+            padding: 10,
+            cornerRadius: 12,
             callbacks: {
               title: (items) => items[0]?.label ?? '',
               label: (context) => {
@@ -309,7 +317,7 @@ export function WeatherChart({
 
   if (forecast.length === 0) return null;
   return (
-    <div className="h-48 min-h-0 w-full">
+    <div className={LUNAR_WEATHER_CARD_TOKENS.chart}>
       <canvas ref={canvasRef} />
     </div>
   );

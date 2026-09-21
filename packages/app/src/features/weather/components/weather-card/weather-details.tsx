@@ -78,7 +78,7 @@ export function WeatherDetails({
   const formatTemperatureValue = (value: number, sourceUnit?: TemperatureUnit) =>
     `${formatTemperatureValueFromSourceUnit(value, sourceUnit, displayTemperatureUnit)} ${getTemperatureUnitSymbol(displayTemperatureUnit)}`;
   const metricsById: Partial<Record<WeatherMetricId, { caption: string; value: string }>> = {
-    precipitation: precipitation !== undefined ? {
+    precipitation: precipitation !== undefined && precipitation > 0 ? {
       caption: t('weather.precipitation'),
       value: precipitationValue,
     } : undefined,

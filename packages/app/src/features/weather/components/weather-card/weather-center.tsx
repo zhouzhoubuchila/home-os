@@ -1,4 +1,9 @@
 import type { WeatherForecastPoint, WeatherModel } from '@navet/app/features/weather/model/weather-model';
+import {
+  getLunarWeatherChipClassName,
+  getLunarWeatherPanelClassName,
+  LUNAR_WEATHER_CARD_TOKENS,
+} from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { useI18n } from '@navet/app/hooks';
 import { settingsSelectors } from '@navet/app/stores/selectors';
 import { useSettingsStore } from '@navet/app/stores/settings-store';
@@ -68,7 +73,7 @@ function ForecastStrip({
         return (
           <div
             key={`${point.datetime}-${index}`}
-            className={`rounded-xl p-3 text-center text-sm ${theme === 'light' ? 'bg-white' : 'bg-white/5'}`}
+            className={`${getLunarWeatherPanelClassName(theme, true)} min-w-0 text-center text-sm`}
           >
             <div className={mutedClassName}>{index === 0 && mode === 'hourly' ? labels.today : label}</div>
             <WeatherIcon
@@ -81,7 +86,7 @@ function ForecastStrip({
             {low ? <div className={mutedClassName}>{low}</div> : null}
             {point.precipitationProbability !== undefined ? (
               <div className="mt-1 text-xs text-sky-500">{Math.round(point.precipitationProbability)}%</div>
-            ) : point.precipitationAmount !== undefined ? (
+            ) : point.precipitationAmount !== undefined && point.precipitationAmount > 0 ? (
               <div className="mt-1 text-xs text-sky-500">
                 {labels.precipitation} {point.precipitationAmount}{point.precipitationUnit ? ` ${point.precipitationUnit}` : ''}
               </div>
@@ -178,13 +183,13 @@ export function WeatherCenter({
     ? formatDaylight(model.current.sunrise, model.current.sunset)
     : undefined);
   const shell = theme === 'light'
-    ? 'border-slate-200 bg-white text-slate-900'
+    ? 'rounded-3xl border-sky-200/90 bg-white/92 text-slate-900 shadow-[0_24px_70px_-36px_rgba(30,64,175,0.45)]'
     : theme === 'glass'
-      ? 'border-white/20 bg-slate-900/90 text-white backdrop-blur-xl'
+      ? 'rounded-3xl border-white/18 bg-slate-950/82 text-white shadow-[0_24px_70px_-38px_rgba(2,8,20,0.75)] backdrop-blur-2xl'
       : theme === 'black'
-        ? 'border-white/10 bg-black text-white'
-        : 'border-white/10 bg-slate-950 text-white';
-  const panel = theme === 'light' ? 'bg-slate-100' : 'bg-white/5';
+        ? 'rounded-3xl border-white/10 bg-black text-white shadow-[0_24px_64px_-38px_rgba(0,0,0,0.9)]'
+        : 'rounded-3xl border-white/12 bg-slate-950/94 text-white shadow-[0_24px_64px_-38px_rgba(2,8,20,0.8)]';
+  const panel = getLunarWeatherPanelClassName(theme);
   const muted = theme === 'light' ? 'text-slate-500' : 'text-white/60';
   const primary = theme === 'light' ? 'text-slate-900' : 'text-white';
   const chartLabels = {
@@ -208,16 +213,16 @@ export function WeatherCenter({
         >
           <Dialog.Title className="sr-only">{title}</Dialog.Title>
           <Dialog.Description className="sr-only">{labels.center}</Dialog.Description>
-          <div className="mb-5 flex items-start justify-between gap-4">
+          <div className={`${LUNAR_WEATHER_CARD_TOKENS.header} mb-5 items-start justify-between gap-4`}>
             <div>
-              <div className={`text-xs uppercase tracking-[0.18em] ${muted}`}>{labels.center}</div>
+              <div className={`${LUNAR_WEATHER_CARD_TOKENS.headerEyebrow} ${muted}`}>{labels.center}</div>
               <h2 className="mt-1 text-2xl font-semibold">{title}</h2>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
                 aria-label={isZh ? '关闭天气中心' : 'Close weather center'}
-                className={`rounded-full p-2 ${muted} hover:bg-black/10`}
+                className={`${LUNAR_WEATHER_CARD_TOKENS.headerControl} ${muted}`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -225,7 +230,7 @@ export function WeatherCenter({
           </div>
 
           <div className="grid gap-5 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-            <section className={`rounded-2xl p-4 ${panel}`}>
+            <section className={panel}>
               <div className={`mb-1 text-xs uppercase tracking-[0.16em] ${muted}`}>{labels.current}</div>
               <div className="flex items-center gap-4">
                 <WeatherIcon
@@ -263,13 +268,13 @@ export function WeatherCenter({
               </div>
             </section>
 
-            <section className={`rounded-2xl p-4 ${panel}`}>
+            <section className={panel}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className={`text-sm font-medium ${muted}`}>{labels.chart}</div>
                 <select
                   value={availableMetrics.includes(metric) ? metric : 'temperature'}
                   onChange={(event) => setMetric(event.target.value as WeatherChartMetric)}
-                  className={`rounded-lg px-2 py-1 text-xs ${theme === 'light' ? 'bg-white text-slate-700' : 'bg-white/10 text-white'}`}
+                  className={getLunarWeatherChipClassName(theme, false)}
                   aria-label={isZh ? '选择天气指标' : 'Chart metric'}
                 >
                   {availableMetrics.includes('temperature') ? <option value="temperature">{labels.chartTemperature}</option> : null}
@@ -295,14 +300,14 @@ export function WeatherCenter({
             </section>
           </div>
 
-          <section className={`mt-5 rounded-2xl p-4 ${panel}`}>
+          <section className={`mt-5 ${panel}`}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className={`text-sm font-medium ${muted}`}>{labels.forecast}</div>
-              <div className="flex gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/5">
+              <div className="flex gap-1 rounded-xl bg-black/5 p-1 dark:bg-white/5">
                 {availableTabs.hourly ? (
                   <button
                     type="button"
-                    className={`rounded-md px-3 py-1 text-xs ${forecastMode === 'hourly' ? 'bg-white/80 text-slate-900 shadow-sm dark:bg-white/15 dark:text-white' : muted}`}
+                    className={getLunarWeatherChipClassName(theme, forecastMode === 'hourly')}
                     onClick={() => setForecastMode('hourly')}
                   >
                     {labels.hourly}
@@ -311,7 +316,7 @@ export function WeatherCenter({
                 {availableTabs.daily ? (
                   <button
                     type="button"
-                    className={`rounded-md px-3 py-1 text-xs ${forecastMode === 'daily' ? 'bg-white/80 text-slate-900 shadow-sm dark:bg-white/15 dark:text-white' : muted}`}
+                    className={getLunarWeatherChipClassName(theme, forecastMode === 'daily')}
                     onClick={() => setForecastMode('daily')}
                   >
                     {labels.daily}
@@ -336,7 +341,7 @@ export function WeatherCenter({
           </section>
 
           {forecastMode === 'hourly' && daily.length > 0 ? (
-            <section className={`mt-5 rounded-2xl p-4 ${panel}`}>
+            <section className={`mt-5 ${panel}`}>
               <div className={`mb-3 text-sm font-medium ${muted}`}>{labels.daily}</div>
               <ForecastStrip
                 forecast={daily.slice(0, 7)}
@@ -354,7 +359,7 @@ export function WeatherCenter({
           ) : null}
 
           {model.current.sunrise || model.current.sunset ? (
-            <div className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm ${muted}`}>
+            <div className={`mt-4 ${getLunarWeatherPanelClassName(theme, true)} flex flex-wrap gap-x-4 gap-y-1 text-sm ${muted}`}>
               <span>{labels.sunrise} {formatSunTime(model.current.sunrise)}</span>
               <span>{labels.sunset} {formatSunTime(model.current.sunset)}</span>
               {daylight && daylight !== '--' ? <span>{isZh ? '日照' : 'Daylight'} {daylight}</span> : null}

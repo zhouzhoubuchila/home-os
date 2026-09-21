@@ -55,7 +55,7 @@ function getWeatherThemeSurface(theme: ThemeType, variant: string): WeatherTheme
 
 function getLightGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#ea6d61_0%,#ef8758_48%,#f4a54d_100%)]',
+    sunny: 'bg-[linear-gradient(120deg,#4f8fce_0%,#5c9fe2_48%,#7a8ed5_100%)]',
     'clear-night': 'bg-[linear-gradient(120deg,#223f83_0%,#284786_46%,#263e73_100%)]',
     cloudy: 'bg-[linear-gradient(120deg,#4b95e4_0%,#4288d4_52%,#3474bc_100%)]',
     rain: 'bg-[linear-gradient(120deg,#34396d_0%,#2f3463_46%,#262d56_100%)]',
@@ -71,7 +71,7 @@ function getLightGradient(variant: string): string {
 function getGlassGradient(variant: string): string {
   const gradients: Record<string, string> = {
     sunny:
-      'bg-[linear-gradient(120deg,rgba(234,109,97,0.42)_0%,rgba(239,135,88,0.34)_48%,rgba(244,165,77,0.28)_100%)]',
+      'bg-[linear-gradient(120deg,rgba(79,143,206,0.34)_0%,rgba(92,159,226,0.28)_48%,rgba(122,142,213,0.24)_100%)]',
     'clear-night':
       'bg-[linear-gradient(120deg,rgba(34,63,131,0.34)_0%,rgba(40,71,134,0.26)_46%,rgba(38,62,115,0.22)_100%)]',
     cloudy:
@@ -95,7 +95,7 @@ function getGlassGradient(variant: string): string {
 
 function getDarkGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#9f462e_0%,#bc6429_48%,#dd8f27_100%)]',
+    sunny: 'bg-[linear-gradient(120deg,#1c3b63_0%,#245082_48%,#353e79_100%)]',
     'clear-night': 'bg-[linear-gradient(120deg,#182a57_0%,#1c3363_46%,#1a2b52_100%)]',
     cloudy: 'bg-[linear-gradient(120deg,#25496f_0%,#214261_52%,#1b3650_100%)]',
     rain: 'bg-[linear-gradient(120deg,#1f2348_0%,#1c2140_46%,#171c36_100%)]',
@@ -110,7 +110,7 @@ function getDarkGradient(variant: string): string {
 
 function getBlackGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#532116_0%,#723115_48%,#a35218_100%)]',
+    sunny: 'bg-[linear-gradient(120deg,#0b1b2c_0%,#102d49_48%,#171b3c_100%)]',
     'clear-night': 'bg-[linear-gradient(120deg,#081122_0%,#0b1630_46%,#0b1227_100%)]',
     cloudy: 'bg-[linear-gradient(120deg,#0d1b2a_0%,#102033_52%,#0d1725_100%)]',
     rain: 'bg-[linear-gradient(120deg,#090b17_0%,#0b1020_46%,#090d18_100%)]',

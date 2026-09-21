@@ -452,11 +452,11 @@ export const WeatherIcon = ({
         src={asset}
         alt=""
         aria-hidden="true"
-        className={`${className} ${theme === 'light' ? 'opacity-85' : 'brightness-0 invert'}`}
+        className={`${className} ${theme === 'light' ? 'opacity-85 drop-shadow-[0_2px_5px_rgba(37,99,235,0.18)]' : 'brightness-0 invert opacity-90 drop-shadow-[0_2px_6px_rgba(125,211,252,0.16)]'}`}
         style={style}
       />
     );
   }
   const IconComponent = getWeatherIconComponent(effectiveCondition);
-  return <IconComponent className={`${className} ${animated ? 'motion-safe:animate-pulse' : ''}`} style={style} />;
+  return <IconComponent className={`${className} drop-shadow-[0_2px_6px_rgba(56,189,248,0.16)] ${animated ? 'motion-safe:animate-pulse' : ''}`} style={style} />;
 };

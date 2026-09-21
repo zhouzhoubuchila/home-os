@@ -2,6 +2,7 @@ import {
   formatTemperatureValueFromSourceUnit,
   type TemperatureUnit,
 } from '@navet/app/utils/temperature';
+import { getLunarWeatherPanelClassName } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import type { CSSProperties } from 'react';
 import type { ThemeType } from '@navet/app/hooks';
 import type { ForecastDay } from './index';
@@ -52,7 +53,10 @@ export function WeatherForecastRow({
   return (
     <div className={`flex w-full items-start justify-between ${isSmall ? 'gap-1' : 'gap-2'}`}>
       {forecast.map((day) => (
-        <div key={day.day} className="min-w-0 text-center">
+        <div
+          key={day.day}
+          className={`min-w-0 flex-1 text-center ${getLunarWeatherPanelClassName(theme, true)} ${isSmall ? 'px-1.5 py-1.5' : ''}`}
+        >
           <div
             className={`${compactForecastDayClassName} ${compactForecastDayTextClassName}`}
             style={{ color: textSecondary, textShadow }}
@@ -100,7 +104,7 @@ export function WeatherForecastRow({
           )}
           {day.precipitationProbability !== undefined ? (
             <div className="mt-0.5 text-[10px] text-sky-500">{Math.round(day.precipitationProbability)}%</div>
-          ) : day.precipitationAmount !== undefined ? (
+          ) : day.precipitationAmount !== undefined && day.precipitationAmount > 0 ? (
             <div className="mt-0.5 text-[10px] text-sky-500">
               {day.precipitationAmount}{day.precipitationUnit ? ` ${day.precipitationUnit}` : ''}
             </div>
