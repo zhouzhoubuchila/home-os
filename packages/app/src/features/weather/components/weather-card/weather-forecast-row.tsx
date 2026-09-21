@@ -2,7 +2,6 @@ import {
   formatTemperatureValueFromSourceUnit,
   type TemperatureUnit,
 } from '@navet/app/utils/temperature';
-import { getLunarWeatherPanelClassName } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import type { CSSProperties } from 'react';
 import type { ThemeType } from '@navet/app/hooks';
 import type { ForecastDay } from './index';
@@ -53,10 +52,7 @@ export function WeatherForecastRow({
   return (
     <div className={`flex w-full items-start justify-between ${isSmall ? 'gap-1' : 'gap-2'}`}>
       {forecast.map((day) => (
-        <div
-          key={day.day}
-          className={`min-w-0 flex-1 text-center ${getLunarWeatherPanelClassName(theme, true)} ${isSmall ? 'px-1.5 py-1.5' : ''}`}
-        >
+        <div key={day.day} className="min-w-0 text-center">
           <div
             className={`${compactForecastDayClassName} ${compactForecastDayTextClassName}`}
             style={{ color: textSecondary, textShadow }}

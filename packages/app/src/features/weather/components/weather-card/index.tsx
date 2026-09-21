@@ -1,6 +1,5 @@
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { CardWrapper } from '@navet/app/components/ui/card-wrapper';
-import { getLunarWeatherPanelClassName, LUNAR_WEATHER_CARD_TOKENS } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { useAccentColor, useI18n } from '@navet/app/hooks';
 import { settingsSelectors } from '@navet/app/stores/selectors';
 import { useSettingsStore, type WeatherForecastMode } from '@navet/app/stores/settings-store';
@@ -213,8 +212,7 @@ export const WeatherCard = memo(function WeatherCard({
     theme === 'black' ? 'opacity-18' : theme === 'dark' ? 'opacity-28' : 'opacity-55';
   const weatherOverlayClassName = hasCustomTint
     ? (tintSurface.overlayClassName ?? 'bg-transparent')
-      : [surface.lightOverlay, shell.overlayClassName].filter(Boolean).join(' ');
-  const sharedPanelClassName = getLunarWeatherPanelClassName(theme, true);
+    : [surface.lightOverlay, shell.overlayClassName].filter(Boolean).join(' ');
 
   const gradientBackgroundStyle = useMemo(
     () =>
@@ -306,13 +304,8 @@ export const WeatherCard = memo(function WeatherCard({
           data-weather-forecast-daily={model?.forecast.daily.length ?? 0}
           data-weather-forecast-twice-daily={model?.forecast.twiceDaily.length ?? 0}
         >
-          <div className={`${LUNAR_WEATHER_CARD_TOKENS.header} items-start justify-between ${compactHeaderClassName}`}>
+          <div className={`flex items-start justify-between ${compactHeaderClassName}`}>
             <div className="min-w-0">
-              {!isTiny ? (
-                <div className={`${LUNAR_WEATHER_CARD_TOKENS.headerEyebrow} mb-1`} style={subtitleStyle}>
-                  {locale.toLowerCase().startsWith('zh') ? '天气' : 'Weather'}
-                </div>
-              ) : null}
               {!isTiny ? <div className={`inline-flex min-w-0 items-center ${compactLocationRowClassName}`}>
                 <Navigation
                   className={`${isMedium || isSmall ? 'h-3.5 w-3.5' : 'h-4 w-4'} shrink-0`}
@@ -404,9 +397,8 @@ export const WeatherCard = memo(function WeatherCard({
               ) : null}
             </div>
           ) : size === 'medium-vertical' ? (
-            <div className="mt-auto flex min-h-0 flex-col gap-2">
-              <div className={sharedPanelClassName}>
-                <WeatherDetails
+            <div className="mt-auto flex min-h-0 flex-col gap-3">
+              <WeatherDetails
                 temperature={resolvedTemperature}
                 temperatureUnit={resolvedTemperatureUnit}
                 highTemp={highTemp}
@@ -433,8 +425,7 @@ export const WeatherCard = memo(function WeatherCard({
                 textShadow={weatherTextTreatment.textShadow}
                 titleStyle={titleStyle}
                 subtitleStyle={subtitleStyle}
-                />
-              </div>
+              />
               {visibleForecast.length > 0 ? <WeatherForecastRow
                 forecast={visibleForecast.slice(0, 4)}
                 temperatureUnit={temperatureUnit}
@@ -451,8 +442,8 @@ export const WeatherCard = memo(function WeatherCard({
               /> : null}
             </div>
           ) : (
-            <div className="mt-auto flex min-h-0 flex-col gap-2">
-              <div className={`${sharedPanelClassName} flex items-end justify-between gap-4`}>
+            <div className="mt-auto flex min-h-0 flex-col">
+              <div className="flex items-end justify-between gap-4">
                 <WeatherDetails
                   temperature={resolvedTemperature}
                   temperatureUnit={resolvedTemperatureUnit}
@@ -484,19 +475,17 @@ export const WeatherCard = memo(function WeatherCard({
                 />
               </div>
 
-              <div className={sharedPanelClassName}>
-                <WeatherSunTimes
-                  sunrise={sunrise}
-                  sunset={sunset}
-                  daylight={daylight}
-                  textPrimary={textPrimary}
-                  textSecondary={textSecondary}
-                  textShadow={weatherTextTreatment.textShadow}
-                  titleStyle={titleStyle}
-                  subtitleStyle={subtitleStyle}
-                  iconStyleSecondary={iconStyleSecondary}
-                />
-              </div>
+              <WeatherSunTimes
+                sunrise={sunrise}
+                sunset={sunset}
+                daylight={daylight}
+                textPrimary={textPrimary}
+                textSecondary={textSecondary}
+                textShadow={weatherTextTreatment.textShadow}
+                titleStyle={titleStyle}
+                subtitleStyle={subtitleStyle}
+                iconStyleSecondary={iconStyleSecondary}
+              />
 
               {(size === 'extra-large' || size === 'extra-wide') && model ? (
                 <WeatherChart

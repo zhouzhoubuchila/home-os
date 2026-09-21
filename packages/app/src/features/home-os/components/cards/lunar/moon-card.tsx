@@ -1,5 +1,4 @@
 import { BaseCard } from '@navet/app/components/primitives';
-import { LUNAR_WEATHER_CARD_TOKENS } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { useTheme } from '@navet/app/hooks';
 import type { ThemeType } from '@navet/app/hooks/use-theme';
@@ -144,7 +143,7 @@ function SectionControl({
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
-      className={`${LUNAR_WEATHER_CARD_TOKENS.headerControl} text-[0.6rem] ${
+      className={`flex h-9 w-9 items-center justify-center rounded-md text-[0.6rem] transition-[color,opacity] disabled:opacity-50 ${
         active ? 'text-[var(--accent-color)] opacity-90' : 'text-current/38 hover:text-current/65'
       }`}
       onClick={(event) => {
@@ -228,15 +227,13 @@ function PhaseBase({
           vertical || moonPosition === 'center' ? 'w-full items-center px-1' : 'flex-1'
         }`}
       >
-        <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          <MoonDataSwiper
-            model={model}
-            language={language}
-            maxDataPerPage={maxDataPerPage}
-            hideItems={hideItems}
-            cardWidth={cardWidth}
-          />
-        </div>
+        <MoonDataSwiper
+          model={model}
+          language={language}
+          maxDataPerPage={maxDataPerPage}
+          hideItems={hideItems}
+          cardWidth={cardWidth}
+        />
       </div>
     </div>
   );
@@ -603,10 +600,10 @@ export function InteractiveLunarCard({
         (!compact || resolvedCompactMode === 'standard') &&
         activeSection !== 'full_calendar' ? (
           <header
-            className={`${LUNAR_WEATHER_CARD_TOKENS.header} h-9 shrink-0 px-3`}
+            className="relative z-10 flex h-9 shrink-0 items-center gap-2 px-3"
             data-card-interactive
           >
-            <span className={`${LUNAR_WEATHER_CARD_TOKENS.headerTitle} mr-auto text-current/80`}>
+            <span className="mr-auto truncate text-sm font-medium text-current/80">
               {getMoonPhaseName(selectedModel.phaseKey, language)}
             </span>
             <nav

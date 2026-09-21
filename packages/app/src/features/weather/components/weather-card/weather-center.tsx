@@ -73,7 +73,7 @@ function ForecastStrip({
         return (
           <div
             key={`${point.datetime}-${index}`}
-            className={`${getLunarWeatherPanelClassName(theme, true)} min-w-0 text-center text-sm`}
+            className={`${getLunarWeatherPanelClassName(theme, true)} min-w-0 p-3 text-center text-sm`}
           >
             <div className={mutedClassName}>{index === 0 && mode === 'hourly' ? labels.today : label}</div>
             <WeatherIcon
@@ -359,7 +359,7 @@ export function WeatherCenter({
           ) : null}
 
           {model.current.sunrise || model.current.sunset ? (
-            <div className={`mt-4 ${getLunarWeatherPanelClassName(theme, true)} flex flex-wrap gap-x-4 gap-y-1 text-sm ${muted}`}>
+            <div className={`mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm ${muted}`}>
               <span>{labels.sunrise} {formatSunTime(model.current.sunrise)}</span>
               <span>{labels.sunset} {formatSunTime(model.current.sunset)}</span>
               {daylight && daylight !== '--' ? <span>{isZh ? '日照' : 'Daylight'} {daylight}</span> : null}
