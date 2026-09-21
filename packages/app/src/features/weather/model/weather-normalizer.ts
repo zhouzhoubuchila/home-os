@@ -1,5 +1,6 @@
 import type { WeatherForecastPoint, WeatherForecastType, WeatherModel } from './weather-model';
 import { normalizeTemperatureUnit, type TemperatureUnit } from '@navet/app/utils/temperature';
+import { formatDaylight } from '@navet/app/hooks/entity-utils';
 
 type RawRecord = Record<string, unknown>;
 
@@ -103,6 +104,7 @@ export function normalizeWeatherModel({
 
   const sunrise = string(sunEntity?.attributes?.next_rising) ?? string(attributes.sunrise);
   const sunset = string(sunEntity?.attributes?.next_setting) ?? string(attributes.sunset);
+  const daylight = formatDaylight(sunrise, sunset);
   const isDay = sunEntity?.state === 'above_horizon'
     ? true
     : sunEntity?.state === 'below_horizon'
@@ -138,6 +140,7 @@ export function normalizeWeatherModel({
       precipitationUnit: string(attributes.precipitation_unit),
       sunrise,
       sunset,
+      daylight: daylight === '--' ? undefined : daylight,
     },
     forecast: normalizedForecast,
     capabilities,

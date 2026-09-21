@@ -31,6 +31,7 @@ interface WeatherDetailsProps {
   pressureUnit?: string;
   uvIndex?: number;
   cloudCoverage?: number;
+  showTemperatureSummary?: boolean;
   selectedMetricIds: WeatherMetricId[];
   textPrimary: string;
   textSecondary: string;
@@ -60,6 +61,7 @@ export function WeatherDetails({
   pressureUnit = 'hPa',
   uvIndex,
   cloudCoverage,
+  showTemperatureSummary = true,
   selectedMetricIds,
   textPrimary,
   textSecondary,
@@ -129,9 +131,16 @@ export function WeatherDetails({
     .filter((metric): metric is { caption: string; value: string } => Boolean(metric))
     .slice(0, 5);
 
+  const hasTemperatureSummary = showTemperatureSummary && (
+    temperature !== undefined ||
+    highTemp !== undefined ||
+    lowTemp !== undefined ||
+    Boolean(rainForecast)
+  );
+
   return (
-    <div className="flex w-full items-end justify-between gap-4">
-      <div className="min-w-0 shrink-0">
+    <div className={`flex w-full items-end gap-4 ${hasTemperatureSummary ? 'justify-between' : 'justify-end'}`}>
+      {hasTemperatureSummary ? <div className="min-w-0 shrink-0">
         {temperature !== undefined ? (
           <div className="mb-1 text-3xl font-bold leading-none" style={titleStyle}>
             {formatTemperature(temperature, temperatureUnit)}
@@ -149,9 +158,9 @@ export function WeatherDetails({
             {rainForecast}
           </div>
         ) : null}
-      </div>
+      </div> : null}
 
-      <div className="shrink-0 space-y-0.5 text-right">
+      <div className={`${hasTemperatureSummary ? 'shrink-0' : 'w-full'} space-y-0.5 text-right`}>
         {visibleMetrics.map((metric) => (
           <CaptionValue
             key={metric.caption}

@@ -1,102 +1,303 @@
-import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Tooltip } from 'chart.js';
-import { useEffect, useRef } from 'react';
 import type { WeatherForecastPoint } from '@navet/app/features/weather/model/weather-model';
 import type { ThemeType } from '@navet/app/hooks';
 import { convertTemperatureUnitValue, type TemperatureUnit } from '@navet/app/utils/temperature';
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  Tooltip,
+  type Plugin,
+} from 'chart.js';
+import { useEffect, useRef } from 'react';
 import { formatWeatherTemperature } from './weather-temperature';
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Tooltip);
+Chart.register(
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  Tooltip
+);
 
-export type WeatherChartMetric = 'temperature' | 'apparentTemperature' | 'humidity' | 'pressure' | 'uvIndex';
+export type WeatherChartMetric =
+  | 'temperature'
+  | 'apparentTemperature'
+  | 'humidity'
+  | 'pressure'
+  | 'uvIndex';
+export type WeatherChartMode = 'hourly' | 'daily';
+
+export function getWeatherChartAvailability(forecast: WeatherForecastPoint[]) {
+  return {
+    temperature: forecast.some((point) => typeof point.temperature === 'number'),
+    lowTemperature: forecast.some((point) => typeof point.temperatureLow === 'number'),
+    precipitation: forecast.some(
+      (point) => typeof point.precipitationAmount === 'number' && point.precipitationAmount > 0
+    ),
+    apparentTemperature: forecast.some((point) => typeof point.apparentTemperature === 'number'),
+    humidity: forecast.some((point) => typeof point.humidity === 'number'),
+    pressure: forecast.some((point) => typeof point.pressure === 'number'),
+    uvIndex: forecast.some((point) => typeof point.uvIndex === 'number'),
+  };
+}
+
+interface WeatherChartProps {
+  forecast: WeatherForecastPoint[];
+  metric?: WeatherChartMetric;
+  mode?: WeatherChartMode;
+  theme?: ThemeType;
+  locale?: string;
+  use24HourTime?: boolean;
+  sourceTemperatureUnit?: TemperatureUnit;
+  displayTemperatureUnit?: TemperatureUnit;
+  metricLabels?: Partial<Record<WeatherChartMetric | 'precipitation' | 'high' | 'low', string>>;
+}
+
+function formatChartMetricValue(
+  point: WeatherForecastPoint,
+  metric: WeatherChartMetric,
+  value: number,
+  sourceTemperatureUnit: TemperatureUnit | undefined,
+  displayTemperatureUnit: TemperatureUnit
+) {
+  if (metric === 'temperature' || metric === 'apparentTemperature') {
+    return formatWeatherTemperature(
+      value,
+      point.temperatureUnit ?? sourceTemperatureUnit,
+      displayTemperatureUnit
+    );
+  }
+  if (metric === 'humidity') return `${Math.round(value)}%`;
+  if (metric === 'pressure') return `${Math.round(value * 10) / 10} hPa`;
+  if (metric === 'uvIndex') return `${Math.round(value * 10) / 10}`;
+  return String(value);
+}
+
+function getTimeLabel(
+  point: WeatherForecastPoint,
+  mode: WeatherChartMode,
+  locale: string | undefined,
+  use24HourTime: boolean
+) {
+  const date = new Date(point.datetime);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(locale, {
+    ...(mode === 'hourly' ? { hour: '2-digit', minute: '2-digit' } : { weekday: 'short' }),
+    hour12: mode === 'hourly' ? !use24HourTime : undefined,
+  }).format(date);
+}
 
 export function WeatherChart({
   forecast,
   metric = 'temperature',
+  mode = 'hourly',
   theme = 'dark',
+  locale,
+  use24HourTime = false,
   sourceTemperatureUnit,
   displayTemperatureUnit,
   metricLabels,
-}: {
-  forecast: WeatherForecastPoint[];
-  metric?: WeatherChartMetric;
-  theme?: ThemeType;
-  sourceTemperatureUnit?: TemperatureUnit;
-  displayTemperatureUnit?: TemperatureUnit;
-  metricLabels?: Partial<Record<WeatherChartMetric | 'precipitation', string>>;
-}) {
+}: WeatherChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
+  const displayUnit = displayTemperatureUnit ?? sourceTemperatureUnit ?? 'celsius';
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || forecast.length === 0) return undefined;
     chartRef.current?.destroy();
-    const displayUnit = displayTemperatureUnit ?? sourceTemperatureUnit ?? 'celsius';
-    const formatMetricValue = (point: WeatherForecastPoint, value: number) => {
-      if (metric === 'temperature' || metric === 'apparentTemperature') {
-        return formatWeatherTemperature(
-          value,
-          point.temperatureUnit ?? sourceTemperatureUnit,
-          displayUnit
-        );
-      }
-      return String(value);
-    };
-    chartRef.current = new Chart(canvas, {
-      data: {
-        labels: forecast.map((point) => new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).format(new Date(point.datetime))),
-        datasets: [
+
+    const isTemperature = metric === 'temperature';
+    const availability = getWeatherChartAvailability(forecast);
+    const hasLow = isTemperature && availability.lowTemperature;
+    const hasPrecipitation = isTemperature && availability.precipitation;
+    const isUv = metric === 'uvIndex';
+    const primaryValues = forecast.map((point) => {
+      const value = point[metric];
+      if (typeof value !== 'number') return null;
+      if (metric !== 'temperature' && metric !== 'apparentTemperature') return value;
+      return convertTemperatureUnitValue(
+        value,
+        point.temperatureUnit ?? sourceTemperatureUnit,
+        displayUnit
+      );
+    });
+    const lowValues = forecast.map((point) => {
+      if (typeof point.temperatureLow !== 'number') return null;
+      return convertTemperatureUnitValue(
+        point.temperatureLow,
+        point.temperatureUnit ?? sourceTemperatureUnit,
+        displayUnit
+      );
+    });
+    const lineColor = theme === 'light' ? '#b45309' : '#fbbf24';
+    const lowColor = theme === 'light' ? '#2563eb' : '#93c5fd';
+    const precipitationColor = theme === 'light' ? 'rgba(2,132,199,0.55)' : 'rgba(56,189,248,0.6)';
+    const labels = forecast.map((point) => getTimeLabel(point, mode, locale, use24HourTime));
+    const datasets = isUv
+      ? [
           {
-            type: 'line',
-            label: metricLabels?.[metric] ?? metric,
-            data: forecast.map((point) => {
-              const value = point[metric];
-              if (typeof value !== 'number') return null;
-              if (metric !== 'temperature' && metric !== 'apparentTemperature') return value;
-              return convertTemperatureUnitValue(
-                value,
-                point.temperatureUnit ?? sourceTemperatureUnit,
-                displayUnit
-              );
-            }),
-            borderColor: theme === 'light' ? '#b45309' : '#fbbf24',
-            backgroundColor: theme === 'light' ? '#b45309' : '#fbbf24',
-            tension: 0.35,
-            spanGaps: true,
-          },
-          ...(metric === 'temperature' ? [{
             type: 'bar' as const,
-            label: metricLabels?.precipitation ?? 'Precipitation',
-            data: forecast.map((point) => point.precipitationAmount ?? 0),
-            backgroundColor: theme === 'light' ? 'rgba(2,132,199,0.35)' : 'rgba(56,189,248,0.45)',
-            borderRadius: 3,
-          }] : []),
-        ],
+            label: metricLabels?.uvIndex ?? 'UV',
+            data: primaryValues,
+            backgroundColor: precipitationColor,
+            borderRadius: 4,
+            barPercentage: 0.65,
+            categoryPercentage: 0.75,
+          },
+        ]
+      : [
+          {
+            type: 'line' as const,
+            label:
+              isTemperature && mode === 'daily'
+                ? metricLabels?.high ?? 'High'
+                : metricLabels?.[metric] ?? metric,
+            data: primaryValues,
+            borderColor: lineColor,
+            backgroundColor: lineColor,
+            borderWidth: 2.2,
+            pointRadius: 2.5,
+            pointHoverRadius: 5,
+            pointHitRadius: 10,
+            tension: 0.32,
+            spanGaps: true,
+            fill: false,
+          },
+          ...(hasLow
+            ? [
+                {
+                  type: 'line' as const,
+                  label: metricLabels?.low ?? 'Low',
+                  data: lowValues,
+                  borderColor: lowColor,
+                  backgroundColor: lowColor,
+                  borderWidth: 2,
+                  pointRadius: 2,
+                  pointHoverRadius: 4.5,
+                  pointHitRadius: 10,
+                  tension: 0.32,
+                  spanGaps: true,
+                  fill: false,
+                },
+              ]
+            : []),
+          ...(hasPrecipitation
+            ? [
+                {
+                  type: 'bar' as const,
+                  label: metricLabels?.precipitation ?? 'Precipitation',
+                  data: forecast.map((point) => point.precipitationAmount ?? null),
+                  backgroundColor: precipitationColor,
+                  borderRadius: 4,
+                  barPercentage: 0.55,
+                  categoryPercentage: 0.7,
+                  yAxisID: 'precipitation',
+                },
+              ]
+            : []),
+        ];
+
+    const valueLabelsPlugin: Plugin = {
+      id: 'weather-value-labels',
+      afterDatasetsDraw(chart) {
+        const context = chart.ctx;
+        context.save();
+        context.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+        context.textAlign = 'center';
+        context.textBaseline = 'bottom';
+        const labelStep = mode === 'daily' ? 1 : Math.max(1, Math.ceil(forecast.length / 8));
+        const lineDatasetCount = isTemperature ? (hasLow ? 2 : 1) : isUv ? 0 : 1;
+        for (let datasetIndex = 0; datasetIndex < lineDatasetCount; datasetIndex += 1) {
+          const metadata = chart.getDatasetMeta(datasetIndex);
+          const values = datasetIndex === 1 ? lowValues : primaryValues;
+          const color = datasetIndex === 1 ? lowColor : lineColor;
+          context.fillStyle = color;
+          metadata.data.forEach((element, index) => {
+            if (index % labelStep !== 0 || typeof values[index] !== 'number') return;
+            const point = forecast[index];
+            const originalValue = datasetIndex === 1 ? point.temperatureLow : point[metric];
+            if (typeof originalValue !== 'number') return;
+            const label = formatChartMetricValue(
+              point,
+              metric,
+              originalValue,
+              sourceTemperatureUnit,
+              displayUnit
+            );
+            const position = element.getProps(['x', 'y'], true);
+            context.fillText(label, position.x, position.y - 7);
+          });
+        }
+        context.restore();
       },
+    };
+
+    const numericValues = primaryValues.filter((value): value is number => typeof value === 'number');
+    const pressurePadding = metric === 'pressure' && numericValues.length > 0
+      ? Math.max(1, (Math.max(...numericValues) - Math.min(...numericValues)) * 0.18)
+      : undefined;
+
+    chartRef.current = new Chart(canvas, {
+      data: { labels, datasets },
+      plugins: [valueLabelsPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
+              title: (items) => items[0]?.label ?? '',
               label: (context) => {
                 const point = forecast[context.dataIndex];
-                const value = context.raw;
-                if (!point || typeof value !== 'number') return '';
-                if (context.datasetIndex === 1) {
-                  return `${metricLabels?.precipitation ?? 'Precipitation'}: ${value}${point.precipitationUnit ? ` ${point.precipitationUnit}` : ''}`;
+                if (!point || typeof context.raw !== 'number') return '';
+                if (context.dataset.type === 'bar' && context.datasetIndex === datasets.length - 1 && hasPrecipitation) {
+                  return `${metricLabels?.precipitation ?? 'Precipitation'}: ${context.raw}${point.precipitationUnit ? ` ${point.precipitationUnit}` : ''}`;
                 }
-                const originalValue = point[metric];
-                return `${metricLabels?.[metric] ?? metric}: ${formatMetricValue(point, typeof originalValue === 'number' ? originalValue : value)}`;
+                if (isUv && context.dataset.type === 'bar') {
+                  return `${metricLabels?.uvIndex ?? 'UV'}: ${context.raw}`;
+                }
+                const originalValue = context.datasetIndex === 1 ? point.temperatureLow : point[metric];
+                if (typeof originalValue !== 'number') return '';
+                return `${context.dataset.label ?? metric}: ${formatChartMetricValue(point, metric, originalValue, sourceTemperatureUnit, displayUnit)}`;
               },
             },
           },
         },
         scales: {
-          x: { display: false },
-          y: { display: false },
+          x: {
+            display: true,
+            grid: { display: false },
+            ticks: {
+              color: theme === 'light' ? '#64748b' : 'rgba(255,255,255,0.62)',
+              maxTicksLimit: mode === 'hourly' ? 8 : 7,
+              autoSkip: true,
+              maxRotation: 0,
+            },
+          },
+          y: {
+            display: false,
+            beginAtZero: metric === 'humidity' || isUv,
+            min: pressurePadding !== undefined ? Math.min(...numericValues) - pressurePadding : undefined,
+            max: pressurePadding !== undefined ? Math.max(...numericValues) + pressurePadding : undefined,
+          },
+          precipitation: {
+            display: false,
+            position: 'right',
+            beginAtZero: true,
+            grid: { drawOnChartArea: false },
+          },
         },
       },
     });
@@ -104,8 +305,12 @@ export function WeatherChart({
       chartRef.current?.destroy();
       chartRef.current = null;
     };
-  }, [displayTemperatureUnit, forecast, metric, metricLabels, sourceTemperatureUnit, theme]);
+  }, [displayTemperatureUnit, displayUnit, forecast, locale, metric, metricLabels, mode, sourceTemperatureUnit, theme, use24HourTime]);
 
   if (forecast.length === 0) return null;
-  return <div className="h-28 min-h-0 w-full"><canvas ref={canvasRef} /></div>;
+  return (
+    <div className="h-48 min-h-0 w-full">
+      <canvas ref={canvasRef} />
+    </div>
+  );
 }

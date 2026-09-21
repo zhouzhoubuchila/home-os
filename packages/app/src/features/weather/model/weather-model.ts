@@ -62,6 +62,7 @@ export interface WeatherModel {
     precipitationUnit?: string;
     sunrise?: string;
     sunset?: string;
+    daylight?: string;
   };
   forecast: WeatherForecastCollections;
   capabilities: WeatherForecastCapabilities;

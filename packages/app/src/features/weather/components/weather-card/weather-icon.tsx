@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactElement, ReactNode, SVGProps } from 'react';
 import { formatHomeOsWeatherCondition } from '@navet/app/features/home-os/i18n/display-state';
+import type { ThemeType } from '@navet/app/hooks';
 import animatedClearDay from '../../third_party/weather-icons/line/svg/clear-day.svg';
 import animatedClearNight from '../../third_party/weather-icons/line/svg/clear-night.svg';
 import animatedCloudy from '../../third_party/weather-icons/line/svg/cloudy.svg';
@@ -54,6 +55,7 @@ interface WeatherIconProps {
   style?: CSSProperties;
   isNight?: boolean;
   animated?: boolean;
+  theme?: ThemeType;
 }
 
 type WeatherIconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
@@ -434,6 +436,7 @@ export const WeatherIcon = ({
   style,
   isNight = false,
   animated = false,
+  theme = 'dark',
 }: WeatherIconProps) => {
   const normalized = normalizeWeatherCondition(condition);
   const effectiveCondition =
@@ -444,7 +447,15 @@ export const WeatherIcon = ({
         : normalized;
   const asset = getWeatherIconAsset(effectiveCondition, isNight, animated);
   if (asset) {
-    return <img src={asset} alt="" aria-hidden="true" className={`${className} brightness-0 invert`} style={style} />;
+    return (
+      <img
+        src={asset}
+        alt=""
+        aria-hidden="true"
+        className={`${className} ${theme === 'light' ? 'opacity-85' : 'brightness-0 invert'}`}
+        style={style}
+      />
+    );
   }
   const IconComponent = getWeatherIconComponent(effectiveCondition);
   return <IconComponent className={`${className} ${animated ? 'motion-safe:animate-pulse' : ''}`} style={style} />;

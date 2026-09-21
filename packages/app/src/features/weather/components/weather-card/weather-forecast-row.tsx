@@ -3,6 +3,7 @@ import {
   type TemperatureUnit,
 } from '@navet/app/utils/temperature';
 import type { CSSProperties } from 'react';
+import type { ThemeType } from '@navet/app/hooks';
 import type { ForecastDay } from './index';
 import { WeatherIcon } from './weather-icon';
 
@@ -18,6 +19,7 @@ interface WeatherForecastRowProps {
   textShadow?: string;
   titleStyle: CSSProperties;
   subtitleStyle: CSSProperties;
+  theme?: ThemeType;
 }
 
 export function WeatherForecastRow({
@@ -32,6 +34,7 @@ export function WeatherForecastRow({
   textShadow,
   titleStyle,
   subtitleStyle,
+  theme = 'dark',
 }: WeatherForecastRowProps) {
   const compactForecastDayTextClassName = isSmall ? 'text-xs' : 'text-sm';
   const compactForecastIconClassName = isSmall
@@ -59,6 +62,7 @@ export function WeatherForecastRow({
           <WeatherIcon
             condition={day.condition}
             isNight={day.isDaytime === false}
+            theme={theme}
             className={compactForecastIconClassName}
             style={{ color: textPrimary }}
           />

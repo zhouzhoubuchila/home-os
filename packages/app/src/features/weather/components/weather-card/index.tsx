@@ -348,6 +348,7 @@ export const WeatherCard = memo(function WeatherCard({
                 style={iconStylePrimary}
                 isNight={current?.isDay === false}
                 animated={!isTiny && !isExtraSmall}
+                theme={theme}
               />
               {!isTiny ? <div
                 className={`${compactSummaryClassName} ${compactSummaryTextClassName} font-medium leading-tight`}
@@ -382,6 +383,7 @@ export const WeatherCard = memo(function WeatherCard({
                     textShadow={weatherTextTreatment.textShadow}
                     titleStyle={titleStyle}
                     subtitleStyle={subtitleStyle}
+                    theme={theme}
                   />
                 </div>
               ) : null}
@@ -428,6 +430,7 @@ export const WeatherCard = memo(function WeatherCard({
                 textShadow={weatherTextTreatment.textShadow}
                 titleStyle={titleStyle}
                 subtitleStyle={subtitleStyle}
+                theme={theme}
               /> : null}
             </div>
           ) : (
@@ -454,6 +457,7 @@ export const WeatherCard = memo(function WeatherCard({
                   pressureUnit={resolvedPressureUnit}
                   uvIndex={resolvedUvIndex}
                   cloudCoverage={resolvedCloudCoverage}
+                  showTemperatureSummary={false}
                   selectedMetricIds={selectedMetricIds}
                   textPrimary={textPrimary}
                   textSecondary={textSecondary}
@@ -498,6 +502,7 @@ export const WeatherCard = memo(function WeatherCard({
                     textShadow={weatherTextTreatment.textShadow}
                     titleStyle={titleStyle}
                     subtitleStyle={subtitleStyle}
+                    theme={theme}
                   />
                 </div>
               )}
