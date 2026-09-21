@@ -1,7 +1,7 @@
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import type { ThemeType } from '@navet/app/hooks';
 import type { EffectsQuality } from '@navet/app/stores/settings-store';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { FogOverlaySvg } from './fog-overlay';
 import { PassageWaveOverlaySvg } from './passage-wave-overlay';
 import { RainOverlaySvg } from './rain-overlay';
@@ -204,6 +204,92 @@ function getSunnyThemeSurface(theme: ThemeType): {
       'bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03)_34%,transparent_72%)]',
     darkThemeScrim: null,
   };
+}
+
+const WEATHER_ATMOSPHERE_KEYFRAMES = `
+@keyframes navet-weather-atmosphere-drift {
+  0%, 100% { transform: translate3d(-2%, 0, 0) scale(1.04); }
+  50% { transform: translate3d(2%, -1.5%, 0) scale(1.08); }
+}
+@keyframes navet-weather-atmosphere-shimmer {
+  0%, 100% { opacity: .32; transform: translate3d(-1%, 1%, 0); }
+  50% { opacity: .52; transform: translate3d(1.5%, -1%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navet-weather-atmosphere-drift,
+  .navet-weather-atmosphere-shimmer { animation: none !important; }
+}
+`;
+
+function getAtmospherePalette(theme: ThemeType, variant: string) {
+  const isNight = variant === 'clear-night' || variant === 'snow-night';
+  if (theme === 'light') {
+    return isNight
+      ? { haze: 'rgba(99,102,241,0.14)', flow: 'rgba(125,211,252,0.12)' }
+      : { haze: 'rgba(186,230,253,0.20)', flow: 'rgba(129,140,248,0.10)' };
+  }
+  if (theme === 'black') {
+    return isNight
+      ? { haze: 'rgba(79,70,229,0.12)', flow: 'rgba(56,189,248,0.08)' }
+      : { haze: 'rgba(14,165,233,0.10)', flow: 'rgba(99,102,241,0.08)' };
+  }
+  return isNight
+    ? { haze: 'rgba(99,102,241,0.16)', flow: 'rgba(125,211,252,0.10)' }
+    : { haze: 'rgba(56,189,248,0.14)', flow: 'rgba(129,140,248,0.10)' };
+}
+
+/** A quiet, air-like layer shared by weather conditions without changing layout. */
+export function WeatherAtmosphere({
+  condition,
+  effectsQuality,
+  size,
+  theme,
+}: {
+  condition: WeatherCondition | string;
+  effectsQuality: EffectsQuality;
+  size: CardSize;
+  theme: ThemeType;
+}) {
+  const variant = getWeatherBackgroundVariant(condition);
+  const palette = getAtmospherePalette(theme, variant);
+  const opacity = size === 'large' || size === 'extra-large' || size === 'extra-wide' ? 1 : 0.78;
+  const canAnimate = effectsQuality === 'high';
+  const driftStyle = canAnimate
+    ? ({ animation: 'navet-weather-atmosphere-drift 26s ease-in-out infinite' } as CSSProperties)
+    : undefined;
+  const shimmerStyle = canAnimate
+    ? ({ animation: 'navet-weather-atmosphere-shimmer 18s ease-in-out infinite' } as CSSProperties)
+    : undefined;
+
+  return (
+    <>
+      <style data-weather-atmosphere-style>{WEATHER_ATMOSPHERE_KEYFRAMES}</style>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-[1] overflow-hidden"
+        data-weather-atmosphere={variant}
+        data-weather-atmosphere-motion={canAnimate ? 'enabled' : 'static'}
+        style={{ opacity }}
+      >
+        <div
+          className={`${canAnimate ? 'navet-weather-atmosphere-drift' : ''} absolute -inset-[18%] rounded-[42%] blur-2xl`}
+          style={{
+            ...driftStyle,
+            background: `radial-gradient(ellipse at 22% 42%, ${palette.haze}, transparent 54%), radial-gradient(ellipse at 80% 24%, ${palette.flow}, transparent 48%)`,
+          }}
+        />
+        <div
+          className={`${canAnimate ? 'navet-weather-atmosphere-shimmer' : ''} absolute -inset-[12%] opacity-35`}
+          style={{
+            ...shimmerStyle,
+            background: `linear-gradient(118deg, transparent 16%, ${palette.flow} 45%, transparent 72%)`,
+            maskImage: 'linear-gradient(180deg, transparent, black 24%, black 72%, transparent)',
+            WebkitMaskImage: 'linear-gradient(180deg, transparent, black 24%, black 72%, transparent)',
+          }}
+        />
+      </div>
+    </>
+  );
 }
 
 // ─── Weather background compositor ───────────────────────────────────────────

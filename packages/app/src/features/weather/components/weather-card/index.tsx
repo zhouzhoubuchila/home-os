@@ -8,7 +8,7 @@ import type { TemperatureUnit } from '@navet/app/utils/temperature';
 import { Navigation } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useWeatherCardController } from './use-weather-card-controller';
-import { WeatherBackground } from './weather-card-overlays';
+import { WeatherAtmosphere, WeatherBackground } from './weather-card-overlays';
 import { WeatherDetails } from './weather-details';
 import { WeatherForecastRow } from './weather-forecast-row';
 import { formatWeatherConditionLabel, type WeatherCondition, WeatherIcon } from './weather-icon';
@@ -287,6 +287,14 @@ export const WeatherCard = memo(function WeatherCard({
           <div
             className="pointer-events-none absolute inset-0 z-[1]"
             style={gradientBackgroundStyle}
+          />
+        ) : null}
+        {!hasCustomTint ? (
+          <WeatherAtmosphere
+            condition={current?.condition ?? condition}
+            effectsQuality={effectiveEffectsQuality}
+            size={size}
+            theme={theme}
           />
         ) : null}
 

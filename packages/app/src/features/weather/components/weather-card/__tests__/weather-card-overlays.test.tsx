@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { RainOverlaySvg } from '../rain-overlay';
-import { WeatherBackground } from '../weather-card-overlays';
+import { WeatherAtmosphere, WeatherBackground } from '../weather-card-overlays';
 
 function countPathSegments(paths: NodeListOf<SVGPathElement>) {
   return Array.from(paths).reduce(
@@ -66,5 +66,29 @@ describe('weather card overlays', () => {
     expect(lightning).toHaveClass('mix-blend-screen');
     expect(lightning?.querySelector('filter')).not.toBeNull();
     expect(container.querySelectorAll('[data-weather-overlay="rain"] line')).toHaveLength(1984);
+  });
+
+  it('adds a restrained animated atmosphere only at high effects quality', () => {
+    const { container } = render(
+      <WeatherAtmosphere condition="cloudy" effectsQuality="high" size="large" theme="dark" />
+    );
+
+    expect(container.querySelector('[data-weather-atmosphere="cloudy"]')).toHaveAttribute(
+      'data-weather-atmosphere-motion',
+      'enabled'
+    );
+    expect(container.querySelector('.navet-weather-atmosphere-drift')).not.toBeNull();
+  });
+
+  it('keeps the atmosphere static for low effects quality', () => {
+    const { container } = render(
+      <WeatherAtmosphere condition="cloudy" effectsQuality="low" size="large" theme="dark" />
+    );
+
+    expect(container.querySelector('[data-weather-atmosphere="cloudy"]')).toHaveAttribute(
+      'data-weather-atmosphere-motion',
+      'static'
+    );
+    expect(container.querySelector('.navet-weather-atmosphere-drift')).toBeNull();
   });
 });
