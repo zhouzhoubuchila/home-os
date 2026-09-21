@@ -14,7 +14,10 @@ import {
   type Plugin,
 } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import { LUNAR_WEATHER_CARD_TOKENS } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
+import {
+  LUNAR_SERIES_PALETTE,
+  LUNAR_WEATHER_CARD_TOKENS,
+} from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { formatWeatherTemperature } from './weather-temperature';
 
 Chart.register(
@@ -139,9 +142,10 @@ export function WeatherChart({
         displayUnit
       );
     });
-    const lineColor = theme === 'light' ? '#2563eb' : '#7dd3fc';
-    const lowColor = theme === 'light' ? '#6366f1' : '#a5b4fc';
-    const precipitationColor = theme === 'light' ? 'rgba(14,116,204,0.34)' : 'rgba(56,189,248,0.42)';
+    const lineColor = theme === 'light' ? '#4f7fd2' : LUNAR_SERIES_PALETTE.chartPrimary;
+    const lowColor = theme === 'light' ? '#7567c9' : LUNAR_SERIES_PALETTE.chartLow;
+    const precipitationColor =
+      theme === 'light' ? 'rgba(79,127,210,0.32)' : LUNAR_SERIES_PALETTE.chartPrecipitation;
     const labels = forecast.map((point) => getTimeLabel(point, mode, locale, use24HourTime));
     const datasets = isUv
       ? [

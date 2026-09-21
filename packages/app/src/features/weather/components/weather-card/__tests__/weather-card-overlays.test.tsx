@@ -91,4 +91,12 @@ describe('weather card overlays', () => {
     );
     expect(container.querySelector('.navet-weather-atmosphere-drift')).toBeNull();
   });
+
+  it('does not mount the atmosphere layer for tiny cards', () => {
+    const { container } = render(
+      <WeatherAtmosphere condition="sunny" effectsQuality="high" size="tiny" theme="dark" />
+    );
+
+    expect(container.querySelector('[data-weather-atmosphere]')).toBeNull();
+  });
 });

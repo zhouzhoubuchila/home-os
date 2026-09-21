@@ -22,17 +22,17 @@ function SunriseIcon({ className, style }: SVGProps<SVGSVGElement>) {
       aria-hidden="true"
       focusable="false"
     >
-      <path d="M3 16.5h18" stroke="#FDE68A" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="M3 16.5h18" stroke="#8FD8F5" strokeLinecap="round" strokeWidth="1.8" />
       <path
         d="M6.5 16.2a5.5 5.5 0 0 1 11 0"
-        fill="#FDBA74"
-        stroke="#F97316"
+        fill="#78B9EB"
+        stroke="#4F7FD2"
         strokeLinecap="round"
         strokeWidth="1.6"
       />
       <path
         d="M12 4.5v4M7 7.2l2.2 2.2M17 7.2l-2.2 2.2M12 4.5l-2 2M12 4.5l2 2"
-        stroke="#FEF3C7"
+        stroke="#D9E8FF"
         strokeLinecap="round"
         strokeWidth="1.6"
       />
@@ -51,21 +51,21 @@ function SunsetIcon({ className, style }: SVGProps<SVGSVGElement>) {
       aria-hidden="true"
       focusable="false"
     >
-      <path d="M3 16.5h18" stroke="#FDBA74" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="M3 16.5h18" stroke="#7567C9" strokeLinecap="round" strokeWidth="1.8" />
       <path
         d="M6.5 16.2a5.5 5.5 0 0 1 11 0"
-        fill="#FB923C"
-        stroke="#EA580C"
+        fill="#4F7FD2"
+        stroke="#334B8C"
         strokeLinecap="round"
         strokeWidth="1.6"
       />
       <path
         d="M12 9V5M7 7.2l2.2 2.2M17 7.2l-2.2 2.2M12 9l-2-2M12 9l2-2"
-        stroke="#FED7AA"
+        stroke="#BFD8FF"
         strokeLinecap="round"
         strokeWidth="1.6"
       />
-      <path d="M5 19h14" stroke="#C4B5FD" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="M5 19h14" stroke="#A5B4FC" strokeLinecap="round" strokeWidth="1.8" />
     </svg>
   );
 }

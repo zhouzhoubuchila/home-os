@@ -183,7 +183,7 @@ export function WeatherCenter({
     ? formatDaylight(model.current.sunrise, model.current.sunset)
     : undefined);
   const shell = theme === 'light'
-    ? 'rounded-3xl border-sky-200/90 bg-white/92 text-slate-900 shadow-[0_24px_70px_-36px_rgba(30,64,175,0.45)]'
+    ? 'rounded-3xl border-sky-200/90 bg-[#edf4ff]/96 text-slate-900 shadow-[0_24px_70px_-36px_rgba(30,64,175,0.45)]'
     : theme === 'glass'
       ? 'rounded-3xl border-white/18 bg-slate-950/82 text-white shadow-[0_24px_70px_-38px_rgba(2,8,20,0.75)] backdrop-blur-2xl'
       : theme === 'black'

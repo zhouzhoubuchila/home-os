@@ -55,72 +55,72 @@ function getWeatherThemeSurface(theme: ThemeType, variant: string): WeatherTheme
 
 function getLightGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#4f8fce_0%,#5c9fe2_48%,#7a8ed5_100%)]',
-    'clear-night': 'bg-[linear-gradient(120deg,#223f83_0%,#284786_46%,#263e73_100%)]',
-    cloudy: 'bg-[linear-gradient(120deg,#4b95e4_0%,#4288d4_52%,#3474bc_100%)]',
-    rain: 'bg-[linear-gradient(120deg,#34396d_0%,#2f3463_46%,#262d56_100%)]',
-    storm: 'bg-[linear-gradient(120deg,#2d315d_0%,#282d53_52%,#1f2648_100%)]',
-    windy: 'bg-[linear-gradient(120deg,#4ca0e8_0%,#3f8fd7_50%,#2f79be_100%)]',
-    fog: 'bg-[linear-gradient(120deg,#7ea2be_0%,#6f96b4_52%,#628aa8_100%)]',
-    'snow-night': 'bg-[linear-gradient(120deg,#1f2d57_0%,#223764_48%,#1c2f58_100%)]',
-    'snow-day': 'bg-[linear-gradient(120deg,#66779c_0%,#566582_50%,#44506b_100%)]',
+    sunny: 'bg-[linear-gradient(135deg,#15294f_0%,#244276_48%,#304d86_100%)]',
+    'clear-night': 'bg-[linear-gradient(135deg,#080f25_0%,#152a55_48%,#263a78_100%)]',
+    cloudy: 'bg-[linear-gradient(135deg,#122a4b_0%,#1f416c_52%,#2d507f_100%)]',
+    rain: 'bg-[linear-gradient(135deg,#09132d_0%,#16244d_46%,#24376a_100%)]',
+    storm: 'bg-[linear-gradient(135deg,#070d21_0%,#111a3a_52%,#1c2854_100%)]',
+    windy: 'bg-[linear-gradient(135deg,#10294b_0%,#214873_50%,#315988_100%)]',
+    fog: 'bg-[linear-gradient(135deg,#172a45_0%,#304a68_52%,#46627e_100%)]',
+    'snow-night': 'bg-[linear-gradient(135deg,#09132d_0%,#1a2f5b_48%,#2e4378_100%)]',
+    'snow-day': 'bg-[linear-gradient(135deg,#1b3158_0%,#2e4b76_50%,#41628b_100%)]',
   };
-  return gradients[variant] || 'bg-[linear-gradient(120deg,#438ddf_0%,#4289dc_52%,#3d85d9_100%)]';
+  return gradients[variant] || 'bg-[linear-gradient(135deg,#122a4c_0%,#234873_52%,#345c8e_100%)]';
 }
 
 function getGlassGradient(variant: string): string {
   const gradients: Record<string, string> = {
     sunny:
-      'bg-[linear-gradient(120deg,rgba(79,143,206,0.34)_0%,rgba(92,159,226,0.28)_48%,rgba(122,142,213,0.24)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(9,18,43,0.58)_0%,rgba(34,66,118,0.54)_48%,rgba(62,78,142,0.48)_100%)]',
     'clear-night':
-      'bg-[linear-gradient(120deg,rgba(34,63,131,0.34)_0%,rgba(40,71,134,0.26)_46%,rgba(38,62,115,0.22)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(5,10,27,0.62)_0%,rgba(20,40,82,0.56)_46%,rgba(42,60,119,0.48)_100%)]',
     cloudy:
-      'bg-[linear-gradient(120deg,rgba(75,149,228,0.28)_0%,rgba(66,136,212,0.22)_52%,rgba(52,116,188,0.18)_100%)]',
-    rain: 'bg-[linear-gradient(120deg,rgba(52,57,109,0.30)_0%,rgba(47,52,99,0.24)_46%,rgba(38,45,86,0.20)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(12,29,55,0.58)_0%,rgba(31,65,107,0.52)_52%,rgba(48,82,128,0.44)_100%)]',
+    rain: 'bg-[linear-gradient(135deg,rgba(5,11,29,0.64)_0%,rgba(18,31,68,0.58)_46%,rgba(35,55,102,0.50)_100%)]',
     storm:
-      'bg-[linear-gradient(120deg,rgba(45,49,93,0.30)_0%,rgba(40,45,83,0.24)_52%,rgba(31,38,72,0.20)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(4,8,23,0.68)_0%,rgba(14,22,49,0.60)_52%,rgba(27,39,80,0.50)_100%)]',
     windy:
-      'bg-[linear-gradient(120deg,rgba(76,160,232,0.28)_0%,rgba(63,143,215,0.22)_50%,rgba(47,121,190,0.18)_100%)]',
-    fog: 'bg-[linear-gradient(120deg,rgba(126,162,190,0.24)_0%,rgba(111,150,180,0.20)_52%,rgba(98,138,168,0.16)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(9,26,51,0.58)_0%,rgba(29,66,107,0.50)_50%,rgba(48,88,136,0.42)_100%)]',
+    fog: 'bg-[linear-gradient(135deg,rgba(17,33,57,0.54)_0%,rgba(44,70,99,0.48)_52%,rgba(70,96,123,0.40)_100%)]',
     'snow-night':
-      'bg-[linear-gradient(120deg,rgba(31,45,87,0.30)_0%,rgba(34,55,100,0.24)_48%,rgba(28,47,88,0.20)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(6,13,31,0.64)_0%,rgba(24,47,91,0.56)_48%,rgba(47,69,124,0.46)_100%)]',
     'snow-day':
-      'bg-[linear-gradient(120deg,rgba(102,119,156,0.24)_0%,rgba(86,101,130,0.20)_50%,rgba(68,80,107,0.16)_100%)]',
+      'bg-[linear-gradient(135deg,rgba(16,31,56,0.54)_0%,rgba(42,70,108,0.48)_50%,rgba(68,96,135,0.40)_100%)]',
   };
   return (
     gradients[variant] ||
-    'bg-[linear-gradient(120deg,rgba(67,141,223,0.28)_0%,rgba(66,137,220,0.22)_52%,rgba(61,133,217,0.18)_100%)]'
+    'bg-[linear-gradient(135deg,rgba(10,25,50,0.58)_0%,rgba(31,67,108,0.52)_52%,rgba(53,91,139,0.44)_100%)]'
   );
 }
 
 function getDarkGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#1c3b63_0%,#245082_48%,#353e79_100%)]',
-    'clear-night': 'bg-[linear-gradient(120deg,#182a57_0%,#1c3363_46%,#1a2b52_100%)]',
-    cloudy: 'bg-[linear-gradient(120deg,#25496f_0%,#214261_52%,#1b3650_100%)]',
-    rain: 'bg-[linear-gradient(120deg,#1f2348_0%,#1c2140_46%,#171c36_100%)]',
-    storm: 'bg-[linear-gradient(120deg,#1a1d39_0%,#161a31_52%,#12172a_100%)]',
-    windy: 'bg-[linear-gradient(120deg,#285479_0%,#224a6a_50%,#1b3d58_100%)]',
-    fog: 'bg-[linear-gradient(120deg,#485f72_0%,#3f5668_52%,#37495a_100%)]',
-    'snow-night': 'bg-[linear-gradient(120deg,#15213f_0%,#19294d_48%,#142241_100%)]',
-    'snow-day': 'bg-[linear-gradient(120deg,#3b4459_0%,#343d4f_50%,#2a3140_100%)]',
+    sunny: 'bg-[linear-gradient(135deg,#101f40_0%,#1c3968_48%,#2e3c78_100%)]',
+    'clear-night': 'bg-[linear-gradient(135deg,#060c20_0%,#10224a_46%,#1e3064_100%)]',
+    cloudy: 'bg-[linear-gradient(135deg,#0d213e_0%,#1a385e_52%,#24466e_100%)]',
+    rain: 'bg-[linear-gradient(135deg,#050b1f_0%,#111d42_46%,#1b2d5a_100%)]',
+    storm: 'bg-[linear-gradient(135deg,#040819_0%,#0b1431_52%,#15234b_100%)]',
+    windy: 'bg-[linear-gradient(135deg,#0b2341_0%,#193a62_50%,#285078_100%)]',
+    fog: 'bg-[linear-gradient(135deg,#14283f_0%,#2b4865_52%,#3d5c77_100%)]',
+    'snow-night': 'bg-[linear-gradient(135deg,#060d22_0%,#142951_48%,#263a70_100%)]',
+    'snow-day': 'bg-[linear-gradient(135deg,#132846_0%,#29486f_50%,#3c5f86_100%)]',
   };
-  return gradients[variant] || 'bg-[linear-gradient(120deg,#24496f_0%,#224466_52%,#1d3d5c_100%)]';
+  return gradients[variant] || 'bg-[linear-gradient(135deg,#0c213f_0%,#1c3d65_52%,#2b527b_100%)]';
 }
 
 function getBlackGradient(variant: string): string {
   const gradients: Record<string, string> = {
-    sunny: 'bg-[linear-gradient(120deg,#0b1b2c_0%,#102d49_48%,#171b3c_100%)]',
-    'clear-night': 'bg-[linear-gradient(120deg,#081122_0%,#0b1630_46%,#0b1227_100%)]',
-    cloudy: 'bg-[linear-gradient(120deg,#0d1b2a_0%,#102033_52%,#0d1725_100%)]',
-    rain: 'bg-[linear-gradient(120deg,#090b17_0%,#0b1020_46%,#090d18_100%)]',
-    storm: 'bg-[linear-gradient(120deg,#060913_0%,#090d18_52%,#070a13_100%)]',
-    windy: 'bg-[linear-gradient(120deg,#0e2030_0%,#102536_50%,#0c1a28_100%)]',
-    fog: 'bg-[linear-gradient(120deg,#171e25_0%,#1a232c_52%,#151d24_100%)]',
-    'snow-night': 'bg-[linear-gradient(120deg,#060c16_0%,#09111f_48%,#070d17_100%)]',
-    'snow-day': 'bg-[linear-gradient(120deg,#131820_0%,#151a24_50%,#11161d_100%)]',
+    sunny: 'bg-[linear-gradient(135deg,#050b18_0%,#0d2340_48%,#151d46_100%)]',
+    'clear-night': 'bg-[linear-gradient(135deg,#030711_0%,#09152f_46%,#101d42_100%)]',
+    cloudy: 'bg-[linear-gradient(135deg,#050f1d_0%,#0b1e32_52%,#102941_100%)]',
+    rain: 'bg-[linear-gradient(135deg,#02050f_0%,#071127_46%,#0d1c3b_100%)]',
+    storm: 'bg-[linear-gradient(135deg,#01030a_0%,#050b1b_52%,#0b1531_100%)]',
+    windy: 'bg-[linear-gradient(135deg,#040d1b_0%,#0a1e34_50%,#102a46_100%)]',
+    fog: 'bg-[linear-gradient(135deg,#0b1624_0%,#14283a_52%,#1d374d_100%)]',
+    'snow-night': 'bg-[linear-gradient(135deg,#030814_0%,#0b1938_48%,#152955_100%)]',
+    'snow-day': 'bg-[linear-gradient(135deg,#0b1829_0%,#172d48_50%,#24425f_100%)]',
   };
-  return gradients[variant] || 'bg-[linear-gradient(120deg,#0d1c2d_0%,#102033_52%,#0c1827_100%)]';
+  return gradients[variant] || 'bg-[linear-gradient(135deg,#040b18_0%,#0b2037_52%,#142b48_100%)]';
 }
 
 function getThemeSurfaceClassName(theme: ThemeType, variant: string): string | null {
@@ -174,7 +174,7 @@ function getSunnyThemeSurface(theme: ThemeType): {
   if (theme === 'glass') {
     return {
       themeSurfaceClassName:
-        'bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03)_34%,transparent_72%)]',
+        'bg-[linear-gradient(180deg,rgba(210,232,255,0.12),rgba(255,255,255,0.025)_34%,transparent_72%)]',
       darkThemeScrim: null,
     };
   }
@@ -182,7 +182,7 @@ function getSunnyThemeSurface(theme: ThemeType): {
   if (theme === 'black') {
     return {
       themeSurfaceClassName:
-        'bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_28%,rgba(0,0,0,0.08)_100%)]',
+        'bg-[linear-gradient(180deg,rgba(180,215,255,0.035),rgba(255,255,255,0.01)_28%,rgba(0,0,0,0.08)_100%)]',
       darkThemeScrim: (
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.18)_100%)]" />
       ),
@@ -192,7 +192,7 @@ function getSunnyThemeSurface(theme: ThemeType): {
   if (theme === 'dark') {
     return {
       themeSurfaceClassName:
-        'bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015)_28%,rgba(2,6,23,0.04)_100%)]',
+        'bg-[linear-gradient(180deg,rgba(190,220,255,0.045),rgba(255,255,255,0.015)_28%,rgba(2,6,23,0.04)_100%)]',
       darkThemeScrim: (
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.05),rgba(2,6,23,0.14)_100%)]" />
       ),
@@ -201,19 +201,19 @@ function getSunnyThemeSurface(theme: ThemeType): {
 
   return {
     themeSurfaceClassName:
-      'bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03)_34%,transparent_72%)]',
+      'bg-[linear-gradient(180deg,rgba(210,232,255,0.12),rgba(255,255,255,0.025)_34%,transparent_72%)]',
     darkThemeScrim: null,
   };
 }
 
 const WEATHER_ATMOSPHERE_KEYFRAMES = `
 @keyframes navet-weather-atmosphere-drift {
-  0%, 100% { transform: translate3d(-2%, 0, 0) scale(1.04); }
-  50% { transform: translate3d(2%, -1.5%, 0) scale(1.08); }
+  0%, 100% { transform: translate3d(-1.5%, 0, 0) scale(1.02); }
+  50% { transform: translate3d(2%, -1%, 0) scale(1.05); }
 }
 @keyframes navet-weather-atmosphere-shimmer {
-  0%, 100% { opacity: .32; transform: translate3d(-1%, 1%, 0); }
-  50% { opacity: .52; transform: translate3d(1.5%, -1%, 0); }
+  0%, 100% { opacity: .16; transform: translate3d(-1%, 1%, 0); }
+  50% { opacity: .28; transform: translate3d(1.5%, -1%, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .navet-weather-atmosphere-drift,
@@ -225,17 +225,17 @@ function getAtmospherePalette(theme: ThemeType, variant: string) {
   const isNight = variant === 'clear-night' || variant === 'snow-night';
   if (theme === 'light') {
     return isNight
-      ? { haze: 'rgba(99,102,241,0.14)', flow: 'rgba(125,211,252,0.12)' }
-      : { haze: 'rgba(186,230,253,0.20)', flow: 'rgba(129,140,248,0.10)' };
+      ? { haze: 'rgba(117,103,201,0.12)', flow: 'rgba(143,216,245,0.10)' }
+      : { haze: 'rgba(120,185,235,0.14)', flow: 'rgba(117,103,201,0.08)' };
   }
   if (theme === 'black') {
     return isNight
-      ? { haze: 'rgba(79,70,229,0.12)', flow: 'rgba(56,189,248,0.08)' }
-      : { haze: 'rgba(14,165,233,0.10)', flow: 'rgba(99,102,241,0.08)' };
+      ? { haze: 'rgba(117,103,201,0.10)', flow: 'rgba(143,216,245,0.07)' }
+      : { haze: 'rgba(79,127,210,0.09)', flow: 'rgba(117,103,201,0.07)' };
   }
   return isNight
-    ? { haze: 'rgba(99,102,241,0.16)', flow: 'rgba(125,211,252,0.10)' }
-    : { haze: 'rgba(56,189,248,0.14)', flow: 'rgba(129,140,248,0.10)' };
+    ? { haze: 'rgba(117,103,201,0.14)', flow: 'rgba(143,216,245,0.09)' }
+    : { haze: 'rgba(79,127,210,0.12)', flow: 'rgba(117,103,201,0.08)' };
 }
 
 /** A quiet, air-like layer shared by weather conditions without changing layout. */
@@ -252,6 +252,7 @@ export function WeatherAtmosphere({
 }) {
   const variant = getWeatherBackgroundVariant(condition);
   const palette = getAtmospherePalette(theme, variant);
+  if (size === 'tiny' || size === 'extra-small') return null;
   const opacity = size === 'large' || size === 'extra-large' || size === 'extra-wide' ? 1 : 0.78;
   const canAnimate = effectsQuality === 'high';
   const driftStyle = canAnimate
@@ -324,33 +325,33 @@ export function WeatherBackground({
   if (variant === 'sunny') {
     const sunClassName = pickThemeValue(theme, {
       light: isLarge
-        ? 'right-[-8%] top-[-10%] h-56 w-56'
+        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-30 blur-2xl'
         : isMedium
-          ? 'right-[-16%] top-[-34%] h-40 w-40'
-          : 'right-[-18%] top-[-28%] h-40 w-40',
+          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-25 blur-2xl'
+          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-25 blur-2xl',
       glass: isLarge
-        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-70'
+        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-22 blur-2xl'
         : isMedium
-          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-70'
-          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-70',
+          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-18 blur-2xl'
+          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-18 blur-2xl',
       dark: isLarge
-        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-84'
+        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-20 blur-2xl'
         : isMedium
-          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-84'
-          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-84',
+          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-17 blur-2xl'
+          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-17 blur-2xl',
       black: isLarge
-        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-72'
+        ? 'right-[-8%] top-[-10%] h-56 w-56 opacity-16 blur-2xl'
         : isMedium
-          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-72'
-          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-72',
+          ? 'right-[-16%] top-[-34%] h-40 w-40 opacity-14 blur-2xl'
+          : 'right-[-18%] top-[-28%] h-40 w-40 opacity-14 blur-2xl',
     });
     const sunnySurface = getSunnyThemeSurface(theme);
     return (
       <>
         <div className={`absolute inset-0 ${surface.baseGradient}`} />
-        <div className={`absolute rounded-full bg-[#ffd364]/95 ${sunClassName}`} />
+        <div className={`absolute rounded-full bg-[#9fd7ff] ${sunClassName}`} />
         <div
-          className={`absolute rounded-full border border-[#ffd975]/48 ${
+          className={`absolute rounded-full border border-[#bfe6ff]/18 ${
             isLarge
               ? 'right-[-2%] top-[-4%] h-44 w-44'
               : isMedium
@@ -359,7 +360,7 @@ export function WeatherBackground({
           }`}
         />
         <div
-          className={`absolute rounded-full border border-[#ffd975]/28 ${
+          className={`absolute rounded-full border border-[#9fc6ff]/10 ${
             isLarge
               ? 'right-[-12%] top-[-14%] h-64 w-64'
               : isMedium
@@ -380,17 +381,17 @@ export function WeatherBackground({
       <>
         <div className={`absolute inset-0 ${surface.baseGradient}`} />
         <div
-          className={`absolute rounded-full bg-[#f6e39b]/92 ${
+          className={`absolute rounded-full bg-[#dbeafe]/24 blur-xl ${
             isLarge ? 'right-[10%] top-[6%] h-20 w-20' : 'right-[10%] top-[0%] h-14 w-14'
           }`}
         />
         <div
-          className={`absolute rounded-full border border-[#f2dda1]/18 ${
+          className={`absolute rounded-full border border-[#c7dcff]/10 ${
             isLarge ? 'right-[4%] top-[-2%] h-32 w-32' : 'right-[2%] top-[-12%] h-24 w-24'
           }`}
         />
         <div
-          className={`absolute rounded-full border border-[#7386cc]/14 ${
+          className={`absolute rounded-full border border-[#8299df]/10 ${
             isLarge ? 'right-[-2%] top-[-8%] h-44 w-44' : 'right-[-8%] top-[-20%] h-32 w-32'
           }`}
         />

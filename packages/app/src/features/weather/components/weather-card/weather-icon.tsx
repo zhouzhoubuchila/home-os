@@ -190,15 +190,15 @@ function SunIcon(props: SVGProps<SVGSVGElement>) {
     <IllustratedSvg {...props}>
       <path
         d="M24 3.5v5.2M24 39.3v5.2M8.7 24H3.5M44.5 24h-5.2M13.2 13.2 9.5 9.5M38.5 38.5l-3.7-3.7M34.8 13.2l3.7-3.7M9.5 38.5l3.7-3.7"
-        stroke="#FDE68A"
+        stroke="#BFE6FF"
         strokeLinecap="round"
         strokeWidth="3.2"
       />
-      <circle cx="24" cy="24" r="12.4" fill="#FACC15" />
-      <circle cx="20" cy="19" r="4.5" fill="#FEF3C7" opacity="0.8" />
+      <circle cx="24" cy="24" r="12.4" fill="#78B9EB" />
+      <circle cx="20" cy="19" r="4.5" fill="#E6F4FF" opacity="0.72" />
       <path
         d="M16.3 28.5c3.6 5.4 12.2 5.2 15.5-.4"
-        stroke="#F59E0B"
+        stroke="#4F7FD2"
         strokeLinecap="round"
         strokeWidth="2.2"
       />
@@ -209,17 +209,17 @@ function SunIcon(props: SVGProps<SVGSVGElement>) {
 function MoonIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <IllustratedSvg {...props}>
-      <circle cx="18" cy="14" r="2" fill="#FDE68A" />
-      <circle cx="35" cy="10" r="1.7" fill="#DBEAFE" />
-      <circle cx="38" cy="27" r="1.5" fill="#BFDBFE" />
+      <circle cx="18" cy="14" r="2" fill="#8FD8F5" />
+      <circle cx="35" cy="10" r="1.7" fill="#D9E8FF" />
+      <circle cx="38" cy="27" r="1.5" fill="#BFD8FF" />
       <path
         d="M31.8 38.6c-10.7 1.7-20-6.3-20-16.4 0-7 4.4-13.2 10.9-15.6 1.2-.4 2.1.9 1.4 1.9a13 13 0 0 0 15.4 19.4c1.1-.5 2.2.6 1.6 1.7a16.5 16.5 0 0 1-9.3 9Z"
-        fill="#C4B5FD"
+        fill="#8499D5"
       />
       <path
         d="M29.5 35.1c-7.9.5-14.3-5.4-14.3-12.9 0-5.2 3.1-9.7 7.7-11.8a13 13 0 0 0 13.6 20.8 12.5 12.5 0 0 1-7 3.9Z"
-        fill="#F5F3FF"
-        opacity="0.88"
+        fill="#E4EEFF"
+        opacity="0.82"
       />
     </IllustratedSvg>
   );
@@ -252,10 +252,10 @@ function CloudIcon(props: SVGProps<SVGSVGElement>) {
 function PartlyCloudyIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <IllustratedSvg {...props}>
-      <circle cx="18" cy="17" r="9.2" fill="#FACC15" />
+      <circle cx="18" cy="17" r="9.2" fill="#78B9EB" />
       <path
         d="M18 3.5v4M18 26v4M4.5 17h4M27.5 17h4M8.5 7.5l2.8 2.8M24.7 23.7l2.8 2.8M27.5 7.5l-2.8 2.8M11.3 23.7l-2.8 2.8"
-        stroke="#FDE68A"
+        stroke="#BFE6FF"
         strokeLinecap="round"
         strokeWidth="2.4"
       />
@@ -269,9 +269,9 @@ function PartlyCloudyNightIcon(props: SVGProps<SVGSVGElement>) {
     <IllustratedSvg {...props}>
       <path
         d="M21.8 7.2A10.5 10.5 0 0 0 34 22.9a12.2 12.2 0 0 1-9.8 4.6c-6.5 0-11.8-5-11.8-11.2 0-4 2.1-7.4 5.4-9.4 1.6-1 3.1-.9 4 .3Z"
-        fill="#DDD6FE"
+        fill="#9AA9DF"
       />
-      <circle cx="35" cy="10" r="1.9" fill="#BFDBFE" />
+      <circle cx="35" cy="10" r="1.9" fill="#BFD8FF" />
       <CloudShape />
     </IllustratedSvg>
   );
@@ -447,13 +447,20 @@ export const WeatherIcon = ({
         : normalized;
   const asset = getWeatherIconAsset(effectiveCondition, isNight, animated);
   if (asset) {
+    const assetStyle = {
+      ...style,
+      filter:
+        theme === 'light'
+          ? 'brightness(0) saturate(100%) invert(63%) sepia(22%) saturate(1150%) hue-rotate(177deg) brightness(93%) contrast(90%)'
+          : style?.filter,
+    };
     return (
       <img
         src={asset}
         alt=""
         aria-hidden="true"
-        className={`${className} ${theme === 'light' ? 'opacity-85 drop-shadow-[0_2px_5px_rgba(37,99,235,0.18)]' : 'brightness-0 invert opacity-90 drop-shadow-[0_2px_6px_rgba(125,211,252,0.16)]'}`}
-        style={style}
+        className={`${className} ${theme === 'light' ? 'opacity-90 drop-shadow-[0_2px_5px_rgba(120,185,235,0.22)]' : 'brightness-0 invert opacity-90 drop-shadow-[0_2px_6px_rgba(125,211,252,0.16)]'}`}
+        style={assetStyle}
       />
     );
   }

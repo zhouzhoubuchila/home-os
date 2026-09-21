@@ -219,12 +219,12 @@ export const WeatherCard = memo(function WeatherCard({
       ({
         background:
           theme === 'light'
-            ? 'radial-gradient(circle at 82% 8%, rgba(186,230,253,0.24), transparent 34%), radial-gradient(circle at 16% 100%, rgba(129,140,248,0.10), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.18), rgba(239,246,255,0.08) 48%, rgba(224,242,254,0.16) 100%)'
+            ? 'radial-gradient(circle at 82% 8%, rgba(143,216,245,0.14), transparent 34%), radial-gradient(circle at 16% 100%, rgba(117,103,201,0.10), transparent 42%), linear-gradient(160deg, rgba(5,8,22,0.18), rgba(13,22,48,0.12) 52%, rgba(21,34,71,0.06) 100%)'
             : theme === 'glass'
-              ? 'radial-gradient(circle at 82% 8%, rgba(125,211,252,0.14), transparent 34%), radial-gradient(circle at 16% 100%, rgba(129,140,248,0.10), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03) 38%, rgba(15,23,42,0.10) 100%)'
+              ? 'radial-gradient(circle at 82% 8%, rgba(143,216,245,0.10), transparent 34%), radial-gradient(circle at 16% 100%, rgba(117,103,201,0.08), transparent 42%), linear-gradient(160deg, rgba(5,8,22,0.18), rgba(13,22,48,0.12) 52%, rgba(21,34,71,0.08) 100%)'
             : theme === 'black'
-                ? 'radial-gradient(circle at 82% 8%, rgba(56,189,248,0.10), transparent 34%), radial-gradient(circle at 16% 100%, rgba(99,102,241,0.08), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01) 34%, rgba(0,0,0,0.16) 100%)'
-                : 'radial-gradient(circle at 82% 8%, rgba(125,211,252,0.12), transparent 34%), radial-gradient(circle at 16% 100%, rgba(99,102,241,0.08), transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02) 34%, rgba(2,6,23,0.16) 100%)',
+                ? 'radial-gradient(circle at 82% 8%, rgba(143,216,245,0.08), transparent 34%), radial-gradient(circle at 16% 100%, rgba(117,103,201,0.07), transparent 42%), linear-gradient(160deg, rgba(3,7,17,0.16), rgba(8,13,33,0.12) 52%, rgba(13,22,48,0.10) 100%)'
+                : 'radial-gradient(circle at 82% 8%, rgba(143,216,245,0.10), transparent 34%), radial-gradient(circle at 16% 100%, rgba(117,103,201,0.08), transparent 42%), linear-gradient(160deg, rgba(5,8,22,0.16), rgba(8,13,33,0.11) 52%, rgba(13,22,48,0.08) 100%)',
       }) as React.CSSProperties,
     [theme]
   );
