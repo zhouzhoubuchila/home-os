@@ -2,6 +2,7 @@ import type { NavetEntity } from '@navet/core/types';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { SemanticCandidate } from '../core/types';
 import { resolveCameraCompatibleRole } from './camera-role-compatibility';
+import { resolveInternetCompatibleRoles } from './internet-role-compatibility';
 import { resolvePveCompatibleRole } from './pve-role-compatibility';
 import { resolveRouterCompatibleRole } from './router-role-compatibility';
 
@@ -327,6 +328,14 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
             ? HOME_OS_ROLES.homelabHomeAssistantOnline
             : undefined;
     if (role) result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
+  }
+
+  // WAN probes and speed-test metrics can be published by router integrations.
+  // Resolve these before router-local compatibility so a latency probe is not
+  // swallowed by the router early return below.
+  const internetRoles = resolveInternetCompatibleRoles(entity);
+  for (const internetCandidate of internetRoles) {
+    if (!result.some(({ role }) => role === internetCandidate.role)) result.push(internetCandidate);
   }
 
   const routerNegative =

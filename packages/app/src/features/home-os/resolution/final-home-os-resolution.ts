@@ -43,6 +43,24 @@ export function resolveFunctionalOnlineState(
   device: ResolvedHomeOsFunctionalDevice
 ): HomeOsPhysicalDevice['state'] {
   const source = device.metricEntities.online ?? device.stateEntity;
+  const latency = device.metricEntities.latency;
+  const sourceIsLatency =
+    device.kind === 'internet' &&
+    source !== undefined &&
+    latency !== undefined &&
+    source.entity.externalId === latency.entity.externalId;
+  if (device.kind === 'internet' && (!source || sourceIsLatency)) {
+    const probe = latency ?? source;
+    if (!probe || probe.entity.availability === 'unknown') return 'unknown';
+    if (probe.entity.availability === 'unavailable') return 'offline';
+    const latencyValue = String(probe.entity.primaryState ?? '')
+      .trim()
+      .toLowerCase();
+    if (!latencyValue || ['unknown', 'unavailable', 'timeout', 'error'].includes(latencyValue)) {
+      return 'unknown';
+    }
+    return Number.isFinite(Number(latencyValue)) ? 'online' : 'unknown';
+  }
   if (!source || source.entity.availability === 'unknown') return 'unknown';
   if (source.entity.availability === 'unavailable') return 'offline';
   const value = String(source.entity.primaryState ?? '')
