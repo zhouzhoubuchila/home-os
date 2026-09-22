@@ -15,6 +15,13 @@ const device: HomeOsPhysicalDevice = {
   capabilities: [],
   entityIds: ['sensor.pve_cpu', 'sensor.pve_memory'],
   semanticMetrics: {
+    'homelab.pve.status': {
+      role: 'homelab.pve.status',
+      value: 'running',
+      stale: false,
+      available: true,
+      sourceEntityId: 'binary_sensor.pve_status',
+    },
     'homelab.pve.cpu_usage': {
       role: 'homelab.pve.cpu_usage',
       value: 18,
@@ -46,6 +53,32 @@ describe('PVE Home OS native monitoring recipe', () => {
       expect(screen.getByText('pve-node')).toBeInTheDocument();
       expect(screen.getByText('18 %')).toBeInTheDocument();
       expect(screen.getByText('Online')).toBeInTheDocument();
+      expect(container.querySelector('[data-home-os-pve-primary="cpu"]')).toHaveTextContent('18 %');
+    }
+  );
+
+  it('keeps CPU as the primary system signal and renders a quiet atmosphere for larger cards', () => {
+    const { container } = renderWithProviders(
+      <PveHomeOsCard size="medium" devices={[device]} isEditMode={false} />
+    );
+
+    expect(container.querySelector('[data-home-os-pve-visual="system"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-home-os-pve-primary="cpu"]')).toHaveTextContent('18 %');
+    expect(
+      container.querySelector('[data-home-os-pve-metric="homelab.pve.memory_usage"]')
+    ).toHaveTextContent('46 %');
+    expect(container.querySelector('[data-home-os-pve-atmosphere="system"]')).toBeInTheDocument();
+  });
+
+  it.each(['tiny', 'extra-small'] as const)(
+    'does not mount complex system atmosphere at %s size',
+    (size) => {
+      const { container } = renderWithProviders(
+        <PveHomeOsCard size={size} devices={[device]} isEditMode={false} />
+      );
+
+      expect(container.querySelector('[data-home-os-pve-primary="cpu"]')).toHaveTextContent('18 %');
+      expect(container.querySelector('[data-home-os-pve-atmosphere="system"]')).toBeNull();
     }
   );
 });

@@ -6,7 +6,6 @@ import {
 import {
   BaseCard,
   BaseCardDialogWithState,
-  CardMetric,
   EntityCardHeader,
   EntityCardHeaderIcon,
   Select,
@@ -16,11 +15,22 @@ import {
   getCustomCardTintSurface,
   normalizeCustomCardTint,
 } from '@navet/app/components/shared/theme/custom-card-tint-surface';
+import { useEffectiveEffectsQuality } from '@navet/app/components/shared/theme/effective-effects-quality';
+import { LUNAR_SERIES_PALETTE } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { getThemeColorValue } from '@navet/app/components/shared/theme/theme-colors';
-import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { useI18n, useTheme } from '@navet/app/hooks';
-import { Server, Settings2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  Activity,
+  Clock3,
+  Cpu,
+  Database,
+  HardDrive,
+  MemoryStick,
+  Server,
+  Settings2,
+  Thermometer,
+} from 'lucide-react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import type { HomeOsMetric, HomeOsPhysicalDevice } from '../../core/types';
 
 export interface PveHomeOsCardData {
@@ -29,8 +39,197 @@ export interface PveHomeOsCardData {
   tintColor?: string;
 }
 
-function normalizeSize(size: CardSize): 'small' | 'medium' | 'large' {
-  return size === 'small' ? 'small' : size === 'large' ? 'large' : 'medium';
+type PveVisualSize = 'tiny' | 'extra-small' | 'small' | 'medium' | 'large';
+
+function resolveVisualSize(size: CardSize): PveVisualSize {
+  if (size === 'tiny') return 'tiny';
+  if (size === 'extra-small') return 'extra-small';
+  if (size === 'small') return 'small';
+  if (size === 'large' || size === 'extra-large' || size === 'extra-wide') return 'large';
+  return 'medium';
+}
+
+function metricLimit(size: PveVisualSize) {
+  if (size === 'tiny') return 1;
+  if (size === 'extra-small') return 2;
+  if (size === 'small') return 2;
+  if (size === 'medium') return 5;
+  return 6;
+}
+
+interface PveVisualTheme {
+  background: string;
+  border: string;
+  readableBackground: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  textTertiary: string;
+  titleColor: string;
+  subtitleColor: string;
+  accent: string;
+  accentStrong: string;
+  surface: string;
+  surfaceBorder: string;
+  track: string;
+  shadow: string;
+}
+
+function getPveVisualTheme(theme: string): PveVisualTheme {
+  if (theme === 'light') {
+    return {
+      background: `linear-gradient(135deg, ${LUNAR_SERIES_PALETTE.background[0]} 0%, #10254a 48%, #1b3764 100%)`,
+      border: 'rgba(139,190,245,0.30)',
+      readableBackground: '#10254a',
+      textPrimary: 'text-white',
+      textSecondary: 'text-blue-100/78',
+      textMuted: 'text-blue-100/62',
+      textTertiary: 'text-blue-100/44',
+      titleColor: 'rgba(245,248,255,0.96)',
+      subtitleColor: 'rgba(226,234,250,0.68)',
+      accent: 'text-sky-200',
+      accentStrong: 'text-cyan-100',
+      surface: 'bg-white/[0.045]',
+      surfaceBorder: 'border-white/10',
+      track: 'bg-white/10',
+      shadow: '0 24px 56px -34px rgba(30,64,175,0.38), inset 0 1px 0 rgba(255,255,255,0.08)',
+    };
+  }
+
+  if (theme === 'glass') {
+    return {
+      background: `linear-gradient(135deg, rgba(5,8,22,0.88) 0%, rgba(13,22,48,0.86) 52%, rgba(38,58,120,0.72) 100%)`,
+      border: 'rgba(190,211,255,0.20)',
+      readableBackground: '#0d1630',
+      textPrimary: 'text-white',
+      textSecondary: 'text-blue-100/80',
+      textMuted: 'text-blue-100/64',
+      textTertiary: 'text-blue-100/44',
+      titleColor: 'rgba(245,248,255,0.96)',
+      subtitleColor: 'rgba(226,234,250,0.72)',
+      accent: 'text-sky-200',
+      accentStrong: 'text-cyan-100',
+      surface: 'bg-white/[0.055]',
+      surfaceBorder: 'border-white/12',
+      track: 'bg-white/10',
+      shadow: '0 26px 64px -38px rgba(2,8,20,0.72), inset 0 1px 0 rgba(255,255,255,0.12)',
+    };
+  }
+
+  if (theme === 'black') {
+    return {
+      background: `linear-gradient(135deg, #01030a 0%, ${LUNAR_SERIES_PALETTE.background[0]} 52%, #0b1531 100%)`,
+      border: 'rgba(190,211,255,0.13)',
+      readableBackground: '#050816',
+      textPrimary: 'text-white',
+      textSecondary: 'text-blue-100/74',
+      textMuted: 'text-blue-100/58',
+      textTertiary: 'text-blue-100/38',
+      titleColor: 'rgba(245,248,255,0.96)',
+      subtitleColor: 'rgba(226,234,250,0.64)',
+      accent: 'text-sky-200',
+      accentStrong: 'text-cyan-100',
+      surface: 'bg-white/[0.035]',
+      surfaceBorder: 'border-white/10',
+      track: 'bg-white/8',
+      shadow: '0 28px 68px -42px rgba(0,0,0,0.86), inset 0 1px 0 rgba(255,255,255,0.05)',
+    };
+  }
+
+  return {
+    background: `linear-gradient(135deg, ${LUNAR_SERIES_PALETTE.background[0]} 0%, ${LUNAR_SERIES_PALETTE.background[1]} 50%, ${LUNAR_SERIES_PALETTE.background[3]} 100%)`,
+    border: LUNAR_SERIES_PALETTE.borderStrong,
+    readableBackground: LUNAR_SERIES_PALETTE.background[1],
+    textPrimary: 'text-white',
+    textSecondary: 'text-blue-100/78',
+    textMuted: 'text-blue-100/62',
+    textTertiary: 'text-blue-100/42',
+    titleColor: 'rgba(245,248,255,0.96)',
+    subtitleColor: 'rgba(226,234,250,0.68)',
+    accent: 'text-sky-200',
+    accentStrong: 'text-cyan-100',
+    surface: 'bg-white/[0.045]',
+    surfaceBorder: 'border-white/10',
+    track: 'bg-white/10',
+    shadow: '0 26px 62px -38px rgba(2,8,20,0.72), inset 0 1px 0 rgba(255,255,255,0.07)',
+  };
+}
+
+const PVE_SYSTEM_KEYFRAMES = `
+@keyframes navet-pve-system-drift {
+  0%, 100% { transform: translate3d(-1.5%, 0, 0) scale(1.02); }
+  50% { transform: translate3d(2%, -1%, 0) scale(1.05); }
+}
+@keyframes navet-pve-system-pulse {
+  0%, 100% { opacity: .16; transform: translate3d(-1%, 1%, 0); }
+  50% { opacity: .27; transform: translate3d(1.5%, -1%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navet-pve-system-drift,
+  .navet-pve-system-pulse { animation: none !important; }
+}
+`;
+
+function PveSystemAtmosphere({
+  size,
+  effectsQuality,
+  theme,
+}: {
+  size: CardSize;
+  effectsQuality: 'high' | 'medium' | 'low';
+  theme: string;
+}) {
+  if (size === 'tiny' || size === 'extra-small') return null;
+  const canAnimate = effectsQuality === 'high';
+  const isLight = theme === 'light';
+  const haze = isLight ? 'rgba(79,127,210,0.12)' : 'rgba(79,127,210,0.14)';
+  const signal = isLight ? 'rgba(143,216,245,0.10)' : 'rgba(143,216,245,0.08)';
+  const driftStyle = canAnimate
+    ? ({ animation: 'navet-pve-system-drift 32s ease-in-out infinite' } as CSSProperties)
+    : undefined;
+  const pulseStyle = canAnimate
+    ? ({ animation: 'navet-pve-system-pulse 18s ease-in-out infinite' } as CSSProperties)
+    : undefined;
+
+  return (
+    <>
+      <style data-home-os-pve-atmosphere-style>{PVE_SYSTEM_KEYFRAMES}</style>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+        data-home-os-pve-atmosphere="system"
+        data-home-os-pve-atmosphere-motion={canAnimate ? 'enabled' : 'static'}
+      >
+        <div
+          className={`${canAnimate ? 'navet-pve-system-drift' : ''} absolute -inset-[18%] rounded-[42%] blur-2xl`}
+          style={{
+            ...driftStyle,
+            background: `radial-gradient(ellipse at 14% 22%, ${haze}, transparent 54%), radial-gradient(ellipse at 84% 72%, ${signal}, transparent 48%)`,
+          }}
+        />
+        <div
+          className={`${canAnimate ? 'navet-pve-system-pulse' : ''} absolute -inset-[12%] opacity-35`}
+          style={{
+            ...pulseStyle,
+            background: `linear-gradient(118deg, transparent 18%, ${signal} 46%, transparent 73%)`,
+            maskImage: 'linear-gradient(180deg, transparent, black 25%, black 72%, transparent)',
+            WebkitMaskImage:
+              'linear-gradient(180deg, transparent, black 25%, black 72%, transparent)',
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(143,216,245,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(143,216,245,0.06) 1px, transparent 1px)',
+            backgroundSize: '42px 42px',
+            maskImage: 'linear-gradient(135deg, transparent 10%, black 52%, transparent 94%)',
+            WebkitMaskImage: 'linear-gradient(135deg, transparent 10%, black 52%, transparent 94%)',
+          }}
+        />
+      </div>
+    </>
+  );
 }
 
 function roleLabel(role: string, language: string) {
@@ -56,25 +255,118 @@ function formatMetric(metric: HomeOsMetric) {
   return metric.unit ? `${value} ${metric.unit}` : value;
 }
 
+const PVE_VISUAL_METRIC_PRIORITY = [
+  'homelab.pve.temperature',
+  'homelab.pve.memory_usage',
+  'homelab.pve.storage_usage',
+  'homelab.pve.load',
+  'homelab.pve.io_wait',
+  'homelab.pve.cpu_model',
+  'homelab.pve.status',
+  'homelab.pve.online',
+  'homelab.pve.uptime',
+];
+
+function sortPveVisualMetrics(metrics: Array<{ role: string; metric: HomeOsMetric }>) {
+  return [...metrics].sort((left, right) => {
+    const leftPriority = PVE_VISUAL_METRIC_PRIORITY.indexOf(left.role);
+    const rightPriority = PVE_VISUAL_METRIC_PRIORITY.indexOf(right.role);
+    return (leftPriority < 0 ? 100 : leftPriority) - (rightPriority < 0 ? 100 : rightPriority);
+  });
+}
+
 function statusClasses(device: HomeOsPhysicalDevice, theme: string) {
   if (device.state === 'online' && device.freshness === 'fresh') {
     return theme === 'light'
-      ? 'border-emerald-300 bg-emerald-100 text-emerald-800'
-      : 'border-emerald-400/30 bg-emerald-500/15 text-emerald-200';
+      ? 'border-emerald-700/25 bg-emerald-500/10 text-emerald-700'
+      : 'border-emerald-300/22 bg-emerald-300/10 text-emerald-100';
   }
   if (device.state === 'offline' || device.health === 'critical') {
     return theme === 'light'
-      ? 'border-red-300 bg-red-100 text-red-800'
-      : 'border-red-400/30 bg-red-500/15 text-red-200';
+      ? 'border-red-700/25 bg-red-500/10 text-red-700'
+      : 'border-red-300/22 bg-red-300/10 text-red-100';
   }
   if (device.freshness === 'stale' || device.health === 'warning') {
     return theme === 'light'
-      ? 'border-amber-300 bg-amber-100 text-amber-800'
-      : 'border-amber-400/30 bg-amber-500/15 text-amber-200';
+      ? 'border-amber-700/25 bg-amber-500/10 text-amber-700'
+      : 'border-amber-300/22 bg-amber-300/10 text-amber-100';
   }
   return theme === 'light'
-    ? 'border-slate-300 bg-slate-100 text-slate-700'
-    : 'border-white/12 bg-white/8 text-white/72';
+    ? 'border-slate-600/20 bg-slate-500/10 text-slate-700'
+    : 'border-white/12 bg-white/6 text-white/68';
+}
+
+function metricPercent(metric: HomeOsMetric) {
+  if (metric.unit !== '%' || !metric.available) return null;
+  const value = Number(metric.value);
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
+}
+
+function metricTone(role: string, metric: HomeOsMetric, palette: PveVisualTheme) {
+  if (role === 'homelab.pve.temperature') {
+    const value = Number(metric.value);
+    if (Number.isFinite(value) && value >= 85) return 'text-red-300';
+    if (Number.isFinite(value) && value >= 70) return 'text-amber-200';
+  }
+  return palette.textSecondary;
+}
+
+function MetricGlyph({ role }: { role: string }) {
+  const Icon =
+    role === 'homelab.pve.temperature'
+      ? Thermometer
+      : role === 'homelab.pve.memory_usage'
+        ? MemoryStick
+        : role === 'homelab.pve.storage_usage'
+          ? HardDrive
+          : role === 'homelab.pve.uptime'
+            ? Clock3
+            : role === 'homelab.pve.load'
+              ? Activity
+              : role === 'homelab.pve.cpu_usage'
+                ? Cpu
+                : Database;
+  return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
+}
+
+function PveMetricCell({
+  role,
+  metric,
+  language,
+  palette,
+}: {
+  role: string;
+  metric: HomeOsMetric;
+  language: string;
+  palette: PveVisualTheme;
+}) {
+  const percent = metricPercent(metric);
+  return (
+    <div
+      className={`min-w-0 border-t ${palette.surfaceBorder} ${palette.surface} px-2.5 py-2`}
+      data-home-os-pve-metric={role}
+    >
+      <div
+        className={`flex items-center gap-1.5 text-[0.64rem] uppercase tracking-[0.13em] ${palette.textMuted}`}
+      >
+        <MetricGlyph role={role} />
+        <span className="truncate">{roleLabel(role, language)}</span>
+      </div>
+      <div
+        className={`mt-1 truncate text-base font-semibold tabular-nums ${metricTone(role, metric, palette)}`}
+      >
+        {formatMetric(metric)}
+      </div>
+      {percent !== null ? (
+        <div className={`mt-1 h-1 overflow-hidden rounded-full ${palette.track}`}>
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#4f7fd2] to-[#8fd8f5]"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function PveHomeOsCard({
@@ -94,8 +386,9 @@ export function PveHomeOsCard({
 }) {
   const { language, t } = useI18n();
   const { theme, primaryColor } = useTheme();
-  const surface = getThemeSurfaceTokens(theme);
-  const resolvedSize = normalizeSize(size);
+  const effectsQuality = useEffectiveEffectsQuality();
+  const palette = getPveVisualTheme(theme);
+  const visualSize = resolveVisualSize(size);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const selectedDevice =
     devices.find((device) => device.id === data?.pveDeviceId) ?? devices[0] ?? null;
@@ -112,15 +405,29 @@ export function PveHomeOsCard({
   const selectedMetrics = allMetrics
     .filter(({ role }) => !configuredRoles || configuredRoles.includes(role))
     .filter(({ role }) => !role.startsWith('diagnostic.'));
-  const visibleMetrics = selectedMetrics.slice(
-    0,
-    resolvedSize === 'small' ? 2 : resolvedSize === 'medium' ? 5 : 6
-  );
+  const orderedMetrics = sortPveVisualMetrics(selectedMetrics);
   const primaryMetric =
-    visibleMetrics.find(({ role }) => role === 'homelab.pve.cpu_usage') ?? visibleMetrics[0];
-  const secondaryMetrics = visibleMetrics.filter(({ role }) => role !== primaryMetric?.role);
+    orderedMetrics.find(({ role }) => role === 'homelab.pve.cpu_usage') ?? orderedMetrics[0];
+  const visibleMetrics = primaryMetric
+    ? [
+        primaryMetric,
+        ...orderedMetrics
+          .filter(({ role }) => role !== primaryMetric.role)
+          .slice(0, Math.max(0, metricLimit(visualSize) - 1)),
+      ]
+    : [];
+  const secondaryMetrics = visibleMetrics.filter(
+    ({ role }) => role !== primaryMetric?.role && role !== 'homelab.pve.uptime'
+  );
+  const uptimeMetric = visibleMetrics.find(({ role }) => role === 'homelab.pve.uptime');
   const tintSurface = getCustomCardTintSurface(theme, data?.tintColor);
   const accentHex = normalizeCustomCardTint(data?.tintColor) ?? getThemeColorValue(primaryColor);
+  const cardStyle: CSSProperties = {
+    background: palette.background,
+    borderColor: palette.border,
+    boxShadow: palette.shadow,
+    ...(tintSurface.panelStyle ?? {}),
+  };
 
   useEffect(() => {
     if (!isEditMode) setSettingsOpen(false);
@@ -131,11 +438,11 @@ export function PveHomeOsCard({
 
   if (!selectedDevice) {
     return (
-      <BaseCard size={resolvedSize} fullBleed frameClassName="overflow-hidden">
-        <div className="flex h-full p-3">
+      <BaseCard size={size} fullBleed frameClassName="overflow-hidden" style={cardStyle}>
+        <div className={`relative z-10 flex h-full p-3 ${palette.textPrimary}`}>
           <CardEmptyState
             icon={Server}
-            size={resolvedSize}
+            size={size}
             title={language === 'zh' ? 'PVE 设备不可用' : 'PVE device unavailable'}
             description={
               language === 'zh'
@@ -164,26 +471,35 @@ export function PveHomeOsCard({
   return (
     <>
       <BaseCard
-        size={resolvedSize}
+        size={size}
         fullBleed
         frameClassName="overflow-hidden"
         contentClassName="h-full"
-        style={tintSurface.panelStyle}
-        readableBackgroundColor={tintSurface.backgroundColor}
+        style={cardStyle}
+        readableBackgroundColor={tintSurface.backgroundColor ?? palette.readableBackground}
       >
-        <div className="relative flex h-full min-w-0 flex-col p-3" data-home-os-pve-recipe="ups">
+        <PveSystemAtmosphere size={size} effectsQuality={effectsQuality} theme={theme} />
+        <div
+          className={`relative z-10 flex h-full min-w-0 flex-col p-3 ${palette.textPrimary}`}
+          data-home-os-pve-recipe="ups"
+          data-home-os-pve-visual="system"
+        >
           <EntityCardHeader
             title={selectedDevice.name}
-            subtitle={selectedDevice.room ?? 'PVE'}
+            subtitle={`${language === 'zh' ? 'PVE / 服务器' : 'PVE / Server'}${selectedDevice.room ? ` · ${selectedDevice.room}` : ''}`}
             layout="eyebrow-first"
-            size={resolvedSize === 'large' ? 'medium' : resolvedSize}
-            titleClassName={surface.textPrimary}
-            subtitleClassName={surface.textMuted}
+            size={size}
+            titleClassName={palette.textPrimary}
+            subtitleClassName={palette.textMuted}
+            titleStyle={{ color: palette.titleColor }}
+            subtitleStyle={{ color: palette.subtitleColor }}
             leading={
               <EntityCardHeaderIcon
                 IconComponent={Server}
                 isActive={selectedDevice.state === 'online'}
-                size={resolvedSize === 'large' ? 'medium' : resolvedSize}
+                size={size}
+                baseColor={LUNAR_SERIES_PALETTE.blue}
+                glyphClassName={palette.accent}
               />
             }
             trailing={
@@ -194,7 +510,7 @@ export function PveHomeOsCard({
                     name: selectedDevice.name,
                   })}
                   onClick={() => setSettingsOpen(true)}
-                  className={`rounded-full border p-2 ${surface.border} ${surface.hoverBg}`}
+                  className={`rounded-full border p-2 ${palette.surfaceBorder} ${palette.textMuted} transition-colors hover:bg-white/10 hover:text-white`}
                 >
                   <Settings2 className="h-4 w-4" />
                 </button>
@@ -203,51 +519,67 @@ export function PveHomeOsCard({
           />
 
           {primaryMetric ? (
-            <div className="mt-3 flex flex-1 flex-col gap-3">
-              <div className="flex items-end justify-between gap-3">
-                <CardMetric
-                  value={formatMetric(primaryMetric.metric)}
-                  label={roleLabel(primaryMetric.role, language)}
-                  size={resolvedSize === 'large' ? 'xl' : 'lg'}
-                  isActive={primaryMetric.metric.available}
-                  accentClassName={theme === 'light' ? 'text-slate-900' : 'text-white'}
-                  theme={theme}
-                  labelClassName={surface.textMuted}
-                />
+            <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+              <div className="flex min-w-0 items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <div
+                    className={`truncate text-4xl font-semibold leading-none tracking-[-0.04em] tabular-nums ${primaryMetric.metric.available ? palette.accentStrong : palette.textMuted}`}
+                    data-home-os-pve-primary="cpu"
+                  >
+                    {formatMetric(primaryMetric.metric)}
+                  </div>
+                  <div className={`mt-2 flex items-center gap-1.5 text-xs ${palette.textMuted}`}>
+                    <Cpu aria-hidden="true" className="h-3.5 w-3.5" />
+                    <span>{roleLabel(primaryMetric.role, language)}</span>
+                  </div>
+                  {metricPercent(primaryMetric.metric) !== null ? (
+                    <div
+                      className={`mt-2 h-1.5 max-w-48 overflow-hidden rounded-full ${palette.track}`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#4f7fd2] to-[#8fd8f5]"
+                        style={{ width: `${metricPercent(primaryMetric.metric)}%` }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
                 <div
-                  className={`rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.12em] ${statusClasses(selectedDevice, theme)}`}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[0.63rem] font-medium uppercase tracking-[0.14em] ${statusClasses(selectedDevice, theme)}`}
+                  data-home-os-pve-status={selectedDevice.state}
                 >
                   {statusLabel}
                 </div>
               </div>
               {secondaryMetrics.length > 0 ? (
                 <div
-                  className={`grid gap-2 ${resolvedSize === 'small' ? 'grid-cols-1' : resolvedSize === 'medium' ? 'grid-cols-2' : 'grid-cols-3'}`}
+                  className={`grid min-h-0 gap-x-2 gap-y-1 ${visualSize === 'small' || visualSize === 'extra-small' ? 'grid-cols-1' : visualSize === 'medium' ? 'grid-cols-2' : 'grid-cols-3'}`}
                 >
                   {secondaryMetrics.map(({ role, metric }) => (
-                    <div
+                    <PveMetricCell
                       key={role}
-                      className={`min-w-0 rounded-2xl border px-3 py-2 ${surface.border} ${surface.panelMuted}`}
-                    >
-                      <div
-                        className={`truncate text-xs uppercase tracking-[0.1em] ${surface.textMuted}`}
-                      >
-                        {roleLabel(role, language)}
-                      </div>
-                      <div
-                        className={`mt-1 truncate text-lg font-semibold tabular-nums ${surface.textPrimary}`}
-                      >
-                        {formatMetric(metric)}
-                      </div>
-                    </div>
+                      role={role}
+                      metric={metric}
+                      language={language}
+                      palette={palette}
+                    />
                   ))}
+                </div>
+              ) : null}
+              {uptimeMetric ? (
+                <div
+                  className={`mt-auto flex items-center gap-1.5 text-[0.68rem] ${palette.textTertiary}`}
+                >
+                  <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />
+                  <span>
+                    {roleLabel(uptimeMetric.role, language)} · {formatMetric(uptimeMetric.metric)}
+                  </span>
                 </div>
               ) : null}
             </div>
           ) : (
             <CardEmptyState
               icon={Server}
-              size={resolvedSize}
+              size={size}
               title={language === 'zh' ? '没有可显示的 PVE 指标' : 'No PVE metrics to display'}
               description={language === 'zh' ? '请检查语义映射。' : 'Check the semantic mapping.'}
             />
