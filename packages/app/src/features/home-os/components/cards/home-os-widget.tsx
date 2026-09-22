@@ -25,31 +25,20 @@ import {
 import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { buildFamilyMembers } from '../../adapters/family-adapter';
-import type { ResolvedHomeOsFunctionalDevice } from '../../adapters/functional-device-adapter';
 import { buildHomeOsLights, getWholeHomeLightActions } from '../../adapters/lighting-adapter';
 import { evaluateAlerts } from '../../alerts/alert-engine';
 import { getDefaultHomeOsAlertRules } from '../../alerts/default-rules';
 import { getHomeOsCardDefinition, type HomeOsCardKind } from '../../cards/card-registry';
-import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../../core/types';
 import { useHomeOsProductProjection } from '../../hooks/use-home-os-product-projection';
 import { useResolvedHomeOsEntities } from '../../hooks/use-resolved-home-os';
-import {
-  formatHomeOsDisplayState,
-  formatHomeOsValueWithUnit,
-} from '../../i18n/display-state';
+import { formatHomeOsDisplayState, formatHomeOsValueWithUnit } from '../../i18n/display-state';
 import { getHomeOsCopy } from '../../i18n/home-os-copy';
-import {
-  resolveAirQualitySources,
-  resolveWeatherSource,
-} from '../../mapping/data-source-resolver';
+import { resolveAirQualitySources, resolveWeatherSource } from '../../mapping/data-source-resolver';
 import { getMetricFreshnessThresholdMs } from '../../mapping/metric-resolution';
 import {
-  functionalDeviceMetricRows,
-  ROUTER_METRIC_ORDER,
   resolveFinalFunctionalDevices,
   resolveFinalPveDevices,
-  resolveFunctionalOnlineState,
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
@@ -58,6 +47,7 @@ import {
   buildMoonCardModel,
   getLunarLocationFromHomeAssistantConfig,
 } from './lunar/moon-card-model';
+import { NetworkHomeOsCard } from './network-home-os-card';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
 
 export interface HomeOsWidgetData extends PveHomeOsCardData {
@@ -200,75 +190,6 @@ function HouseholdCard({
             <div key={member.id} className="flex justify-between gap-2">
               <span className="truncate">{member.name}</span>
               <span className="text-current/60">{formatHomeOsDisplayState(member.state, t)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </BaseCard>
-  );
-}
-
-const routerMetricLabel = (key: string, language: string) => {
-  const labels: Record<string, [string, string]> = {
-    clients: ['Clients', '客户端'],
-    wan_ip: ['WAN', 'WAN'],
-    lan_ip: ['LAN', 'LAN'],
-    cpu: ['CPU', 'CPU'],
-    memory: ['Memory', '内存'],
-    temperature: ['Temperature', '温度'],
-    uptime: ['Uptime', '运行时间'],
-    upload: ['Upload', '上传'],
-    download: ['Download', '下载'],
-  };
-  const pair = labels[key];
-  return pair ? (language === 'zh' ? pair[1] : pair[0]) : key;
-};
-
-function FunctionalRouterCard({
-  size,
-  device,
-  language,
-  t,
-}: {
-  size: CardSize;
-  device: ResolvedHomeOsFunctionalDevice;
-  language: string;
-  t: TranslateFn;
-}) {
-  const online = resolveFunctionalOnlineState(device);
-  const rows = functionalDeviceMetricRows(device, ROUTER_METRIC_ORDER).filter(
-    ({ key }) => key !== 'online'
-  );
-  const status =
-    online === 'online'
-      ? language === 'zh'
-        ? '在线'
-        : 'Online'
-      : online === 'offline'
-        ? language === 'zh'
-          ? '离线'
-          : 'Offline'
-        : language === 'zh'
-          ? '未知'
-          : 'Unknown';
-  return (
-    <BaseCard size={size} title={device.name} headerLeading={<Network className="h-5 w-5" />}>
-      <div className="flex h-full min-h-0 flex-col justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm">
-          <span
-            className={
-              online === 'online'
-                ? 'h-2 w-2 rounded-full bg-emerald-400'
-                : 'h-2 w-2 rounded-full bg-current/30'
-            }
-          />
-          <span>{status}</span>
-        </div>
-        <div className="grid min-h-0 gap-2 overflow-hidden">
-          {rows.slice(0, sizeLimit(size)).map(({ key, entity }) => (
-            <div key={key} className="flex justify-between gap-3 text-sm">
-              <span className="text-current/65">{routerMetricLabel(key, language)}</span>
-              <strong className="tabular-nums">{stateText(entity, t)}</strong>
             </div>
           ))}
         </div>
@@ -662,12 +583,19 @@ export function HomeOsWidget({
       />
     );
   }
-  if (definition.kind === 'router') {
-    const router = resolvedFunctionalDevices.find((device) => device.kind === 'router');
-    if (router)
-      return withDetail(
-        <FunctionalRouterCard size={size} device={router} language={language} t={t} />
-      );
+  if (definition.kind === 'router' || definition.kind === 'internet') {
+    const networkDevice = resolvedFunctionalDevices.find(
+      (device) => device.kind === definition.kind
+    );
+    return withDetail(
+      <NetworkHomeOsCard
+        size={size}
+        kind={definition.kind}
+        device={networkDevice}
+        entities={matched}
+        title={networkDevice?.name ?? name.replace('Home OS · ', '')}
+      />
+    );
   }
   return withDetail(
     <BaseCard
@@ -688,12 +616,7 @@ export function HomeOsWidget({
             {matched.length
               ? matched.every((item) => item.entity.availability !== 'available')
                 ? copy.unavailable
-                : definition.kind === 'router' &&
-                    !matched.some((item) => item.roles.includes(HOME_OS_ROLES.networkRouterOnline))
-                  ? language === 'zh'
-                    ? '未检测到独立在线状态'
-                    : 'No independent online status detected'
-                  : copy.live
+                : copy.live
               : copy.notConfigured}
           </span>
         </div>
