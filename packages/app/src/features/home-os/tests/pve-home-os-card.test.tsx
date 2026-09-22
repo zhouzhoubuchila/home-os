@@ -63,6 +63,7 @@ describe('PVE Home OS native monitoring recipe', () => {
     );
 
     expect(container.querySelector('[data-home-os-pve-visual="system"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor="pve"]')).toBeInTheDocument();
     expect(container.querySelector('[data-home-os-pve-primary="cpu"]')).toHaveTextContent('18 %');
     expect(
       container.querySelector('[data-home-os-pve-metric="homelab.pve.memory_usage"]')
@@ -79,6 +80,7 @@ describe('PVE Home OS native monitoring recipe', () => {
 
       expect(container.querySelector('[data-home-os-pve-primary="cpu"]')).toHaveTextContent('18 %');
       expect(container.querySelector('[data-home-os-pve-atmosphere="system"]')).toBeNull();
+      expect(container.querySelector('[data-tech-monitor="pve"]')).toBeInTheDocument();
     }
   );
 });

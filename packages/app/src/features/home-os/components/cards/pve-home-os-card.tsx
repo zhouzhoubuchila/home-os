@@ -16,6 +16,11 @@ import {
   normalizeCustomCardTint,
 } from '@navet/app/components/shared/theme/custom-card-tint-surface';
 import { useEffectiveEffectsQuality } from '@navet/app/components/shared/theme/effective-effects-quality';
+import {
+  getTechMonitorSurface,
+  TECH_MONITOR_KEYFRAMES,
+  TECH_MONITOR_PALETTE,
+} from '@navet/app/components/shared/theme/lunar-series-tech-monitor';
 import { LUNAR_SERIES_PALETTE } from '@navet/app/components/shared/theme/lunar-weather-card-tokens';
 import { getThemeColorValue } from '@navet/app/components/shared/theme/theme-colors';
 import { useI18n, useTheme } from '@navet/app/hooks';
@@ -76,10 +81,11 @@ interface PveVisualTheme {
 }
 
 function getPveVisualTheme(theme: string): PveVisualTheme {
+  const monitorSurface = getTechMonitorSurface(theme as 'light' | 'dark' | 'black' | 'glass');
   if (theme === 'light') {
     return {
-      background: `linear-gradient(135deg, ${LUNAR_SERIES_PALETTE.background[0]} 0%, #10254a 48%, #1b3764 100%)`,
-      border: 'rgba(139,190,245,0.30)',
+      background: monitorSurface.background,
+      border: monitorSurface.border,
       readableBackground: '#10254a',
       textPrimary: 'text-white',
       textSecondary: 'text-blue-100/78',
@@ -92,14 +98,14 @@ function getPveVisualTheme(theme: string): PveVisualTheme {
       surface: 'bg-white/[0.045]',
       surfaceBorder: 'border-white/10',
       track: 'bg-white/10',
-      shadow: '0 24px 56px -34px rgba(30,64,175,0.38), inset 0 1px 0 rgba(255,255,255,0.08)',
+      shadow: monitorSurface.shadow,
     };
   }
 
   if (theme === 'glass') {
     return {
-      background: `linear-gradient(135deg, rgba(5,8,22,0.88) 0%, rgba(13,22,48,0.86) 52%, rgba(38,58,120,0.72) 100%)`,
-      border: 'rgba(190,211,255,0.20)',
+      background: monitorSurface.background,
+      border: monitorSurface.border,
       readableBackground: '#0d1630',
       textPrimary: 'text-white',
       textSecondary: 'text-blue-100/80',
@@ -112,14 +118,14 @@ function getPveVisualTheme(theme: string): PveVisualTheme {
       surface: 'bg-white/[0.055]',
       surfaceBorder: 'border-white/12',
       track: 'bg-white/10',
-      shadow: '0 26px 64px -38px rgba(2,8,20,0.72), inset 0 1px 0 rgba(255,255,255,0.12)',
+      shadow: monitorSurface.shadow,
     };
   }
 
   if (theme === 'black') {
     return {
-      background: `linear-gradient(135deg, #01030a 0%, ${LUNAR_SERIES_PALETTE.background[0]} 52%, #0b1531 100%)`,
-      border: 'rgba(190,211,255,0.13)',
+      background: monitorSurface.background,
+      border: monitorSurface.border,
       readableBackground: '#050816',
       textPrimary: 'text-white',
       textSecondary: 'text-blue-100/74',
@@ -132,13 +138,13 @@ function getPveVisualTheme(theme: string): PveVisualTheme {
       surface: 'bg-white/[0.035]',
       surfaceBorder: 'border-white/10',
       track: 'bg-white/8',
-      shadow: '0 28px 68px -42px rgba(0,0,0,0.86), inset 0 1px 0 rgba(255,255,255,0.05)',
+      shadow: monitorSurface.shadow,
     };
   }
 
   return {
-    background: `linear-gradient(135deg, ${LUNAR_SERIES_PALETTE.background[0]} 0%, ${LUNAR_SERIES_PALETTE.background[1]} 50%, ${LUNAR_SERIES_PALETTE.background[3]} 100%)`,
-    border: LUNAR_SERIES_PALETTE.borderStrong,
+    background: monitorSurface.background,
+    border: monitorSurface.border,
     readableBackground: LUNAR_SERIES_PALETTE.background[1],
     textPrimary: 'text-white',
     textSecondary: 'text-blue-100/78',
@@ -151,24 +157,9 @@ function getPveVisualTheme(theme: string): PveVisualTheme {
     surface: 'bg-white/[0.045]',
     surfaceBorder: 'border-white/10',
     track: 'bg-white/10',
-    shadow: '0 26px 62px -38px rgba(2,8,20,0.72), inset 0 1px 0 rgba(255,255,255,0.07)',
+    shadow: monitorSurface.shadow,
   };
 }
-
-const PVE_SYSTEM_KEYFRAMES = `
-@keyframes navet-pve-system-drift {
-  0%, 100% { transform: translate3d(-1.5%, 0, 0) scale(1.02); }
-  50% { transform: translate3d(2%, -1%, 0) scale(1.05); }
-}
-@keyframes navet-pve-system-pulse {
-  0%, 100% { opacity: .16; transform: translate3d(-1%, 1%, 0); }
-  50% { opacity: .27; transform: translate3d(1.5%, -1%, 0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .navet-pve-system-drift,
-  .navet-pve-system-pulse { animation: none !important; }
-}
-`;
 
 function PveSystemAtmosphere({
   size,
@@ -185,15 +176,15 @@ function PveSystemAtmosphere({
   const haze = isLight ? 'rgba(79,127,210,0.12)' : 'rgba(79,127,210,0.14)';
   const signal = isLight ? 'rgba(143,216,245,0.10)' : 'rgba(143,216,245,0.08)';
   const driftStyle = canAnimate
-    ? ({ animation: 'navet-pve-system-drift 32s ease-in-out infinite' } as CSSProperties)
+    ? ({ animation: 'navet-tech-monitor-drift 32s ease-in-out infinite' } as CSSProperties)
     : undefined;
   const pulseStyle = canAnimate
-    ? ({ animation: 'navet-pve-system-pulse 18s ease-in-out infinite' } as CSSProperties)
+    ? ({ animation: 'navet-tech-monitor-pulse 18s ease-in-out infinite' } as CSSProperties)
     : undefined;
 
   return (
     <>
-      <style data-home-os-pve-atmosphere-style>{PVE_SYSTEM_KEYFRAMES}</style>
+      <style data-home-os-pve-atmosphere-style>{TECH_MONITOR_KEYFRAMES}</style>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
@@ -201,14 +192,14 @@ function PveSystemAtmosphere({
         data-home-os-pve-atmosphere-motion={canAnimate ? 'enabled' : 'static'}
       >
         <div
-          className={`${canAnimate ? 'navet-pve-system-drift' : ''} absolute -inset-[18%] rounded-[42%] blur-2xl`}
+          className={`${canAnimate ? 'navet-tech-monitor-drift' : ''} absolute -inset-[18%] rounded-[42%] blur-2xl`}
           style={{
             ...driftStyle,
             background: `radial-gradient(ellipse at 14% 22%, ${haze}, transparent 54%), radial-gradient(ellipse at 84% 72%, ${signal}, transparent 48%)`,
           }}
         />
         <div
-          className={`${canAnimate ? 'navet-pve-system-pulse' : ''} absolute -inset-[12%] opacity-35`}
+          className={`${canAnimate ? 'navet-tech-monitor-pulse' : ''} absolute -inset-[12%] opacity-35`}
           style={{
             ...pulseStyle,
             background: `linear-gradient(118deg, transparent 18%, ${signal} 46%, transparent 73%)`,
@@ -226,6 +217,22 @@ function PveSystemAtmosphere({
             maskImage: 'linear-gradient(135deg, transparent 10%, black 52%, transparent 94%)',
             WebkitMaskImage: 'linear-gradient(135deg, transparent 10%, black 52%, transparent 94%)',
           }}
+        />
+        <div
+          className={`${canAnimate ? 'navet-tech-monitor-flow' : ''} absolute left-[8%] right-[18%] top-[36%] h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent`}
+          style={
+            canAnimate
+              ? { animation: 'navet-tech-monitor-flow 14s ease-in-out infinite' }
+              : undefined
+          }
+        />
+        <div
+          className={`${canAnimate ? 'navet-tech-monitor-flow' : ''} absolute left-[24%] right-[4%] top-[68%] h-px bg-gradient-to-r from-transparent via-indigo-300/20 to-transparent`}
+          style={
+            canAnimate
+              ? { animation: 'navet-tech-monitor-flow 18s ease-in-out -5s infinite' }
+              : undefined
+          }
         />
       </div>
     </>
@@ -327,6 +334,25 @@ function MetricGlyph({ role }: { role: string }) {
                 ? Cpu
                 : Database;
   return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
+}
+
+function PveCpuGauge({ metric, compact = false }: { metric: HomeOsMetric; compact?: boolean }) {
+  const percent = metricPercent(metric);
+  const value = percent ?? 0;
+  return (
+    <div
+      aria-hidden="true"
+      className={`relative shrink-0 rounded-full p-[3px] ${compact ? 'h-12 w-12' : 'h-16 w-16'}`}
+      style={{
+        background: `conic-gradient(from 225deg, ${TECH_MONITOR_PALETTE.cyan} 0deg, ${TECH_MONITOR_PALETTE.blue} ${Math.max(12, value * 2.7)}deg, rgba(255,255,255,0.08) ${Math.max(14, value * 2.7)}deg 270deg, transparent 270deg 360deg)`,
+        boxShadow: `0 0 22px ${TECH_MONITOR_PALETTE.glowCyan}`,
+      }}
+    >
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-[#07102a]/90">
+        <Cpu className="h-4 w-4 text-cyan-100/70" />
+      </div>
+    </div>
+  );
 }
 
 function PveMetricCell({
@@ -481,6 +507,7 @@ export function PveHomeOsCard({
         <PveSystemAtmosphere size={size} effectsQuality={effectsQuality} theme={theme} />
         <div
           className={`relative z-10 flex h-full min-w-0 flex-col p-3 ${palette.textPrimary}`}
+          data-tech-monitor="pve"
           data-home-os-pve-recipe="ups"
           data-home-os-pve-visual="system"
         >
@@ -520,7 +547,7 @@ export function PveHomeOsCard({
 
           {primaryMetric ? (
             <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
-              <div className="flex min-w-0 items-end justify-between gap-3">
+              <div className="flex min-w-0 items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div
                     className={`truncate text-4xl font-semibold leading-none tracking-[-0.04em] tabular-nums ${primaryMetric.metric.available ? palette.accentStrong : palette.textMuted}`}
@@ -543,6 +570,9 @@ export function PveHomeOsCard({
                     </div>
                   ) : null}
                 </div>
+                {visualSize === 'medium' || visualSize === 'large' ? (
+                  <PveCpuGauge metric={primaryMetric.metric} compact={visualSize === 'medium'} />
+                ) : null}
                 <div
                   className={`shrink-0 rounded-full border px-2.5 py-1 text-[0.63rem] font-medium uppercase tracking-[0.14em] ${statusClasses(selectedDevice, theme)}`}
                   data-home-os-pve-status={selectedDevice.state}
@@ -573,6 +603,26 @@ export function PveHomeOsCard({
                   <span>
                     {roleLabel(uptimeMetric.role, language)} · {formatMetric(uptimeMetric.metric)}
                   </span>
+                </div>
+              ) : null}
+              {visualSize === 'large' ? (
+                <div
+                  className={`mt-auto grid grid-cols-2 gap-x-4 border-t ${palette.surfaceBorder} pt-2 text-[0.62rem] uppercase tracking-[0.14em] ${palette.textTertiary}`}
+                  data-home-os-pve-telemetry="true"
+                >
+                  {selectedMetrics
+                    .filter(
+                      ({ role }) => role === 'homelab.pve.load' || role === 'homelab.pve.io_wait'
+                    )
+                    .slice(0, 2)
+                    .map(({ role, metric }) => (
+                      <span key={role} className="truncate">
+                        {roleLabel(role, language)}{' '}
+                        <strong className="ml-1 font-medium text-cyan-100/70">
+                          {formatMetric(metric)}
+                        </strong>
+                      </span>
+                    ))}
                 </div>
               ) : null}
             </div>
