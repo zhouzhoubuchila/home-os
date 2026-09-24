@@ -10,6 +10,7 @@ import type {
   HomeOsPhysicalDevice,
   ResolvedSemanticEntity,
 } from '../core/types';
+import { isInternetRoleCompatible } from '../mapping/internet-role-compatibility';
 
 const PVE_METRIC_ROLES: Record<string, SemanticRole> = {
   cpu: HOME_OS_ROLES.homelabPveCpu,
@@ -39,27 +40,51 @@ export function resolveFinalFunctionalDevices(
   return resolveFunctionalDevices(functionalDevices, entities);
 }
 
+export function resolveInternetOnlineState(
+  online?: ResolvedSemanticEntity,
+  latency?: ResolvedSemanticEntity
+): HomeOsPhysicalDevice['state'] {
+  const source = online ?? latency;
+  if (!source || !isInternetRoleCompatible(source.entity, HOME_OS_ROLES.networkInternetOnline)) {
+    return 'unknown';
+  }
+  if (source.entity.availability === 'unknown') return 'unknown';
+  if (source.entity.availability === 'unavailable') return 'offline';
+
+  const value = String(source.entity.primaryState ?? '')
+    .trim()
+    .toLowerCase();
+  const probe =
+    latency?.entity.externalId === source.entity.externalId ||
+    isInternetRoleCompatible(source.entity, HOME_OS_ROLES.networkInternetLatency);
+  if (probe) {
+    return value !== '' && Number.isFinite(Number(value)) ? 'online' : 'unknown';
+  }
+  if (['on', 'online', 'available', 'true', 'connected', 'detected'].includes(value))
+    return 'online';
+  if (['off', 'offline', 'false', 'unavailable', 'disconnected', 'clear'].includes(value)) {
+    return 'offline';
+  }
+  return 'unknown';
+}
+
 export function resolveFunctionalOnlineState(
   device: ResolvedHomeOsFunctionalDevice
 ): HomeOsPhysicalDevice['state'] {
   const source = device.metricEntities.online ?? device.stateEntity;
   const latency = device.metricEntities.latency;
-  const sourceIsLatency =
-    device.kind === 'internet' &&
-    source !== undefined &&
-    latency !== undefined &&
-    source.entity.externalId === latency.entity.externalId;
-  if (device.kind === 'internet' && (!source || sourceIsLatency)) {
-    const probe = latency ?? source;
-    if (!probe || probe.entity.availability === 'unknown') return 'unknown';
-    if (probe.entity.availability === 'unavailable') return 'offline';
-    const latencyValue = String(probe.entity.primaryState ?? '')
-      .trim()
-      .toLowerCase();
-    if (!latencyValue || ['unknown', 'unavailable', 'timeout', 'error'].includes(latencyValue)) {
-      return 'unknown';
-    }
-    return Number.isFinite(Number(latencyValue)) ? 'online' : 'unknown';
+  if (device.kind === 'internet') {
+    const latencyId = device.metrics.latency;
+    const unavailableProbe =
+      !latency && latencyId
+        ? device.entities.find(
+            (item) =>
+              [item.entity.id, item.entity.canonicalId, item.entity.externalId].includes(
+                latencyId
+              ) && isInternetRoleCompatible(item.entity, HOME_OS_ROLES.networkInternetOnline)
+          )
+        : undefined;
+    return resolveInternetOnlineState(source, latency ?? unavailableProbe);
   }
   if (!source || source.entity.availability === 'unknown') return 'unknown';
   if (source.entity.availability === 'unavailable') return 'offline';

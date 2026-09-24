@@ -1,4 +1,6 @@
+import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../core/types';
+import { isInternetRoleCompatible } from '../mapping/internet-role-compatibility';
 
 export interface ResolvedHomeOsFunctionalDevice extends HomeOsFunctionalDevice {
   stateEntity?: ResolvedSemanticEntity;
@@ -11,6 +13,14 @@ export interface ResolvedHomeOsFunctionalDevice extends HomeOsFunctionalDevice {
 }
 
 const BATH_HEATER_HINTS = /bath.?heater|bathroom.?heater|浴霸|暖风机|风暖/;
+const INTERNET_METRIC_ROLES: Record<string, string> = {
+  online: HOME_OS_ROLES.networkInternetOnline,
+  latency: HOME_OS_ROLES.networkInternetLatency,
+  packet_loss: HOME_OS_ROLES.networkInternetPacketLoss,
+  jitter: HOME_OS_ROLES.networkInternetJitter,
+  download: HOME_OS_ROLES.networkInternetDownload,
+  upload: HOME_OS_ROLES.networkInternetUpload,
+};
 
 export function discoverBathHeaterFunctionalDevices(
   entities: readonly ResolvedSemanticEntity[]
@@ -77,6 +87,9 @@ export function resolveFunctionalDevices(
     byExternalId.set(item.entity.externalId, item);
   }
   return configs.map((config) => {
+    const compatibleInternetEntity = (entity: ResolvedSemanticEntity | undefined, role: string) =>
+      entity && isInternetRoleCompatible(entity.entity, role) ? entity : undefined;
+    const stateEntity = config.stateEntityId ? byExternalId.get(config.stateEntityId) : undefined;
     const referencedIds = new Set([
       ...config.sourceEntityIds,
       ...(config.stateEntityId ? [config.stateEntityId] : []),
@@ -88,7 +101,10 @@ export function resolveFunctionalDevices(
       .filter((item): item is ResolvedSemanticEntity => Boolean(item));
     return {
       ...config,
-      stateEntity: config.stateEntityId ? byExternalId.get(config.stateEntityId) : undefined,
+      stateEntity:
+        config.kind === 'internet'
+          ? compatibleInternetEntity(stateEntity, HOME_OS_ROLES.networkInternetOnline)
+          : stateEntity,
       controlEntities: Object.fromEntries(
         Object.entries(config.controls ?? {}).flatMap(([key, entityId]) => {
           const entity = entityId ? byExternalId.get(entityId) : undefined;
@@ -96,7 +112,15 @@ export function resolveFunctionalDevices(
         })
       ),
       metricEntities: Object.fromEntries(
-        Object.entries(config.metrics).map(([key, entityId]) => [key, byExternalId.get(entityId)])
+        Object.entries(config.metrics).map(([key, entityId]) => {
+          const entity = byExternalId.get(entityId);
+          return [
+            key,
+            config.kind === 'internet' && INTERNET_METRIC_ROLES[key]
+              ? compatibleInternetEntity(entity, INTERNET_METRIC_ROLES[key])
+              : entity,
+          ];
+        })
       ),
       entities: members,
       missingEntityIds: [...referencedIds].filter((entityId) => !byExternalId.has(entityId)),

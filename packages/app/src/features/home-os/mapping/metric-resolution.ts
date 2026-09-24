@@ -5,6 +5,7 @@ import type {
   MetricResolutionCandidate,
   ResolvedSemanticEntity,
 } from '../core/types';
+import { isInternetRoleCompatible } from './internet-role-compatibility';
 
 export const HOME_OS_FRESHNESS_THRESHOLD_MS = 15 * 60_000;
 export const HOME_OS_CONNECTIVITY_FRESHNESS_THRESHOLD_MS = 5 * 60_000;
@@ -56,6 +57,7 @@ const candidateFor = (
   item: ResolvedSemanticEntity,
   role: SemanticRole
 ): MetricResolutionCandidate | undefined => {
+  if (!isInternetRoleCompatible(item.entity, role)) return undefined;
   const match = item.candidates.find((candidate) => candidate.role === role);
   if (!match && item.source === 'manual' && item.roles.includes(role)) {
     return {
@@ -81,7 +83,10 @@ export function resolveMetric(
 ): MetricResolution {
   const visible = entities.filter((item) => !item.ignored && item.displayMode !== 'hidden');
   const mapped = visible.filter(
-    (item) => item.roles.includes(role) && item.reviewDisposition === 'mapped'
+    (item) =>
+      item.roles.includes(role) &&
+      item.reviewDisposition === 'mapped' &&
+      isInternetRoleCompatible(item.entity, role)
   );
   const candidates = visible
     .map((item) => candidateFor(item, role))

@@ -7,7 +7,111 @@ const readString = (value: unknown) => (typeof value === 'string' ? value.trim()
 const RATE_UNITS = /(?:^|\s|\/)(?:k|m|g)?(?:bit|b)(?:\/s|ps)(?:$|\s)/i;
 const AGGREGATE_HINTS = /total|cumulative|accumulated|bytes?|traffic|累计|总量|流量|字节/i;
 const SPEEDTEST_HINTS = /speed.?test|bandwidth|throughput|internet.?speed|网速|带宽|吞吐/i;
-const INTERNET_CONTEXT = /internet|wan|外网|公网|connectivity|reachable|可达|联网|连通/i;
+const INTERNET_CONTEXT =
+  /internet|(?:^|[._\s-])wan(?:$|[._\s-])|external[._\s-]*network|gateway[._\s-]*reachab|外网|公网/i;
+const LOCAL_DEVICE_CONTEXT =
+  /midea|家电|appliance|phone|mobile|iphone|android|电视|\btv\b|vacuum|扫地|climate|空调|washing|washer|洗衣|fridge|refrigerator|冰箱|iot[._\s-]*device/i;
+const LATENCY_HINT = /latency|ping|(?:^|[._\s-])rtt(?:$|[._\s-])|round[._\s-]*trip|延迟/i;
+const LATENCY_UNIT = /^(?:ms|milliseconds?)$/i;
+
+const entityUnit = (entity: NavetEntity) =>
+  readString(entity.attributes.unit ?? entity.attributes.unit_of_measurement);
+
+function finiteState(entity: NavetEntity) {
+  const value = entity.primaryState;
+  return (
+    (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) &&
+    Number.isFinite(Number(value))
+  );
+}
+
+function isLatencyProbeShape(entity: NavetEntity) {
+  return (
+    entity.externalId.startsWith('sensor.') &&
+    LATENCY_UNIT.test(entityUnit(entity)) &&
+    LATENCY_HINT.test(metadataText(entity))
+  );
+}
+
+export function isNumericInternetLatency(entity: NavetEntity) {
+  return isLatencyProbeShape(entity) && finiteState(entity);
+}
+
+function isLatencyOnlineFallback(entity: NavetEntity) {
+  if (!isLatencyProbeShape(entity)) return false;
+  if (finiteState(entity)) return true;
+  const state = readString(entity.primaryState).toLowerCase();
+  return ['unknown', 'unavailable', 'timeout', 'error'].includes(state);
+}
+
+function isExplicitInternetOnline(entity: NavetEntity) {
+  const domain = entity.externalId.split('.')[0];
+  if (domain !== 'binary_sensor' && domain !== 'sensor') return false;
+  const text = metadataText(entity);
+  if (LOCAL_DEVICE_CONTEXT.test(text) || !INTERNET_CONTEXT.test(text)) return false;
+  if (
+    !/online|offline|connected|disconnected|connectivity|reachable|reachability|status|状态|联网|在线|连通/i.test(
+      text
+    )
+  )
+    return false;
+  if (domain === 'binary_sensor') return true;
+  const state = readString(entity.primaryState).toLowerCase();
+  return [
+    'on',
+    'off',
+    'online',
+    'offline',
+    'available',
+    'unavailable',
+    'connected',
+    'disconnected',
+    'unknown',
+    'true',
+    'false',
+  ].includes(state);
+}
+
+/** Hard constraints also apply to persisted manual mappings and review candidates. */
+export function isInternetRoleCompatible(entity: NavetEntity, role: string) {
+  switch (role) {
+    case HOME_OS_ROLES.networkInternetOnline:
+      return isExplicitInternetOnline(entity) || isLatencyOnlineFallback(entity);
+    case HOME_OS_ROLES.networkInternetLatency:
+      return isNumericInternetLatency(entity);
+    case HOME_OS_ROLES.networkInternetPacketLoss:
+      return (
+        entity.externalId.startsWith('sensor.') &&
+        finiteState(entity) &&
+        /packet[._\s-]*loss|丢包/i.test(metadataText(entity))
+      );
+    case HOME_OS_ROLES.networkInternetJitter:
+      return (
+        entity.externalId.startsWith('sensor.') &&
+        finiteState(entity) &&
+        /jitter|抖动/i.test(metadataText(entity)) &&
+        LATENCY_UNIT.test(entityUnit(entity))
+      );
+    case HOME_OS_ROLES.networkInternetDownload:
+    case HOME_OS_ROLES.networkInternetUpload: {
+      const text = metadataText(entity);
+      const direction =
+        role === HOME_OS_ROLES.networkInternetDownload
+          ? /download|downstream|receive|下载|下行/i
+          : /upload|upstream|transmit|上传|上行/i;
+      return (
+        entity.externalId.startsWith('sensor.') &&
+        finiteState(entity) &&
+        !AGGREGATE_HINTS.test(text) &&
+        RATE_UNITS.test(entityUnit(entity)) &&
+        SPEEDTEST_HINTS.test(text) &&
+        direction.test(text)
+      );
+    }
+    default:
+      return true;
+  }
+}
 
 function metadataText(entity: NavetEntity) {
   const attributes = entity.attributes;
@@ -44,20 +148,11 @@ function candidate(
  * speed-test metadata are allowed to create Internet roles.
  */
 export function resolveInternetCompatibleRoles(entity: NavetEntity): SemanticCandidate[] {
-  const domain = entity.externalId.split('.')[0] ?? '';
   const attributes = entity.attributes;
   const integration = readString(attributes.integration ?? attributes.platform).toLowerCase();
-  const unit = readString(attributes.unit ?? attributes.unit_of_measurement).toLowerCase();
-  const text = metadataText(entity);
   const roles: SemanticCandidate[] = [];
 
-  const latency = /latency|ping|rtt|round.?trip|延迟|往返/.test(text);
-  const packetLoss = /packet.?loss|packetloss|丢包/.test(text);
-  const jitter = /jitter|抖动/.test(text);
-  const aggregate = AGGREGATE_HINTS.test(text);
-  const speedtest = SPEEDTEST_HINTS.test(text) || integration.includes('speedtest');
-
-  if (latency) {
+  if (isNumericInternetLatency(entity)) {
     roles.push(
       candidate(
         HOME_OS_ROLES.networkInternetLatency,
@@ -67,9 +162,10 @@ export function resolveInternetCompatibleRoles(entity: NavetEntity): SemanticCan
         integration ? `integration=${integration}` : 'Internet telemetry name'
       )
     );
-    // A live latency probe is a reliable online signal when HA has no separate
-    // WAN binary_sensor. Availability and error states are interpreted by the
-    // resolution layer, so this does not fabricate a boolean value.
+  }
+
+  // Availability and error states are interpreted by the resolution layer.
+  if (isLatencyOnlineFallback(entity)) {
     roles.push(
       candidate(
         HOME_OS_ROLES.networkInternetOnline,
@@ -80,7 +176,7 @@ export function resolveInternetCompatibleRoles(entity: NavetEntity): SemanticCan
     );
   }
 
-  if (packetLoss) {
+  if (isInternetRoleCompatible(entity, HOME_OS_ROLES.networkInternetPacketLoss)) {
     roles.push(
       candidate(
         HOME_OS_ROLES.networkInternetPacketLoss,
@@ -91,7 +187,7 @@ export function resolveInternetCompatibleRoles(entity: NavetEntity): SemanticCan
     );
   }
 
-  if (jitter) {
+  if (isInternetRoleCompatible(entity, HOME_OS_ROLES.networkInternetJitter)) {
     roles.push(
       candidate(
         HOME_OS_ROLES.networkInternetJitter,
@@ -102,43 +198,33 @@ export function resolveInternetCompatibleRoles(entity: NavetEntity): SemanticCan
     );
   }
 
-  const rateUnit = RATE_UNITS.test(unit);
-  // A speed-test integration alone is not enough: without a bit/s unit the
-  // value may be a cumulative byte counter, which must stay unmapped.
-  if (speedtest && !aggregate && rateUnit) {
-    if (/download|downstream|receive|下载|下行/.test(text)) {
-      roles.push(
-        candidate(
-          HOME_OS_ROLES.networkInternetDownload,
-          0.94,
-          'integration',
-          'real-time speed-test download rate'
-        )
-      );
-    }
-    if (/upload|upstream|transmit|上传|上行/.test(text)) {
-      roles.push(
-        candidate(
-          HOME_OS_ROLES.networkInternetUpload,
-          0.94,
-          'integration',
-          'real-time speed-test upload rate'
-        )
-      );
-    }
+  if (isInternetRoleCompatible(entity, HOME_OS_ROLES.networkInternetDownload)) {
+    roles.push(
+      candidate(
+        HOME_OS_ROLES.networkInternetDownload,
+        0.94,
+        'integration',
+        'real-time speed-test download rate'
+      )
+    );
+  }
+  if (isInternetRoleCompatible(entity, HOME_OS_ROLES.networkInternetUpload)) {
+    roles.push(
+      candidate(
+        HOME_OS_ROLES.networkInternetUpload,
+        0.94,
+        'integration',
+        'real-time speed-test upload rate'
+      )
+    );
   }
 
-  const deviceClass = readString(attributes.deviceClass ?? attributes.device_class).toLowerCase();
-  const onlineContext = INTERNET_CONTEXT.test(text) || deviceClass === 'connectivity';
-  const onlineState = /online|offline|connected|disconnected|reachable|status|状态|联网|在线/.test(
-    text
-  );
-  if (
-    onlineContext &&
-    onlineState &&
-    (domain === 'binary_sensor' || domain === 'sensor') &&
-    !latency
-  ) {
+  if (isExplicitInternetOnline(entity)) {
+    const deviceClass = readString(attributes.deviceClass ?? attributes.device_class).toLowerCase();
+    const fallbackIndex = roles.findIndex(
+      ({ role }) => role === HOME_OS_ROLES.networkInternetOnline
+    );
+    if (fallbackIndex >= 0) roles.splice(fallbackIndex, 1);
     roles.push(
       candidate(
         HOME_OS_ROLES.networkInternetOnline,

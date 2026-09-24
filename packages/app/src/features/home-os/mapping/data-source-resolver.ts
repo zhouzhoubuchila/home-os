@@ -5,6 +5,7 @@ import type {
   MetricResolutionState,
   ResolvedSemanticEntity,
 } from '../core/types';
+import { isInternetRoleCompatible } from './internet-role-compatibility';
 
 const readString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const append = <T>(index: Map<string, T[]>, key: string, value: T) => {
@@ -67,6 +68,7 @@ const candidateFromEntity = (
   item: ResolvedSemanticEntity,
   role: SemanticRole
 ): DataSourceCandidate | undefined => {
+  if (!isInternetRoleCompatible(item.entity, role)) return undefined;
   const semanticCandidate = item.candidates.find((candidate) => candidate.role === role);
   if (!semanticCandidate && !item.roles.includes(role)) return undefined;
   const attributes = item.entity.attributes;

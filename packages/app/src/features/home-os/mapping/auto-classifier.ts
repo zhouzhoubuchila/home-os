@@ -2,7 +2,10 @@ import type { NavetEntity } from '@navet/core/types';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { SemanticCandidate } from '../core/types';
 import { resolveCameraCompatibleRole } from './camera-role-compatibility';
-import { resolveInternetCompatibleRoles } from './internet-role-compatibility';
+import {
+  isInternetRoleCompatible,
+  resolveInternetCompatibleRoles,
+} from './internet-role-compatibility';
 import { resolvePveCompatibleRole } from './pve-role-compatibility';
 import { resolveRouterCompatibleRole } from './router-role-compatibility';
 
@@ -20,6 +23,7 @@ function explicitCandidates(entity: NavetEntity): SemanticCandidate[] {
   const roles = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
   return roles
     .filter((role): role is string => typeof role === 'string' && role.includes('.'))
+    .filter((role) => isInternetRoleCompatible(entity, role))
     .map((role) => candidate(role, 1, 'explicit_metadata', 'explicit Home OS metadata'));
 }
 
@@ -360,8 +364,6 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
   const fallbackRules: Array<[RegExp, string]> = [
     [/state.?grid|国家电网/, HOME_OS_ROLES.energyElectricityToday],
     [/towngas|港华燃气/, HOME_OS_ROLES.energyGasCurrent],
-    [/latency|延迟/, HOME_OS_ROLES.networkInternetLatency],
-    [/packet.?loss|丢包/, HOME_OS_ROLES.networkInternetPacketLoss],
   ];
   if (!result.some(({ confidence }) => confidence >= 0.9)) {
     const matched = fallbackRules.find(([pattern]) => pattern.test(name));

@@ -16,6 +16,7 @@ import {
   functionalDeviceMetricRows,
   ROUTER_METRIC_ORDER,
   resolveFunctionalOnlineState,
+  resolveInternetOnlineState,
 } from '../../resolution/final-home-os-resolution';
 
 export type NetworkCardKind = 'router' | 'internet';
@@ -135,11 +136,15 @@ function resolveNetworkMetrics(
 }
 
 function onlineState(
+  kind: NetworkCardKind,
   device: ResolvedHomeOsFunctionalDevice | undefined,
   metrics: readonly NetworkMetric[]
 ) {
   if (device) return resolveFunctionalOnlineState(device);
   const source = metrics.find(({ key }) => key === 'online')?.entity;
+  if (kind === 'internet') {
+    return resolveInternetOnlineState(source, metrics.find(({ key }) => key === 'latency')?.entity);
+  }
   if (!source || source.entity.availability === 'unknown') return 'unknown' as const;
   if (source.entity.availability === 'unavailable') return 'offline' as const;
   const state = String(source.entity.primaryState ?? '').toLowerCase();
@@ -268,23 +273,25 @@ export function NetworkHomeOsCard({
     () => resolveNetworkMetrics(kind, device, entities),
     [device, entities, kind]
   );
-  const state = onlineState(device, metrics);
+  const state = onlineState(kind, device, metrics);
   const sizeKind = SIZE_KIND(size);
   const download = metrics.find(({ key }) => key === 'download');
   const upload = metrics.find(({ key }) => key === 'upload');
   const latency = metrics.find(({ key }) => key === 'latency');
   const clients = metrics.find(({ key }) => key === 'clients');
   const primaryMetrics = [download, upload].filter(isDefined);
-  const secondaryMetrics = metrics.filter(({ key }) => key !== 'download' && key !== 'upload');
+  const secondaryMetrics = metrics.filter(
+    ({ key }) => key !== 'download' && key !== 'upload' && key !== 'latency'
+  );
   const compactMetrics =
     sizeKind === 'tiny'
       ? [latency ?? metrics.find(({ key }) => key === 'online')]
       : sizeKind === 'extra-small'
         ? primaryMetrics
         : sizeKind === 'small'
-          ? [latency ?? clients]
+          ? [clients]
           : [
-              latency ?? clients,
+              clients,
               ...secondaryMetrics.filter(({ key }) =>
                 ['packet_loss', 'jitter', 'wan_ip', 'lan_ip'].includes(key)
               ),

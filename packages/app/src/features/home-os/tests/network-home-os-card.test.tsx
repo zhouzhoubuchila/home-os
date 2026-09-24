@@ -84,6 +84,14 @@ describe('Network Home OS tech monitor card', () => {
     );
   });
 
+  it('renders Internet latency once in its dedicated row', () => {
+    const { container } = renderWithProviders(
+      <NetworkHomeOsCard size="large" kind="internet" entities={[latency]} />
+    );
+    expect(container.querySelectorAll('[data-tech-monitor-latency="true"]')).toHaveLength(1);
+    expect(container.querySelector('[data-tech-monitor-metric="latency"]')).toBeNull();
+  });
+
   it('labels cumulative transfer values instead of implying a live rate', () => {
     const totalDownload = resolved(
       'sensor.router_download_total',
