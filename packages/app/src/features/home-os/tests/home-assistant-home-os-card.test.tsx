@@ -1,16 +1,21 @@
 import { HomeAssistantHomeOsCard } from '@navet/app/features/home-os/components/cards/home-assistant-home-os-card';
 import { HomeOsWidget } from '@navet/app/features/home-os/components/cards/home-os-widget';
+import { HomeOsDetailDialog } from '@navet/app/features/home-os/components/detail/home-os-detail-dialog';
 import { HOME_OS_ROLES } from '@navet/app/features/home-os/core/semantic-roles';
 import type { ManualEntityMapping } from '@navet/app/features/home-os/core/types';
 import {
   resolveSemanticEntities,
   resolveSemanticEntity,
 } from '@navet/app/features/home-os/mapping/semantic-resolver';
+import {
+  formatHomeAssistantUptime,
+  selectHomeAssistantHostTelemetry,
+} from '@navet/app/features/home-os/resolution/home-assistant-host-telemetry';
 import { homeOsEntity } from '@navet/app/features/home-os/tests/fixtures';
 import { useThemeStore } from '@navet/app/stores/theme-store';
 import { renderWithProviders } from '@navet/app/test/render';
 import { mapHomeAssistantEntitiesToNavetEntities } from '@navet/provider-homeassistant';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { REAL_HOME_ASSISTANT_FIXTURE } from './fixtures/real-home/home-assistant';
 
 const host = (id: string, value: string | number, unit?: string) =>
@@ -63,7 +68,9 @@ describe('Home Assistant host Tech Monitor', () => {
     expect(container.querySelector('[data-home-assistant-metric="version"]')).toHaveTextContent(
       '2026.9.1'
     );
-    expect(container.querySelector('[data-home-assistant-metric="storage"]')).toBeNull();
+    expect(container.querySelector('[data-home-assistant-metric="storage"]')).toHaveTextContent(
+      '17.2 %'
+    );
   });
 
   it('does not load atmosphere in Tiny and does not invent missing CPU', () => {
@@ -152,7 +159,7 @@ describe('Home Assistant host Tech Monitor', () => {
     expect(container.querySelector('[data-home-assistant-metric="cpu"]')).toBeInTheDocument();
   });
 
-  it('maps the raw HA fixture online and storage, without inventing CPU or memory', () => {
+  it('maps real-shaped System Monitor states without a Home Assistant device name', () => {
     const resolved = resolveSemanticEntities(
       mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
     );
@@ -163,11 +170,167 @@ describe('Home Assistant host Tech Monitor', () => {
       resolved.find((item) => item.entity.externalId === 'sensor.system_monitor_disk_use')?.roles
     ).toContain(HOME_OS_ROLES.homelabHomeAssistantStorage);
     expect(
-      resolved.some((item) => item.roles.includes(HOME_OS_ROLES.homelabHomeAssistantCpu))
-    ).toBe(false);
+      resolved.find((item) => item.entity.externalId === 'sensor.processor_use')?.roles
+    ).toContain(HOME_OS_ROLES.homelabHomeAssistantCpu);
     expect(
-      resolved.some((item) => item.roles.includes(HOME_OS_ROLES.homelabHomeAssistantMemory))
-    ).toBe(false);
+      resolved.find((item) => item.entity.externalId === 'sensor.memory_usage')?.roles
+    ).toContain(HOME_OS_ROLES.homelabHomeAssistantMemory);
+    expect(resolved.find((item) => item.entity.externalId === 'sensor.uptime')?.roles).toContain(
+      HOME_OS_ROLES.homelabHomeAssistantUptime
+    );
+    expect(
+      resolved.find((item) => item.entity.externalId === 'sensor.processor_use')?.entity.attributes
+    ).toEqual(
+      expect.objectContaining({
+        integration: 'systemmonitor',
+        deviceName: 'System Monitor',
+        unit: '%',
+      })
+    );
+  });
+
+  it('recognizes English processor and memory labels but rejects non-percent memory', () => {
+    const processor = homeOsEntity({
+      externalId: 'sensor.processor_use',
+      name: 'Processor utilization',
+      primaryState: '3',
+      attributes: { integration: 'systemmonitor', deviceName: 'System Monitor', unit: '%' },
+    });
+    const memory = homeOsEntity({
+      externalId: 'sensor.memory_usage',
+      name: 'Memory usage',
+      primaryState: '67.3',
+      attributes: { platform: 'systemmonitor', deviceName: 'System Monitor', unit: '%' },
+    });
+    const bytes = homeOsEntity({
+      externalId: 'sensor.memory_available',
+      name: 'Available memory',
+      primaryState: '2048',
+      attributes: { integration: 'systemmonitor', deviceName: 'System Monitor', unit: 'MB' },
+    });
+    expect(resolveSemanticEntity(processor).roles).toContain(HOME_OS_ROLES.homelabHomeAssistantCpu);
+    expect(resolveSemanticEntity(memory).roles).toContain(HOME_OS_ROLES.homelabHomeAssistantMemory);
+    expect(resolveSemanticEntity(bytes).roles).not.toContain(
+      HOME_OS_ROLES.homelabHomeAssistantMemory
+    );
+    expect(
+      resolveSemanticEntity(
+        homeOsEntity({
+          externalId: 'sensor.processor_usage',
+          name: 'Processor usage',
+          primaryState: 3,
+          attributes: { platform: 'systemmonitor', unit: '%' },
+        })
+      ).roles
+    ).toContain(HOME_OS_ROLES.homelabHomeAssistantCpu);
+  });
+
+  it('selects /config over root and /media for card and detail data', () => {
+    const resolved = resolveSemanticEntities(
+      mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
+    );
+    const selected = selectHomeAssistantHostTelemetry(resolved);
+    const storage = selected.filter((item) =>
+      item.roles.includes(HOME_OS_ROLES.homelabHomeAssistantStorage)
+    );
+    expect(storage).toHaveLength(1);
+    expect(storage[0].entity.externalId).toBe('sensor.system_monitor_disk_use_config');
+    const withoutConfig = resolved.filter(
+      (item) => item.entity.externalId !== 'sensor.system_monitor_disk_use_config'
+    );
+    expect(
+      selectHomeAssistantHostTelemetry(withoutConfig).find((item) =>
+        item.roles.includes(HOME_OS_ROLES.homelabHomeAssistantStorage)
+      )?.entity.externalId
+    ).toBe('sensor.system_monitor_disk_use');
+    const { container } = renderWithProviders(
+      <HomeAssistantHomeOsCard
+        size="large"
+        entities={resolved}
+        connected
+        config={{ version: '2026.8.3', state: 'RUNNING' }}
+      />
+    );
+    expect(container.querySelectorAll('[data-home-assistant-metric="storage"]')).toHaveLength(1);
+    expect(container.querySelector('[data-home-assistant-metric="storage"]')).toHaveTextContent(
+      '23.0 %'
+    );
+  });
+
+  it('shows CPU, memory, storage, uptime and version in Medium from raw HA entities', () => {
+    const resolved = resolveSemanticEntities(
+      mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
+    );
+    const { container } = renderWithProviders(
+      <HomeAssistantHomeOsCard
+        size="medium"
+        entities={resolved}
+        connected
+        config={{ version: '2026.8.3', state: 'RUNNING' }}
+      />
+    );
+    expect(container.querySelector('[data-home-assistant-metric="cpu"]')).toHaveTextContent('3 %');
+    expect(container.querySelector('[data-home-assistant-metric="memory"]')).toHaveTextContent(
+      '67.3 %'
+    );
+    expect(container.querySelector('[data-home-assistant-metric="storage"]')).toHaveTextContent(
+      '23.0 %'
+    );
+    expect(container.querySelector('[data-home-assistant-metric="uptime"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-home-assistant-metric="version"]')).toHaveTextContent(
+      '2026.8.3'
+    );
+  });
+
+  it('formats uptime from the real timestamp instead of a fixed duration', () => {
+    const resolved = resolveSemanticEntities(
+      mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
+    );
+    const uptime = resolved.find((item) => item.entity.externalId === 'sensor.uptime');
+    expect(uptime).toBeDefined();
+    if (!uptime) throw new Error('Uptime fixture missing');
+    expect(formatHomeAssistantUptime(uptime, 'zh', Date.parse('2026-09-25T09:00:00.000Z'))).toBe(
+      '1周'
+    );
+    expect(formatHomeAssistantUptime(uptime, 'zh', Date.parse('2026-09-19T09:00:00.000Z'))).toBe(
+      '1天'
+    );
+  });
+
+  it('uses the same resolved telemetry in Home Assistant detail', () => {
+    const resolved = resolveSemanticEntities(
+      mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
+    );
+    renderWithProviders(
+      <HomeOsDetailDialog kind="home-assistant" entities={resolved} isOpen onOpenChange={vi.fn()} />
+    );
+    expect(document.body.textContent).toContain('处理器占用');
+    expect(document.body.textContent).toContain('内存用量');
+    expect(document.body.textContent).toContain('23.0 %');
+    expect(document.body.textContent).not.toContain('21.0 %');
+    expect(document.body.textContent).not.toContain('30.0 %');
+    expect(document.body.textContent).toContain('Uptime');
+  });
+
+  it('accepts real duration and human-readable uptime states', () => {
+    const duration = homeOsEntity({
+      externalId: 'sensor.uptime',
+      name: 'Uptime',
+      primaryState: '604800',
+      attributes: { platform: 'systemmonitor', unit: 's' },
+    });
+    const readable = homeOsEntity({
+      externalId: 'sensor.uptime',
+      name: 'Uptime',
+      primaryState: '1周',
+      attributes: { platform: 'systemmonitor' },
+    });
+    expect(resolveSemanticEntity(duration).roles).toContain(
+      HOME_OS_ROLES.homelabHomeAssistantUptime
+    );
+    const resolvedReadable = resolveSemanticEntity(readable);
+    expect(resolvedReadable.roles).toContain(HOME_OS_ROLES.homelabHomeAssistantUptime);
+    expect(formatHomeAssistantUptime(resolvedReadable, 'zh')).toBe('1周');
   });
 
   it('rejects unrelated CPU and status even with tempting names or integrations', () => {
@@ -183,9 +346,36 @@ describe('Home Assistant host Tech Monitor', () => {
       primaryState: 'online',
       attributes: { integration: 'home_assistant', deviceName: 'NAS' },
     });
+    const pveCpu = homeOsEntity({
+      externalId: 'sensor.pve_cpu',
+      name: 'PVE CPU',
+      primaryState: 18,
+      attributes: { integration: 'systemmonitor', deviceName: 'PVE Node', unit: '%' },
+    });
+    const routerMemory = homeOsEntity({
+      externalId: 'sensor.router_memory',
+      name: 'Router memory',
+      primaryState: 42,
+      attributes: { integration: 'systemmonitor', deviceName: 'Main Router', unit: '%' },
+    });
+    const nasStorage = homeOsEntity({
+      externalId: 'sensor.nas_disk_use',
+      name: 'NAS storage usage',
+      primaryState: 76,
+      attributes: { integration: 'systemmonitor', deviceName: 'NAS', unit: '%' },
+    });
     expect(resolveSemanticEntity(tvCpu).roles).not.toContain(HOME_OS_ROLES.homelabHomeAssistantCpu);
     expect(resolveSemanticEntity(nasStatus).roles).not.toContain(
       HOME_OS_ROLES.homelabHomeAssistantOnline
+    );
+    expect(resolveSemanticEntity(pveCpu).roles).not.toContain(
+      HOME_OS_ROLES.homelabHomeAssistantCpu
+    );
+    expect(resolveSemanticEntity(routerMemory).roles).not.toContain(
+      HOME_OS_ROLES.homelabHomeAssistantMemory
+    );
+    expect(resolveSemanticEntity(nasStorage).roles).not.toContain(
+      HOME_OS_ROLES.homelabHomeAssistantStorage
     );
   });
 

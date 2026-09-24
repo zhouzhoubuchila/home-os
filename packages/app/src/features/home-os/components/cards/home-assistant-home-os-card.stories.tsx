@@ -1,6 +1,7 @@
 import { getCardSizeOverlayStyle } from '@navet/app/components/shared/card-size';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { type ThemeMode, useThemeStore } from '@navet/app/stores/theme-store';
+import { mapHomeAssistantEntitiesToNavetEntities } from '@navet/provider-homeassistant';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useEffect } from 'react';
 import { expect } from 'storybook/test';
@@ -10,6 +11,7 @@ import { resolveSemanticEntities } from '../../mapping/semantic-resolver';
 import { buildHomeOsProductProjection } from '../../projection/product-path-projection';
 import { homeOsEntity } from '../../tests/fixtures';
 import { REAL_HOME_FIXTURE } from '../../tests/fixtures/real-home';
+import { REAL_HOME_ASSISTANT_FIXTURE } from '../../tests/fixtures/real-home/home-assistant';
 import { HomeAssistantHomeOsCard } from './home-assistant-home-os-card';
 import { NetworkHomeOsCard } from './network-home-os-card';
 import { PveHomeOsCard } from './pve-home-os-card';
@@ -26,13 +28,10 @@ const host = (id: string, value: string | number, unit?: string) =>
     },
   });
 const sparse = resolveSemanticEntities([host('sensor.home_assistant_online', 'online')]);
-const full = resolveSemanticEntities([
-  host('sensor.home_assistant_online', 'online'),
-  host('sensor.home_assistant_cpu_usage', 12, '%'),
-  host('sensor.home_assistant_memory_usage', 38, '%'),
-  host('sensor.home_assistant_disk_use', 17.2, '%'),
-]);
-const haConfig = { version: '2026.9.1', state: 'RUNNING' } as const;
+const full = resolveSemanticEntities(
+  mapHomeAssistantEntitiesToNavetEntities(REAL_HOME_ASSISTANT_FIXTURE)
+);
+const haConfig = { version: '2026.8.3', state: 'RUNNING' } as const;
 const pveDevices = buildHomeOsProductProjection({
   entities: resolveSemanticEntities(REAL_HOME_FIXTURE),
 }).pveDevices;

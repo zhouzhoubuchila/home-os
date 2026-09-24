@@ -23,8 +23,9 @@ function hostContext(entity: NavetEntity) {
   if (FOREIGN_DEVICE.test(device) || FOREIGN_DEVICE.test(`${entity.externalId} ${entity.name}`))
     return false;
   if (HOST_CONTEXT.test(device)) return true;
-  // System Monitor samples the HA host. A named foreign device must not inherit that identity.
-  return integration === 'systemmonitor' && !device;
+  // Registry platform is the stable source; System Monitor samples the HA host even
+  // when its device is named simply "System Monitor" or another user-defined label.
+  return integration === 'systemmonitor';
 }
 
 const metricText = (entity: NavetEntity) => `${entity.externalId} ${entity.name}`.toLowerCase();
@@ -58,7 +59,7 @@ export function isHomeAssistantRoleCompatible(entity: NavetEntity, role: string)
     case HOME_OS_ROLES.homelabHomeAssistantCpu:
       return (
         domain === 'sensor' &&
-        /(?:^|[._\s-])cpu(?:$|[._\s-])/.test(text) &&
+        /(?:^|[._\s-])cpu(?:$|[._\s-])|processor|处理器/.test(text) &&
         finite(entity) &&
         unitOf(entity) === '%'
       );
@@ -66,6 +67,7 @@ export function isHomeAssistantRoleCompatible(entity: NavetEntity, role: string)
       return (
         domain === 'sensor' &&
         /memory|\bram\b|内存/.test(text) &&
+        !/free|available|空闲|可用/.test(text) &&
         finite(entity) &&
         unitOf(entity) === '%'
       );
@@ -73,9 +75,24 @@ export function isHomeAssistantRoleCompatible(entity: NavetEntity, role: string)
       return (
         domain === 'sensor' &&
         /disk|storage|磁盘|存储/.test(text) &&
+        !/free|available|剩余|空闲|可用/.test(text) &&
         finite(entity) &&
         unitOf(entity) === '%'
       );
+    case HOME_OS_ROLES.homelabHomeAssistantUptime: {
+      if (domain !== 'sensor' || !/uptime|last.?boot|运行时间|启动时间/.test(text)) return false;
+      const value = String(entity.primaryState ?? '').trim();
+      const deviceClass = read(entity.attributes.deviceClass ?? entity.attributes.device_class);
+      const timestamp =
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && Number.isFinite(Date.parse(value));
+      const duration =
+        finite(entity) &&
+        (/^(?:s|sec|seconds?|min|minutes?|h|hours?|d|days?)$/.test(unitOf(entity)) ||
+          deviceClass === 'duration');
+      const readable =
+        /^\d+(?:\.\d+)?\s*(?:周|天|小时|分钟|秒|weeks?|days?|hours?|minutes?)$/i.test(value);
+      return timestamp || duration || readable;
+    }
     default:
       return false;
   }
@@ -88,6 +105,7 @@ export function resolveHomeAssistantCompatibleRoles(entity: NavetEntity): Semant
     HOME_OS_ROLES.homelabHomeAssistantCpu,
     HOME_OS_ROLES.homelabHomeAssistantMemory,
     HOME_OS_ROLES.homelabHomeAssistantStorage,
+    HOME_OS_ROLES.homelabHomeAssistantUptime,
   ];
   return roles
     .filter((role) => isHomeAssistantRoleCompatible(entity, role))

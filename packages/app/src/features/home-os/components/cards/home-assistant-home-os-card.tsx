@@ -5,20 +5,25 @@ import {
   getTechMonitorSurface,
   TECH_MONITOR_PALETTE,
 } from '@navet/app/components/shared/theme/lunar-series-tech-monitor';
-import { useTheme } from '@navet/app/hooks';
+import { useI18n, useTheme } from '@navet/app/hooks';
 import { useSettingsStore } from '@navet/app/stores/settings-store';
 import type { HassConfig } from 'home-assistant-js-websocket';
 import { House, Radio } from 'lucide-react';
 import { HOME_OS_ROLES } from '../../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../../core/types';
+import {
+  formatHomeAssistantUptime,
+  selectHomeAssistantHostTelemetry,
+} from '../../resolution/home-assistant-host-telemetry';
 
-type HostMetricKey = 'cpu' | 'memory' | 'storage' | 'version';
+type HostMetricKey = 'cpu' | 'memory' | 'storage' | 'uptime' | 'version';
 type SizeKind = 'tiny' | 'extra-small' | 'small' | 'medium' | 'large';
 
 const roleByMetric: Record<HostMetricKey, string> = {
   cpu: HOME_OS_ROLES.homelabHomeAssistantCpu,
   memory: HOME_OS_ROLES.homelabHomeAssistantMemory,
   storage: HOME_OS_ROLES.homelabHomeAssistantStorage,
+  uptime: HOME_OS_ROLES.homelabHomeAssistantUptime,
   version: HOME_OS_ROLES.homelabHomeAssistantVersion,
 };
 
@@ -26,6 +31,7 @@ const labels: Record<HostMetricKey, string> = {
   cpu: 'CPU',
   memory: 'MEMORY',
   storage: 'STORAGE',
+  uptime: 'UPTIME',
   version: 'VERSION',
 };
 
@@ -37,7 +43,8 @@ function sizeKind(size: CardSize): SizeKind {
   return 'large';
 }
 
-function metricValue(entity: ResolvedSemanticEntity) {
+function metricValue(entity: ResolvedSemanticEntity, key: HostMetricKey, language: string) {
+  if (key === 'uptime') return formatHomeAssistantUptime(entity, language);
   const unit = entity.entity.attributes.unit ?? entity.entity.attributes.unit_of_measurement;
   return `${entity.entity.primaryState}${typeof unit === 'string' && unit ? ` ${unit}` : ''}`;
 }
@@ -136,22 +143,25 @@ export function HomeAssistantHomeOsCard({
   title?: string;
 }) {
   const { theme } = useTheme();
+  const { language } = useI18n();
   const effectsQuality = useEffectiveEffectsQuality();
   const disableAnimations = useSettingsStore((state) => state.disableAnimations);
   const lowPowerMode = useSettingsStore((state) => state.lowPowerMode);
   const kind = sizeKind(size);
   const surface = getTechMonitorSurface(theme);
+  const selected = selectHomeAssistantHostTelemetry(entities);
   const active =
     connected === false
       ? []
-      : entities.filter((entity) => !entity.ignored && entity.entity.availability === 'available');
+      : selected.filter((entity) => !entity.ignored && entity.entity.availability === 'available');
   const online = entities.find((entity) =>
     entity.roles.includes(HOME_OS_ROLES.homelabHomeAssistantOnline)
   );
   const status = resolveStatus(online, connected, config);
   const metrics = (Object.keys(roleByMetric) as HostMetricKey[]).flatMap((key) => {
     const entity = active.find((item) => item.roles.includes(roleByMetric[key]));
-    if (entity && entity.entity.primaryState !== null) return [{ key, value: metricValue(entity) }];
+    if (entity && entity.entity.primaryState !== null)
+      return [{ key, value: metricValue(entity, key, language) }];
     if (key === 'version' && connected && config?.version) return [{ key, value: config.version }];
     return [];
   });
@@ -163,10 +173,16 @@ export function HomeAssistantHomeOsCard({
       : kind === 'small'
         ? [byKey('cpu'), byKey('memory')].filter((metric) => metric !== undefined).length
           ? [byKey('cpu'), byKey('memory')].filter((metric) => metric !== undefined)
-          : [byKey('version'), byKey('storage')].filter((metric) => metric !== undefined)
+          : [byKey('version'), byKey('uptime'), byKey('storage')]
+              .filter((metric) => metric !== undefined)
+              .slice(0, 2)
         : kind === 'medium'
-          ? telemetry.slice(0, 2)
+          ? [byKey('cpu'), byKey('memory')].filter((metric) => metric !== undefined).length
+            ? [byKey('cpu'), byKey('memory')].filter((metric) => metric !== undefined)
+            : telemetry.slice(0, 2)
           : telemetry;
+  const secondary =
+    kind === 'medium' ? telemetry.filter((metric) => !prominent.includes(metric)).slice(0, 2) : [];
   const version = byKey('version');
   const animated = effectsQuality === 'high' && !disableAnimations && !lowPowerMode;
 
@@ -251,10 +267,12 @@ export function HomeAssistantHomeOsCard({
           </div>
         ) : kind !== 'tiny' ? (
           <div
-            className={`flex min-h-0 flex-1 flex-col ${kind === 'medium' ? 'gap-2 pt-1' : kind === 'large' ? 'gap-4 pt-3' : 'gap-2 pt-1'}`}
+            className={`flex min-h-0 flex-1 flex-col ${kind === 'medium' ? 'gap-1 pt-0.5' : kind === 'large' ? 'gap-4 pt-3' : 'gap-2 pt-1'}`}
           >
             <div className="flex items-center gap-2" data-home-assistant-runtime="core">
-              <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full border border-cyan-300/25 bg-cyan-300/[0.06] text-cyan-200">
+              <span
+                className={`relative grid shrink-0 place-items-center rounded-full border border-cyan-300/25 bg-cyan-300/[0.06] text-cyan-200 ${kind === 'medium' ? 'h-6 w-6' : 'h-7 w-7'}`}
+              >
                 <Radio className="h-3.5 w-3.5" />
               </span>
               <div className="min-w-0">
@@ -265,6 +283,16 @@ export function HomeAssistantHomeOsCard({
                   {status === 'online' ? 'Running' : status === 'offline' ? 'Offline' : 'Unknown'}
                 </strong>
               </div>
+              {kind === 'medium' && secondary.length > 0 && version ? (
+                <div className="ml-auto min-w-0 text-right" data-home-assistant-metric="version">
+                  <span className="block text-[0.56rem] tracking-[0.1em] text-blue-100/48">
+                    VERSION
+                  </span>
+                  <strong className="block truncate text-xs font-medium text-blue-50">
+                    {version.value}
+                  </strong>
+                </div>
+              ) : null}
             </div>
             {prominent.length ? (
               <div
@@ -275,8 +303,29 @@ export function HomeAssistantHomeOsCard({
                 ))}
               </div>
             ) : null}
+            {secondary.length ? (
+              <div
+                className="grid grid-cols-2 gap-2 border-t border-white/10 pt-1"
+                data-home-assistant-secondary="true"
+              >
+                {secondary.map((metric) => (
+                  <div
+                    key={metric.key}
+                    className="flex min-w-0 items-baseline gap-1.5"
+                    data-home-assistant-metric={metric.key}
+                  >
+                    <span className="shrink-0 text-[0.56rem] tracking-[0.1em] text-blue-100/48">
+                      {labels[metric.key]}
+                    </span>
+                    <strong className="truncate text-xs font-medium tabular-nums text-blue-50">
+                      {metric.value}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {version &&
-            (kind === 'medium' || kind === 'large') &&
+            (kind === 'large' || (kind === 'medium' && secondary.length === 0)) &&
             !prominent.some((metric) => metric.key === 'version') ? (
               <div
                 className={`mt-auto border-t border-white/10 ${kind === 'medium' ? 'flex items-center gap-2 pt-0.5' : 'pt-1'}`}

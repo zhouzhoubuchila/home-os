@@ -25,6 +25,7 @@ import {
   resolveFinalFunctionalDevices,
   resolveFunctionalOnlineState,
 } from '../../resolution/final-home-os-resolution';
+import { selectHomeAssistantHostTelemetry } from '../../resolution/home-assistant-host-telemetry';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { MoonCardDetail } from '../cards/lunar/moon-card';
 import {
@@ -532,7 +533,10 @@ export function HomeOsDetailDialog({
       <DiagnosisRows roles={diagnosticRoles} entities={visible} copy={copy} />
     ) : (
       <MetricRows
-        entities={visible.filter((entity) => entity.roles.some((role) => role.startsWith(prefix)))}
+        entities={(kind === 'home-assistant'
+          ? selectHomeAssistantHostTelemetry(visible)
+          : visible
+        ).filter((entity) => entity.roles.some((role) => role.startsWith(prefix)))}
         t={t}
       />
     );

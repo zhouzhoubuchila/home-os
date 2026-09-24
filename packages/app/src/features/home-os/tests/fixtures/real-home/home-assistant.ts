@@ -26,10 +26,38 @@ export const REAL_HOME_ASSISTANT_FIXTURE = {
       friendly_name: 'Main router clients',
       state_class: 'measurement',
     }),
-    'sensor.system_monitor_disk_use': state('sensor.system_monitor_disk_use', '17.2', {
-      friendly_name: 'System Monitor disk use',
+    'sensor.system_monitor_disk_use': state('sensor.system_monitor_disk_use', '21.0', {
+      friendly_name: '磁盘用量 /',
       state_class: 'measurement',
       unit_of_measurement: '%',
+    }),
+    'sensor.system_monitor_disk_use_config': state(
+      'sensor.system_monitor_disk_use_config',
+      '23.0',
+      {
+        friendly_name: '磁盘用量 /config',
+        state_class: 'measurement',
+        unit_of_measurement: '%',
+      }
+    ),
+    'sensor.system_monitor_disk_use_media': state('sensor.system_monitor_disk_use_media', '30.0', {
+      friendly_name: 'Disk use /media',
+      state_class: 'measurement',
+      unit_of_measurement: '%',
+    }),
+    'sensor.processor_use': state('sensor.processor_use', '3', {
+      friendly_name: '处理器占用',
+      state_class: 'measurement',
+      unit_of_measurement: '%',
+    }),
+    'sensor.memory_usage': state('sensor.memory_usage', '67.3', {
+      friendly_name: '内存用量',
+      state_class: 'measurement',
+      unit_of_measurement: '%',
+    }),
+    'sensor.uptime': state('sensor.uptime', '2026-09-18T09:00:00.000Z', {
+      friendly_name: 'Uptime',
+      device_class: 'timestamp',
     }),
     'sensor.home_assistant_online': state('sensor.home_assistant_online', 'online', {
       friendly_name: 'Home Assistant online status',
@@ -73,6 +101,7 @@ export const REAL_HOME_ASSISTANT_FIXTURE = {
       model: 'x86 router',
     },
     { id: 'home-assistant-host', name: 'Home Assistant host' },
+    { id: 'system-monitor-host', name: 'System Monitor' },
     { id: 'study-light-device', area_id: 'study', name_by_user: 'Study light' },
   ],
   entityRegistry: [
@@ -99,11 +128,24 @@ export const REAL_HOME_ASSISTANT_FIXTURE = {
     },
     {
       entity_id: 'sensor.system_monitor_disk_use',
-      device_id: 'home-assistant-host',
+      device_id: 'system-monitor-host',
       platform: 'systemmonitor',
       unique_id: 'system-monitor-disk-use',
       entity_category: 'diagnostic',
     },
+    ...[
+      'sensor.system_monitor_disk_use_config',
+      'sensor.system_monitor_disk_use_media',
+      'sensor.processor_use',
+      'sensor.memory_usage',
+      'sensor.uptime',
+    ].map((entity_id) => ({
+      entity_id,
+      device_id: 'system-monitor-host',
+      platform: 'systemmonitor',
+      unique_id: entity_id,
+      entity_category: 'diagnostic' as const,
+    })),
     {
       entity_id: 'sensor.home_assistant_online',
       device_id: 'home-assistant-host',
