@@ -2,6 +2,7 @@ import type { NavetEntity } from '@navet/core/types';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { SemanticCandidate } from '../core/types';
 import { resolveCameraCompatibleRole } from './camera-role-compatibility';
+import { resolveHomeAssistantCompatibleRoles } from './home-assistant-role-compatibility';
 import {
   isInternetRoleCompatible,
   resolveInternetCompatibleRoles,
@@ -321,18 +322,7 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
       result.push(airCandidate);
   }
 
-  if (integration.includes('home_assistant') || integration.includes('systemmonitor')) {
-    const role = name.includes('version')
-      ? HOME_OS_ROLES.homelabHomeAssistantVersion
-      : name.includes('memory')
-        ? HOME_OS_ROLES.homelabHomeAssistantMemory
-        : name.includes('cpu')
-          ? HOME_OS_ROLES.homelabHomeAssistantCpu
-          : /online|status|connectivity|reachable/.test(name)
-            ? HOME_OS_ROLES.homelabHomeAssistantOnline
-            : undefined;
-    if (role) result.push(candidate(role, 0.9, 'integration', `integration=${integration}`));
-  }
+  result.push(...resolveHomeAssistantCompatibleRoles(entity));
 
   // WAN probes and speed-test metrics can be published by router integrations.
   // Resolve these before router-local compatibility so a latency probe is not

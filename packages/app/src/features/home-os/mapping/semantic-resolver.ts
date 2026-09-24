@@ -2,6 +2,7 @@ import type { NavetEntity } from '@navet/core/types';
 import type { ManualEntityMapping, ResolvedSemanticEntity } from '../core/types';
 import { classifyEntity } from './auto-classifier';
 import { shouldSurfaceMappingReview } from './confidence';
+import { isHomeAssistantRoleCompatible } from './home-assistant-role-compatibility';
 import { isInternetRoleCompatible } from './internet-role-compatibility';
 import { findManualMapping } from './manual-overrides';
 
@@ -9,12 +10,13 @@ export function resolveSemanticEntity(
   entity: NavetEntity,
   mappings: readonly ManualEntityMapping[] = []
 ): ResolvedSemanticEntity {
-  const candidates = classifyEntity(entity).filter(({ role }) =>
-    isInternetRoleCompatible(entity, role)
+  const candidates = classifyEntity(entity).filter(
+    ({ role }) =>
+      isInternetRoleCompatible(entity, role) && isHomeAssistantRoleCompatible(entity, role)
   );
   const mapping = findManualMapping(entity, mappings);
-  const mappedRoles = mapping?.semanticRoles?.filter((role) =>
-    isInternetRoleCompatible(entity, role)
+  const mappedRoles = mapping?.semanticRoles?.filter(
+    (role) => isInternetRoleCompatible(entity, role) && isHomeAssistantRoleCompatible(entity, role)
   );
   const invalidManualRoles = Boolean(
     mapping?.semanticRoles && mappedRoles?.length !== mapping.semanticRoles.length
@@ -52,7 +54,7 @@ export function resolveSemanticEntity(
     roles,
     confidence,
     reasons: invalidManualRoles
-      ? ['stored Internet role failed compatibility validation']
+      ? ['stored semantic role failed compatibility validation']
       : mapping
         ? ['manual override']
         : (candidates[0]?.reasons ?? []),

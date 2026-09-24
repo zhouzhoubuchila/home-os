@@ -62,6 +62,7 @@ export const HOME_OS_ROLES = {
   homelabHomeAssistantVersion: 'homelab.home_assistant.version',
   homelabHomeAssistantCpu: 'homelab.home_assistant.cpu',
   homelabHomeAssistantMemory: 'homelab.home_assistant.memory',
+  homelabHomeAssistantStorage: 'homelab.home_assistant.storage',
   energyElectricityToday: 'energy.electricity.today',
   energyElectricityMonth: 'energy.electricity.month',
   energyElectricityBalance: 'energy.electricity.balance',

@@ -42,6 +42,7 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
+import { HomeAssistantHomeOsCard } from './home-assistant-home-os-card';
 import { MoonCard } from './lunar/moon-card';
 import {
   buildMoonCardModel,
@@ -386,6 +387,7 @@ export function HomeOsWidget({
   const surface = getThemeSurfaceTokens(theme);
   const entities = useResolvedHomeOsEntities();
   const homeAssistantConfig = useHomeAssistant((state) => state.config);
+  const homeAssistantConnected = useHomeAssistant((state) => state.connected);
   const lunarLocation = getLunarLocationFromHomeAssistantConfig(homeAssistantConfig);
   const functionalDevices = useHomeOsConfigStore((state) => state.config.functionalDevices ?? []);
   const resolvedFunctionalDevices = useMemo(
@@ -580,6 +582,17 @@ export function HomeOsWidget({
         onUpdate={onUpdate}
         isEditMode={isEditMode}
         openSettingsRequestKey={openSettingsRequestKey}
+      />
+    );
+  }
+  if (definition.kind === 'home-assistant') {
+    return withDetail(
+      <HomeAssistantHomeOsCard
+        size={size}
+        entities={matched}
+        config={homeAssistantConfig}
+        connected={homeAssistantConnected}
+        title={name.replace('Home OS · ', '')}
       />
     );
   }
