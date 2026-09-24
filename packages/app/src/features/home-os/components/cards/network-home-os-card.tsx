@@ -66,6 +66,7 @@ const SIZE_KIND = (size: CardSize) => {
   if (size === 'tiny') return 'tiny';
   if (size === 'extra-small') return 'extra-small';
   if (size === 'small') return 'small';
+  if (size === 'medium') return 'medium';
   return 'large';
 };
 
@@ -163,6 +164,7 @@ function NetworkAtmosphere({
   effectsQuality: 'high' | 'medium' | 'low';
 }) {
   if (size === 'tiny' || size === 'extra-small') return null;
+  const isMedium = SIZE_KIND(size) === 'medium';
   const canAnimate = effectsQuality === 'high';
   return (
     <>
@@ -174,14 +176,14 @@ function NetworkAtmosphere({
         data-tech-monitor-atmosphere-motion={canAnimate ? 'enabled' : 'static'}
       >
         <div
-          className={`${canAnimate ? 'navet-tech-monitor-drift' : ''} absolute -inset-[20%] opacity-50 blur-2xl`}
+          className={`${canAnimate ? 'navet-tech-monitor-drift' : ''} absolute -inset-[20%] ${isMedium ? 'opacity-40' : 'opacity-50'} blur-2xl`}
           style={{
             background: `radial-gradient(ellipse at 10% 24%, ${TECH_MONITOR_PALETTE.glowCyan}, transparent 48%), radial-gradient(ellipse at 86% 78%, ${TECH_MONITOR_PALETTE.glowViolet}, transparent 46%)`,
             animation: canAnimate ? 'navet-tech-monitor-drift 34s ease-in-out infinite' : undefined,
           }}
         />
         <div
-          className={`${canAnimate ? 'navet-tech-monitor-flow' : ''} absolute left-0 right-0 top-[38%] h-16 opacity-30`}
+          className={`${canAnimate ? 'navet-tech-monitor-flow' : ''} absolute left-0 right-0 ${isMedium ? 'top-[92%] h-3 opacity-15' : 'top-[38%] h-16 opacity-30'}`}
           style={{
             background: `repeating-linear-gradient(100deg, transparent 0 18px, ${TECH_MONITOR_PALETTE.cyan} 19px 20px, transparent 21px 54px)`,
             maskImage: 'linear-gradient(90deg, transparent, black 18%, black 82%, transparent)',
@@ -192,26 +194,44 @@ function NetworkAtmosphere({
         />
         <svg
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full opacity-30"
+          className={`absolute inset-0 h-full w-full ${isMedium ? 'opacity-15' : 'opacity-30'}`}
           viewBox="0 0 500 180"
           preserveAspectRatio="none"
         >
           <path
-            d="M-10 128 C 90 80, 150 160, 245 103 S 400 38, 510 75"
+            d={
+              isMedium
+                ? 'M-10 177 C 90 168, 150 179, 245 173 S 400 166, 510 173'
+                : 'M-10 128 C 90 80, 150 160, 245 103 S 400 38, 510 75'
+            }
             fill="none"
             stroke={TECH_MONITOR_PALETTE.blue}
             strokeOpacity=".55"
             strokeWidth=".7"
           />
           <path
-            d="M-10 148 C 92 124, 176 164, 270 128 S 402 92, 510 112"
+            d={
+              isMedium
+                ? 'M-10 179 C 92 175, 176 180, 270 177 S 402 171, 510 177'
+                : 'M-10 148 C 92 124, 176 164, 270 128 S 402 92, 510 112'
+            }
             fill="none"
             stroke={TECH_MONITOR_PALETTE.violet}
             strokeOpacity=".35"
             strokeWidth=".6"
           />
-          <circle cx="245" cy="103" r="2" fill={TECH_MONITOR_PALETTE.cyan} fillOpacity=".7" />
-          <circle cx="400" cy="38" r="1.5" fill={TECH_MONITOR_PALETTE.violet} fillOpacity=".6" />
+          {!isMedium ? (
+            <>
+              <circle cx="245" cy="103" r="2" fill={TECH_MONITOR_PALETTE.cyan} fillOpacity=".7" />
+              <circle
+                cx="400"
+                cy="38"
+                r="1.5"
+                fill={TECH_MONITOR_PALETTE.violet}
+                fillOpacity=".6"
+              />
+            </>
+          ) : null}
         </svg>
       </div>
     </>
@@ -246,6 +266,19 @@ function NetworkMetricCell({ metric, language }: { metric: NetworkMetric; langua
         <span className="truncate">{metricLabel(metric.key, metric.entity, language)}</span>
       </div>
       <strong className="mt-1 block truncate text-sm font-medium tabular-nums text-blue-50/90">
+        {entityValue(metric.entity)}
+      </strong>
+    </div>
+  );
+}
+
+function NetworkMetricStrip({ metric, language }: { metric: NetworkMetric; language: string }) {
+  return (
+    <div className="min-w-0 border-t border-white/10 pt-1.5" data-tech-monitor-metric={metric.key}>
+      <span className="block truncate text-[0.6rem] uppercase leading-3 tracking-[0.12em] text-blue-100/48">
+        {metricLabel(metric.key, metric.entity, language)}
+      </span>
+      <strong className="mt-0.5 block truncate text-xs font-medium leading-4 tabular-nums text-blue-50/90">
         {entityValue(metric.entity)}
       </strong>
     </div>
@@ -289,13 +322,20 @@ export function NetworkHomeOsCard({
       : sizeKind === 'extra-small'
         ? primaryMetrics
         : sizeKind === 'small'
-          ? [clients]
-          : [
-              clients,
-              ...secondaryMetrics.filter(({ key }) =>
-                ['packet_loss', 'jitter', 'wan_ip', 'lan_ip'].includes(key)
-              ),
-            ];
+          ? []
+          : sizeKind === 'medium'
+            ? secondaryMetrics.filter(({ key }) =>
+                (kind === 'internet'
+                  ? ['packet_loss', 'jitter']
+                  : ['clients', 'wan_ip', 'lan_ip']
+                ).includes(key)
+              )
+            : [
+                clients,
+                ...secondaryMetrics.filter(({ key }) =>
+                  ['packet_loss', 'jitter', 'wan_ip', 'lan_ip'].includes(key)
+                ),
+              ];
   const shownMetrics = compactMetrics.filter(isDefined);
   const displayTitle = title ?? device?.name ?? (kind === 'router' ? 'Network' : 'Internet');
   const subtitle = kind === 'router' ? 'NETWORK / ROUTER' : 'NETWORK / WAN';
@@ -317,6 +357,7 @@ export function NetworkHomeOsCard({
       <div
         className="relative z-10 flex h-full min-w-0 flex-col p-3 text-white"
         data-tech-monitor="network"
+        data-tech-monitor-size-kind={sizeKind}
       >
         <EntityCardHeader
           title={displayTitle}
@@ -339,7 +380,9 @@ export function NetworkHomeOsCard({
           trailing={<StatusBadge state={state} />}
         />
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+        <div
+          className={`${sizeKind === 'medium' ? 'mt-1.5 gap-1.5 pb-0.5' : sizeKind === 'small' ? 'mt-2 gap-2' : 'mt-3 gap-3'} flex min-h-0 flex-1 flex-col`}
+        >
           {sizeKind === 'tiny' ? (
             <div className="flex min-w-0 items-end justify-between gap-2">
               <div>
@@ -364,7 +407,7 @@ export function NetworkHomeOsCard({
           ) : (
             <>
               {primaryMetrics.length ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid grid-cols-2 ${sizeKind === 'medium' ? 'gap-2' : 'gap-3'}`}>
                   {primaryMetrics.map((metric) => (
                     <div key={metric.key} data-tech-monitor-primary={metric.key}>
                       <div className="flex items-center gap-1.5 text-[0.63rem] uppercase tracking-[0.16em] text-blue-100/50">
@@ -375,7 +418,9 @@ export function NetworkHomeOsCard({
                         )}
                         {metricLabel(metric.key, metric.entity, language)}
                       </div>
-                      <strong className="mt-1 block truncate text-2xl font-semibold leading-none tracking-[-0.03em] tabular-nums text-blue-50">
+                      <strong
+                        className={`mt-1 block truncate font-semibold leading-none tracking-[-0.03em] tabular-nums text-blue-50 ${sizeKind === 'medium' ? 'text-xl' : sizeKind === 'small' ? 'text-lg' : 'text-2xl'}`}
+                      >
                         {entityValue(metric.entity)}
                       </strong>
                     </div>
@@ -384,7 +429,7 @@ export function NetworkHomeOsCard({
               ) : null}
               {latency ? (
                 <div
-                  className="flex items-center gap-2 text-xs text-blue-100/62"
+                  className={`flex items-center text-xs text-blue-100/62 ${sizeKind === 'medium' ? 'gap-1.5 leading-4' : 'gap-2'}`}
                   data-tech-monitor-latency="true"
                 >
                   <Gauge className="h-3.5 w-3.5 text-cyan-200/75" />
@@ -392,18 +437,30 @@ export function NetworkHomeOsCard({
                   <strong className="tabular-nums text-blue-50/90">
                     {entityValue(latency.entity)}
                   </strong>
-                  <span className="ml-auto font-mono text-cyan-200/45">·━━╱━━╲━━</span>
+                  {sizeKind === 'large' ? (
+                    <span className="ml-auto font-mono text-cyan-200/45">·━━╱━━╲━━</span>
+                  ) : null}
                 </div>
               ) : null}
               {sizeKind !== 'extra-small' && shownMetrics.length ? (
-                <div className="grid min-h-0 grid-cols-2 gap-x-2 gap-y-1">
-                  {shownMetrics.map((metric) => (
-                    <NetworkMetricCell
-                      key={`${metric.key}-${metric.entity.entity.externalId}`}
-                      metric={metric}
-                      language={language}
-                    />
-                  ))}
+                <div
+                  className={`grid min-h-0 ${sizeKind === 'medium' && kind === 'router' ? 'grid-cols-3 gap-x-2' : 'grid-cols-2 gap-x-2 gap-y-1'}`}
+                >
+                  {shownMetrics.map((metric) =>
+                    sizeKind === 'medium' ? (
+                      <NetworkMetricStrip
+                        key={`${metric.key}-${metric.entity.entity.externalId}`}
+                        metric={metric}
+                        language={language}
+                      />
+                    ) : (
+                      <NetworkMetricCell
+                        key={`${metric.key}-${metric.entity.entity.externalId}`}
+                        metric={metric}
+                        language={language}
+                      />
+                    )
+                  )}
                 </div>
               ) : null}
             </>

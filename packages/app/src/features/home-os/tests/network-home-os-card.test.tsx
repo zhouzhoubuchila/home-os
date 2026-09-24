@@ -33,6 +33,20 @@ const download = resolved(
 const upload = resolved('sensor.router_upload', HOME_OS_ROLES.networkRouterUpload, 12.7, 'Mbps');
 const clients = resolved('sensor.router_clients', HOME_OS_ROLES.networkRouterClients, 26);
 const latency = resolved('sensor.internet_ping', HOME_OS_ROLES.networkInternetLatency, 28, 'ms');
+const loss = resolved('sensor.internet_loss', HOME_OS_ROLES.networkInternetPacketLoss, 0.2, '%');
+const jitter = resolved('sensor.internet_jitter', HOME_OS_ROLES.networkInternetJitter, 3.1, 'ms');
+const internetDownload = resolved(
+  'sensor.internet_download',
+  HOME_OS_ROLES.networkInternetDownload,
+  86.4,
+  'Mbps'
+);
+const internetUpload = resolved(
+  'sensor.internet_upload',
+  HOME_OS_ROLES.networkInternetUpload,
+  12.7,
+  'Mbps'
+);
 const online = resolved('binary_sensor.router_online', HOME_OS_ROLES.networkRouterOnline, 'on');
 
 const router: ResolvedHomeOsFunctionalDevice = {
@@ -90,6 +104,76 @@ describe('Network Home OS tech monitor card', () => {
     );
     expect(container.querySelectorAll('[data-tech-monitor-latency="true"]')).toHaveLength(1);
     expect(container.querySelector('[data-tech-monitor-metric="latency"]')).toBeNull();
+  });
+
+  it('uses a distinct medium recipe with compact real Internet metrics', () => {
+    const { container } = renderWithProviders(
+      <NetworkHomeOsCard
+        size="medium"
+        kind="internet"
+        entities={[internetDownload, internetUpload, latency, loss, jitter]}
+      />
+    );
+    expect(container.querySelector('[data-tech-monitor-size-kind="medium"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor-primary="download"] strong')).toHaveClass(
+      'text-xl'
+    );
+    expect(container.querySelector('[data-tech-monitor-primary="upload"] strong')).toHaveClass(
+      'text-xl'
+    );
+    expect(container.querySelectorAll('[data-tech-monitor-latency="true"]')).toHaveLength(1);
+    expect(container.querySelector('[data-tech-monitor-metric="packet_loss"]')).toHaveTextContent(
+      '0.2 %'
+    );
+    expect(container.querySelector('[data-tech-monitor-metric="jitter"]')).toHaveTextContent(
+      '3.1 ms'
+    );
+    expect(container.querySelector('[data-tech-monitor-metric="packet_loss"]')).not.toHaveClass(
+      'bg-white/[0.025]'
+    );
+  });
+
+  it('keeps the large metric treatment and all available telemetry', () => {
+    const { container } = renderWithProviders(
+      <NetworkHomeOsCard
+        size="large"
+        kind="internet"
+        entities={[internetDownload, internetUpload, latency, loss, jitter]}
+      />
+    );
+    expect(container.querySelector('[data-tech-monitor-size-kind="large"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor-primary="download"] strong')).toHaveClass(
+      'text-2xl'
+    );
+    expect(container.querySelector('[data-tech-monitor-metric="packet_loss"]')).toHaveClass(
+      'bg-white/[0.025]'
+    );
+    expect(container.querySelector('[data-tech-monitor-metric="jitter"]')).toBeInTheDocument();
+  });
+
+  it('limits small Internet cards to rates and ping', () => {
+    const { container } = renderWithProviders(
+      <NetworkHomeOsCard
+        size="small"
+        kind="internet"
+        entities={[internetDownload, internetUpload, latency, loss, jitter]}
+      />
+    );
+    expect(container.querySelector('[data-tech-monitor-primary="download"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor-primary="upload"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor-latency="true"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-tech-monitor-metric="packet_loss"]')).toBeNull();
+    expect(container.querySelector('[data-tech-monitor-metric="jitter"]')).toBeNull();
+  });
+
+  it('shows ping in small cards when no live rates exist', () => {
+    const { container } = renderWithProviders(
+      <NetworkHomeOsCard size="small" kind="internet" entities={[latency]} />
+    );
+    expect(container.querySelector('[data-tech-monitor-latency="true"]')).toHaveTextContent(
+      '28 ms'
+    );
+    expect(container.querySelector('[data-tech-monitor-primary="download"]')).toBeNull();
   });
 
   it('labels cumulative transfer values instead of implying a live rate', () => {
