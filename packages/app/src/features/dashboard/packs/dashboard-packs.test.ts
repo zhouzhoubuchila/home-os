@@ -1,8 +1,17 @@
 import type { DeviceWithType } from '@navet/app/types/device.types';
 import { describe, expect, it } from 'vitest';
+import {
+  buildHomeOverviewTopology,
+  buildSectionStacks,
+} from '../components/home-dashboard-overview.shared';
+import { packDashboardGridItems } from '../device-grid/device-grid-layout';
 import type { HomeDashboardLayoutState } from '../hooks/use-home-dashboard-layout';
 import type { CustomCard } from '../stores/custom-cards-store';
-import { buildDashboardPackLayout, buildHomeOsRecommendedLayout } from './dashboard-packs';
+import {
+  buildDashboardPackLayout,
+  buildHomeOsRecommendedLayout,
+  getHomeOsRecommendedSectionGridCols,
+} from './dashboard-packs';
 
 function device(overrides: Partial<DeviceWithType> & Pick<DeviceWithType, 'id' | 'type'>) {
   return {
@@ -48,8 +57,8 @@ describe('dashboard packs', () => {
         'extra',
         ...kinds.filter((kind) => kind !== 'internet' && kind !== 'lunar'),
       ],
-      sections: [],
-      cardSectionAssignments: {},
+      sections: [{ id: 'old-position', title: 'Old', x: 6, y: 8, w: 6, h: 1, span: 6 }],
+      cardSectionAssignments: { pve: 'old-position' },
     };
     const { layout, cardSizes } = buildHomeOsRecommendedLayout(original, cards);
     expect(original.mode).toBe('flow');
@@ -78,10 +87,77 @@ describe('dashboard packs', () => {
       'Energy & Utilities',
     ]);
     expect(layout.sections.every((section) => section.w === 12)).toBe(true);
+    expect(layout.sections.map((section) => [section.x, section.y])).toEqual([
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+    ]);
     expect(cardSizes.lunar).toBe('extra-large');
+    expect(cardSizes.weather).toBe('extra-large');
+    for (const kind of kinds.filter((kind) => kind !== 'lunar' && kind !== 'weather')) {
+      expect(cardSizes[kind]).toBe('medium');
+    }
     expect(cardSizes.battery).toBe('medium');
     expect(cardSizes.extra).toBeUndefined();
     expect(new Set(layout.cardIds).size).toBe(layout.cardIds.length);
+
+    const topology = buildHomeOverviewTopology({
+      availableCardIds: new Set(layout.cardIds),
+      homeLayout: layout,
+    });
+    expect(topology.flowCards).toEqual([]);
+    expect(topology.sectionCards.map((section) => section.cardIds)).toEqual([
+      ['lunar', 'weather'],
+      ['household', 'lighting', 'device-health', 'alerts'],
+      ['pve', 'home-assistant', 'router', 'internet'],
+      ['electricity', 'gas', 'battery', 'extra'],
+    ]);
+    expect(
+      buildSectionStacks(topology.sectionCards)
+        .flat(2)
+        .map((section) => section.id)
+    ).toEqual(layout.sections.map((section) => section.id));
+
+    const daily = topology.sectionCards[0];
+    const home = topology.sectionCards[1];
+    const infrastructure = topology.sectionCards[2];
+    const utilities = topology.sectionCards[3];
+    expect(getHomeOsRecommendedSectionGridCols(daily.id, 6)).toBe(6);
+    for (const section of [home, infrastructure, utilities]) {
+      expect(getHomeOsRecommendedSectionGridCols(section.id, 6)).toBe(4);
+    }
+    const dailyPlacements = packDashboardGridItems(
+      daily.cardIds.map((id) => ({ id, size: cardSizes[id] })),
+      12
+    );
+    expect(dailyPlacements.get('lunar')).toEqual({ column: 1, row: 1 });
+    expect(dailyPlacements.get('weather')).toEqual({ column: 7, row: 1 });
+    const homePlacements = packDashboardGridItems(
+      home.cardIds.map((id) => ({ id, size: cardSizes[id] })),
+      8
+    );
+    expect(home.cardIds.map((id) => homePlacements.get(id))).toEqual([
+      { column: 1, row: 1 },
+      { column: 5, row: 1 },
+      { column: 1, row: 3 },
+      { column: 5, row: 3 },
+    ]);
+    const infraPlacements = packDashboardGridItems(
+      infrastructure.cardIds.map((id) => ({ id, size: cardSizes[id] })),
+      8
+    );
+    expect(infrastructure.cardIds.map((id) => infraPlacements.get(id))).toEqual([
+      { column: 1, row: 1 },
+      { column: 5, row: 1 },
+      { column: 1, row: 3 },
+      { column: 5, row: 3 },
+    ]);
+    const utilityPlacements = packDashboardGridItems(
+      utilities.cardIds.slice(0, 3).map((id) => ({ id, size: cardSizes[id] })),
+      8
+    );
+    expect(utilityPlacements.get('battery')).toEqual({ column: 1, row: 3 });
   });
 
   it('does not add unselected cards to the recommended layout', () => {

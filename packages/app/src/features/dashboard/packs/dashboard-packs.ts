@@ -205,6 +205,31 @@ const HOME_OS_RECOMMENDED_GROUPS = [
   { id: 'utilities', titleKey: 'dashboard.packs.section.utilities', kinds: ['electricity', 'gas'] },
 ] as const;
 
+const HOME_OS_RECOMMENDED_SIZES: Record<string, CardSize> = {
+  lunar: 'extra-large',
+  weather: 'extra-large',
+  household: 'medium',
+  lighting: 'medium',
+  'device-health': 'medium',
+  alerts: 'medium',
+  pve: 'medium',
+  'home-assistant': 'medium',
+  router: 'medium',
+  internet: 'medium',
+  electricity: 'medium',
+  gas: 'medium',
+};
+
+const HOME_OS_RECOMMENDED_SECTION_PREFIX = 'dashboard-pack-home-os-recommended-';
+
+/** Use two medium cards per row inside the full-width recommended sections. */
+export function getHomeOsRecommendedSectionGridCols(sectionId: string, availableCols: number) {
+  if (!sectionId.startsWith(HOME_OS_RECOMMENDED_SECTION_PREFIX) || sectionId.endsWith('-daily')) {
+    return availableCols;
+  }
+  return Math.min(availableCols, 4);
+}
+
 /** Reorders only cards already selected on this dashboard; applying it is an explicit user action. */
 export function buildHomeOsRecommendedLayout(
   current: HomeDashboardLayoutState,
@@ -227,9 +252,11 @@ export function buildHomeOsRecommendedLayout(
   const cardSizes: Record<string, CardSize> = {};
   const grouped = HOME_OS_RECOMMENDED_GROUPS.map((group) => {
     const cardIds = group.kinds.flatMap((kind) => byKind.get(kind) ?? []);
-    for (const id of cardIds) {
-      usedIds.add(id);
-      cardSizes[id] = 'extra-large';
+    for (const kind of group.kinds) {
+      for (const id of byKind.get(kind) ?? []) {
+        usedIds.add(id);
+        cardSizes[id] = HOME_OS_RECOMMENDED_SIZES[kind];
+      }
     }
     return { id: group.id, titleKey: group.titleKey, cardIds };
   });
@@ -244,7 +271,7 @@ export function buildHomeOsRecommendedLayout(
     group.cardIds.length
       ? [
           {
-            id: `dashboard-pack-home-os-recommended-${group.id}`,
+            id: `${HOME_OS_RECOMMENDED_SECTION_PREFIX}${group.id}`,
             title: t(group.titleKey),
             x: 0,
             y: 0,

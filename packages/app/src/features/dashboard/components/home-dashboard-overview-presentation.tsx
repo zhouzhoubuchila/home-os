@@ -6,6 +6,7 @@ import type { DeviceWithType } from '@navet/app/types/device.types';
 import { Wand2 } from 'lucide-react';
 import { type CSSProperties, useMemo } from 'react';
 import type { HomeEditorSection } from '../hooks/use-home-dashboard-editor';
+import { getHomeOsRecommendedSectionGridCols } from '../packs/dashboard-packs';
 import type { CustomCard } from '../stores/custom-cards-store';
 import { getRenderedRowLayouts } from '../utils/layout-engine';
 import {
@@ -184,7 +185,7 @@ export function HomePresentation({
                       </div>
                       <PresentationCardGrid
                         cardIds={section.cardIds}
-                        gridCols={renderedSpan}
+                        gridCols={getHomeOsRecommendedSectionGridCols(section.id, renderedSpan)}
                         allCards={allCards}
                         cardSizes={cardSizes}
                         updateCardSize={updateCardSize}
