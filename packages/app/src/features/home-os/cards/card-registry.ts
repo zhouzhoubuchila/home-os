@@ -5,6 +5,7 @@ export type HomeOsCardKind =
   | 'household'
   | 'lighting'
   | 'alerts'
+  | 'device-health'
   | 'pve'
   | 'home-assistant'
   | 'router'
@@ -87,6 +88,19 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
     { en: 'Proxmox health and load.', zh: 'Proxmox 健康与负载。' },
     ['homelab.pve.']
   ),
+  {
+    ...card(
+      'device-health',
+      { en: 'Home OS · Device Health', zh: 'Home OS · 设备健康' },
+      {
+        en: 'Whole-home device availability and attention summary.',
+        zh: '全屋设备可用性与需关注状态。',
+      },
+      [],
+      'medium'
+    ),
+    supportedSizes: ['tiny', 'extra-small', 'small', 'medium', 'large'],
+  },
   card(
     'home-assistant',
     { en: 'Home OS · Home Assistant', zh: 'Home OS · Home Assistant' },

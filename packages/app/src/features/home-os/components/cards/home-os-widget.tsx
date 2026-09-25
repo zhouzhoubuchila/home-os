@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   CircleGauge,
   CloudSun,
+  HeartPulse,
   House,
   Lightbulb,
   Moon,
@@ -42,6 +43,7 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
+import { DeviceHealthHomeOsCard } from './device-health-home-os-card';
 import { HomeAssistantHomeOsCard } from './home-assistant-home-os-card';
 import { MoonCard } from './lunar/moon-card';
 import {
@@ -356,6 +358,7 @@ const ICONS: Record<HomeOsCardKind, typeof Server> = {
   household: Users,
   lighting: Lightbulb,
   alerts: AlertTriangle,
+  'device-health': HeartPulse,
   pve: Server,
   'home-assistant': House,
   router: Network,
@@ -492,6 +495,15 @@ export function HomeOsWidget({
     );
   if (definition.kind === 'alerts')
     return withDetail(<AlertsCard size={size} entities={entities} copy={copy} />);
+  if (definition.kind === 'device-health')
+    return (
+      <DeviceHealthHomeOsCard
+        size={size}
+        entities={entities}
+        providerConnected={homeAssistantConnected}
+        isEditMode={isEditMode}
+      />
+    );
   if (definition.kind === 'modes')
     return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
   if (definition.kind === 'lunar')

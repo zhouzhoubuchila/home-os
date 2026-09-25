@@ -14,6 +14,22 @@ type BatteryEntitySnapshot = {
   attributes?: Record<string, unknown>;
 };
 
+/** Shared HA battery-sensor detection for Battery Overview and Device Health. */
+export function readHomeAssistantBatterySensorLevel(
+  entityId: string,
+  state: unknown,
+  attributes: Record<string, unknown>
+): number | undefined {
+  if (state === null || state === undefined || state === '') return undefined;
+  if (
+    !entityId.startsWith('sensor.') ||
+    (attributes.device_class ?? attributes.deviceClass) !== 'battery'
+  )
+    return undefined;
+  const level = Number(state);
+  return Number.isFinite(level) ? Math.min(100, Math.max(0, Math.round(level))) : undefined;
+}
+
 export function mapBatterySensorRowsFromEntities(
   entities: Record<string, BatteryEntitySnapshot> | null
 ): PlatformBatterySensorRow[] {
@@ -23,24 +39,16 @@ export function mapBatterySensorRowsFromEntities(
 
   const rows: PlatformBatterySensorRow[] = [];
   for (const [id, entity] of Object.entries(entities)) {
-    if (!id.startsWith('sensor.')) {
-      continue;
-    }
-
-    const attributes = entity.attributes as Record<string, unknown>;
-    if (attributes.device_class !== 'battery') {
-      continue;
-    }
-
-    const n = Number(entity.state);
-    if (Number.isNaN(n)) {
+    const attributes = entity.attributes ?? {};
+    const level = readHomeAssistantBatterySensorLevel(id, entity.state, attributes);
+    if (level === undefined) {
       continue;
     }
 
     rows.push({
       id,
       name: (attributes.friendly_name as string) || id.replace(/^sensor\./, '').replace(/_/g, ' '),
-      level: Math.min(100, Math.max(0, Math.round(n))),
+      level,
     });
   }
 
