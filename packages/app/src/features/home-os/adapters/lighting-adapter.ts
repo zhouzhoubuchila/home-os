@@ -1,4 +1,10 @@
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../core/types';
+import {
+  hasApplianceLightingEvidence,
+  hasNonHouseholdLightingEvidence,
+  hasSpecificLightChannelEvidence,
+  lightingContextText,
+} from '../mapping/lighting-evidence';
 import { resolveFunctionalDevices } from './functional-device-adapter';
 import {
   type HomeOsLightCircuit,
@@ -21,13 +27,38 @@ export interface HomeOsLight extends HomeOsLightCircuit {
 
 const stateDomain = (entityId?: string) => entityId?.split('.')[0] ?? '';
 
-function manualClassification(name: string): HomeOsLightClassification {
-  const text = name.toLowerCase();
+function manualClassification(
+  name: string,
+  sourceEntityIds: readonly string[],
+  entityById: ReadonlyMap<string, ResolvedSemanticEntity>
+): HomeOsLightClassification {
+  const sources = sourceEntityIds.map((id) => entityById.get(id)).filter((item) => item != null);
+  const text = [
+    name,
+    ...sources.map((item) => lightingContextText(item.entity, item.displayName)),
+  ].join(' ');
   if (/diagnostic|诊断/.test(text)) return 'diagnostic';
-  if (/backlight|screen|背光|屏幕/.test(text)) return 'screen_backlight';
+  if (/backlight|wake.?screen|screen.?light|背光|唤醒屏幕/.test(text)) return 'screen_backlight';
   if (/indicator|status led|指示灯/.test(text)) return 'device_indicator';
-  if (/fridge|freezer|vacuum|appliance|冰箱|冰柜|扫地|家电/.test(text)) return 'appliance_light';
+  if (hasApplianceLightingEvidence(text)) return 'appliance_light';
+  if (
+    !sourceEntityIds.some((id) => id.startsWith('light.')) &&
+    !hasSpecificLightChannelEvidence([name, ...sourceEntityIds].join(' '))
+  )
+    return 'diagnostic';
   return 'household_lighting';
+}
+
+function confirmedWholeHomeLight(light: HomeOsLight) {
+  const text = [light.name, ...light.sourceEntityIds, ...Object.values(light.actions)].join(' ');
+  return (
+    light.controllable &&
+    light.classification === 'household_lighting' &&
+    !hasApplianceLightingEvidence(text) &&
+    !hasNonHouseholdLightingEvidence(text) &&
+    (light.sourceEntityIds.some((id) => id.startsWith('light.')) ||
+      hasSpecificLightChannelEvidence(text))
+  );
 }
 
 function automaticCircuits(
@@ -73,7 +104,7 @@ export function buildHomeOsLights(
         },
         sourceEntityIds: circuit.sourceEntityIds,
         stateQuality: stateSource ? ('reliable' as const) : ('unknown' as const),
-        classification: manualClassification(circuit.name),
+        classification: manualClassification(circuit.name, circuit.sourceEntityIds, entityById),
         manual: true,
       };
     }),
@@ -83,60 +114,58 @@ export function buildHomeOsLights(
     })),
   ];
 
-  return circuits.map((circuit) => {
-    const stateEntity = circuit.stateSource
-      ? entityById.get(circuit.stateSource.entityId)
-      : undefined;
-    const primaryAction =
-      circuit.actions.toggle ?? circuit.actions.turnOn ?? circuit.actions.turnOff;
-    const controlEntity = primaryAction ? entityById.get(primaryAction) : undefined;
-    const providerId =
-      controlEntity?.entity.providerId ?? stateEntity?.entity.providerId ?? 'home_assistant';
-    const controls = {
-      on: circuit.actions.turnOn,
-      off: circuit.actions.turnOff,
-      toggle: circuit.actions.toggle,
-      brightness: circuit.actions.brightness,
-      colorTemperature: circuit.actions.colorTemperature,
-      color: circuit.actions.color,
-    };
-    const rgb = stateEntity?.entity.attributes.rgb ?? stateEntity?.entity.attributes.rgb_color;
-    return {
-      ...circuit,
-      sourceEntityId:
-        primaryAction ?? circuit.stateSource?.entityId ?? circuit.sourceEntityIds[0] ?? '',
-      providerId,
-      sourceDomain: stateDomain(primaryAction ?? circuit.stateSource?.entityId),
-      state:
-        circuit.stateQuality === 'reliable'
-          ? String(stateEntity?.entity.primaryState ?? 'unknown')
-          : 'unknown',
-      brightness:
-        typeof stateEntity?.entity.attributes.brightness === 'number'
-          ? stateEntity.entity.attributes.brightness
-          : undefined,
-      colorTemperature:
-        typeof stateEntity?.entity.attributes.colorTemperature === 'number'
-          ? stateEntity.entity.attributes.colorTemperature
-          : undefined,
-      rgb: Array.isArray(rgb) && rgb.length === 3 ? (rgb as [number, number, number]) : undefined,
-      controllable: Boolean(primaryAction),
-      controls,
-    };
-  });
+  return circuits
+    .filter((circuit) => circuit.classification === 'household_lighting')
+    .map((circuit) => {
+      const stateEntity = circuit.stateSource
+        ? entityById.get(circuit.stateSource.entityId)
+        : undefined;
+      const primaryAction =
+        circuit.actions.toggle ?? circuit.actions.turnOn ?? circuit.actions.turnOff;
+      const controlEntity = primaryAction ? entityById.get(primaryAction) : undefined;
+      const providerId =
+        controlEntity?.entity.providerId ?? stateEntity?.entity.providerId ?? 'home_assistant';
+      const controls = {
+        on: circuit.actions.turnOn,
+        off: circuit.actions.turnOff,
+        toggle: circuit.actions.toggle,
+        brightness: circuit.actions.brightness,
+        colorTemperature: circuit.actions.colorTemperature,
+        color: circuit.actions.color,
+      };
+      const rgb = stateEntity?.entity.attributes.rgb ?? stateEntity?.entity.attributes.rgb_color;
+      return {
+        ...circuit,
+        sourceEntityId:
+          primaryAction ?? circuit.stateSource?.entityId ?? circuit.sourceEntityIds[0] ?? '',
+        providerId,
+        sourceDomain: stateDomain(primaryAction ?? circuit.stateSource?.entityId),
+        state:
+          circuit.stateQuality === 'reliable'
+            ? String(stateEntity?.entity.primaryState ?? 'unknown')
+            : 'unknown',
+        brightness:
+          typeof stateEntity?.entity.attributes.brightness === 'number'
+            ? stateEntity.entity.attributes.brightness
+            : undefined,
+        colorTemperature:
+          typeof stateEntity?.entity.attributes.colorTemperature === 'number'
+            ? stateEntity.entity.attributes.colorTemperature
+            : undefined,
+        rgb: Array.isArray(rgb) && rgb.length === 3 ? (rgb as [number, number, number]) : undefined,
+        controllable: Boolean(primaryAction),
+        controls,
+      };
+    });
 }
 
 export const getWholeHomeLightTargets = (lights: readonly HomeOsLight[]) =>
-  lights
-    .filter(
-      ({ controllable, classification }) => controllable && classification === 'household_lighting'
-    )
-    .flatMap(({ actions }) => {
-      const target =
-        actions.turnOff ??
-        (actions.toggle && !actions.toggle.startsWith('button.') ? actions.toggle : undefined);
-      return target ? [target] : [];
-    });
+  lights.filter(confirmedWholeHomeLight).flatMap(({ actions }) => {
+    const target =
+      actions.turnOff ??
+      (actions.toggle && !actions.toggle.startsWith('button.') ? actions.toggle : undefined);
+    return target ? [target] : [];
+  });
 
 export interface HomeOsLightAction {
   entityId: string;
@@ -151,7 +180,7 @@ export const getWholeHomeLightActions = (lights: readonly HomeOsLight[]): HomeOs
       (light.actions.toggle && !light.actions.toggle.startsWith('button.')
         ? light.actions.toggle
         : undefined);
-    if (!light.controllable || light.classification !== 'household_lighting' || !target) return [];
+    if (!confirmedWholeHomeLight(light) || !target) return [];
     return [
       {
         entityId: target,

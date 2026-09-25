@@ -1,6 +1,13 @@
 import { hasCapability } from '../core/capabilities';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { ResolvedSemanticEntity } from '../core/types';
+import {
+  hasApplianceLightingEvidence,
+  hasNonHouseholdLightingEvidence,
+  hasSpecificLightChannelEvidence,
+  lightingChannelText,
+  lightingContextText,
+} from '../mapping/lighting-evidence';
 
 export type HomeOsLightClassification =
   | 'household_lighting'
@@ -52,20 +59,19 @@ function textOf(item: ResolvedSemanticEntity) {
 }
 
 function classificationOf(members: readonly ResolvedSemanticEntity[]): HomeOsLightClassification {
-  const text = members.map(textOf).join(' ');
+  const text = members.map((item) => lightingContextText(item.entity, item.displayName)).join(' ');
   if (/diagnostic|诊断/.test(text)) return 'diagnostic';
   if (/backlight|wake.?screen|screen.?light|背光|唤醒屏幕/.test(text)) return 'screen_backlight';
   if (/indicator|status led|指示灯/.test(text)) return 'device_indicator';
-  if (/fridge|refrigerator|freezer|vacuum|appliance|冰箱|冰柜|扫地|家电/.test(text))
-    return 'appliance_light';
+  if (hasApplianceLightingEvidence(text)) return 'appliance_light';
   return 'household_lighting';
 }
 
 function rootName(item: ResolvedSemanticEntity) {
   const value =
-    read(item.entity.attributes.deviceName ?? item.entity.attributes.device_name) ||
     item.displayName ||
-    item.entity.name;
+    item.entity.name ||
+    read(item.entity.attributes.deviceName ?? item.entity.attributes.device_name);
   return value
     .toLowerCase()
     .replace(ACTION_WORDS, ' ')
@@ -77,6 +83,9 @@ function rootName(item: ResolvedSemanticEntity) {
 function groupKey(item: ResolvedSemanticEntity) {
   const attrs = item.entity.attributes;
   const deviceId = read(attrs.deviceId ?? attrs.device_id);
+  // A multi-key wall switch has one device ID but several independent named circuits.
+  if (deviceId && /^(switch|button)\./.test(item.entity.externalId))
+    return `${item.entity.providerId}:device:${deviceId}:channel:${rootName(item)}`;
   if (deviceId) return `${item.entity.providerId}:device:${deviceId}`;
   const integration = read(attrs.integration ?? attrs.platform).toLowerCase();
   return `${item.entity.providerId}:semantic:${(item.room ?? '').toLowerCase()}:${rootName(item)}:${integration}`;
@@ -85,8 +94,15 @@ function groupKey(item: ResolvedSemanticEntity) {
 function isCandidate(item: ResolvedSemanticEntity) {
   if (item.ignored || item.displayMode === 'hidden') return false;
   const domain = item.entity.externalId.split('.')[0] ?? '';
+  const context = lightingContextText(item.entity, item.displayName);
+  if (hasApplianceLightingEvidence(context) || hasNonHouseholdLightingEvidence(context))
+    return false;
+  if (domain === 'light') return item.roles.includes(HOME_OS_ROLES.lightingLight);
+  const channel = lightingChannelText(item.entity, item.displayName);
+  if (!hasSpecificLightChannelEvidence(channel)) return false;
   if (domain === 'button') return item.roles.includes(HOME_OS_ROLES.lightingSwitch);
-  if (domain === 'binary_sensor') return /light|lamp|照明|灯/.test(textOf(item));
+  if (domain === 'binary_sensor') return true;
+  if (domain !== 'switch') return false;
   return (
     item.roles.includes(HOME_OS_ROLES.lightingLight) ||
     item.roles.includes(HOME_OS_ROLES.lightingSwitch)
@@ -141,6 +157,7 @@ export class HomeOsLightCircuitBuilder {
       return {
         id: `light-circuit:${id}`,
         name:
+          (representative?.entity.externalId.startsWith('switch.') && representative.displayName) ||
           read(
             representative?.entity.attributes.deviceName ??
               representative?.entity.attributes.device_name

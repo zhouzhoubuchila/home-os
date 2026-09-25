@@ -7,6 +7,13 @@ import {
   isInternetRoleCompatible,
   resolveInternetCompatibleRoles,
 } from './internet-role-compatibility';
+import {
+  hasApplianceLightingEvidence,
+  hasNonHouseholdLightingEvidence,
+  hasSpecificLightChannelEvidence,
+  lightingChannelText,
+  lightingContextText,
+} from './lighting-evidence';
 import { resolvePveCompatibleRole } from './pve-role-compatibility';
 import { resolveRouterCompatibleRole } from './router-role-compatibility';
 
@@ -198,12 +205,21 @@ export function classifyEntity(entity: NavetEntity): SemanticCandidate[] {
     result.push(candidate(HOME_OS_ROLES.lightingLight, 0.99, 'domain', 'domain=light'));
   } else if (domain === 'switch') {
     result.push(candidate(HOME_OS_ROLES.deviceSwitch, 0.95, 'domain', 'domain=switch'));
-    if (LIGHTING_NEGATIVE_HINTS.test(name)) {
+    if (
+      hasSpecificLightChannelEvidence(lightingChannelText(entity)) &&
+      !hasApplianceLightingEvidence(lightingContextText(entity)) &&
+      !hasNonHouseholdLightingEvidence(lightingContextText(entity))
+    ) {
       result.unshift(
         candidate(HOME_OS_ROLES.lightingSwitch, 0.97, 'device_metadata', 'lighting switch context')
       );
     }
-  } else if (domain === 'button' && LIGHTING_NEGATIVE_HINTS.test(name)) {
+  } else if (
+    domain === 'button' &&
+    hasSpecificLightChannelEvidence(lightingChannelText(entity)) &&
+    !hasApplianceLightingEvidence(lightingContextText(entity)) &&
+    !hasNonHouseholdLightingEvidence(lightingContextText(entity))
+  ) {
     result.push(
       candidate(HOME_OS_ROLES.lightingSwitch, 0.95, 'device_metadata', 'lighting button context')
     );
