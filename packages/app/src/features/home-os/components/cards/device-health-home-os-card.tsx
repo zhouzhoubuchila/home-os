@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import type { ResolvedSemanticEntity } from '../../core/types';
 import {
   type DeviceHealthDevice,
+  groupDeviceHealthDetail,
   resolveDeviceHealth,
 } from '../../resolution/device-health-resolution';
 
@@ -118,23 +119,27 @@ export function DeviceHealthHomeOsCard({
     [entities, providerConnected]
   );
   const { summary } = model;
+  const detailGroups = useMemo(() => groupDeviceHealthDetail(model), [model]);
   const [open, setOpen] = useState(false);
   const [showHealthy, setShowHealthy] = useState(false);
   const status = model.sourceOffline
     ? labels.sourceOffline
-    : summary.total === 0 || summary.unknown > summary.total / 2
+    : summary.total === 0
       ? labels.check
       : summary.attention
         ? labels.attention
-        : labels.good;
-  const statusColor =
-    model.sourceOffline || summary.unknown > summary.total / 2
-      ? '#a9bad6'
-      : summary.unavailable ||
-          model.attention.some((item) => item.issues.includes('critical-battery'))
-        ? '#ffaaa8'
-        : summary.attention
-          ? '#e9c987'
+        : summary.unknown
+          ? labels.check
+          : labels.good;
+  const statusColor = model.sourceOffline
+    ? '#a9bad6'
+    : summary.unavailable ||
+        model.attention.some((item) => item.issues.includes('critical-battery'))
+      ? '#ffaaa8'
+      : summary.attention
+        ? '#e9c987'
+        : summary.unknown
+          ? '#a9bad6'
           : '#8adbc9';
   const openDetail = () => {
     if (!isEditMode) setOpen(true);
@@ -292,10 +297,10 @@ export function DeviceHealthHomeOsCard({
           ) : null}
           <section>
             <h3 className="mb-2 text-sm font-semibold text-[#e9c987]">
-              {labels.attention} · {model.attention.length}
+              {labels.attention} · {detailGroups.attention.length}
             </h3>
-            {model.attention.length ? (
-              model.attention.map((device) => (
+            {detailGroups.attention.length ? (
+              detailGroups.attention.map((device) => (
                 <div key={device.id} className="border-b border-white/10">
                   <DeviceRow device={device} zh={zh} />
                   <div className="pb-2 text-xs text-[#9eb2ce]">
@@ -312,16 +317,14 @@ export function DeviceHealthHomeOsCard({
           </section>
           <section>
             <h3 className="mb-2 text-sm font-semibold text-[#b9cbe5]">
-              {labels.unknown} · {summary.unknown}
+              {labels.unknown} · {detailGroups.unknown.length}
             </h3>
-            {model.devices
-              .filter((device) => device.state === 'unknown')
-              .map((device) => (
-                <div key={device.id} className="border-b border-white/10">
-                  <DeviceRow device={device} zh={zh} />
-                  <div className="pb-2 text-xs text-[#9eb2ce]">{device.room}</div>
-                </div>
-              ))}
+            {detailGroups.unknown.map((device) => (
+              <div key={device.id} className="border-b border-white/10">
+                <DeviceRow device={device} zh={zh} />
+                <div className="pb-2 text-xs text-[#9eb2ce]">{device.room}</div>
+              </div>
+            ))}
           </section>
           <section>
             <button
@@ -329,17 +332,16 @@ export function DeviceHealthHomeOsCard({
               className="text-sm text-[#a9d4f1]"
               onClick={() => setShowHealthy(!showHealthy)}
             >
-              {showHealthy ? labels.hideHealthy : labels.showHealthy} · {summary.healthy}
+              {showHealthy ? labels.hideHealthy : labels.showHealthy} ·{' '}
+              {detailGroups.healthy.length}
             </button>
             {showHealthy
-              ? model.devices
-                  .filter((device) => device.state === 'healthy' && !device.lowBattery)
-                  .map((device) => (
-                    <div key={device.id} className="border-b border-white/10">
-                      <DeviceRow device={device} zh={zh} />
-                      <div className="pb-2 text-xs text-[#9eb2ce]">{device.room}</div>
-                    </div>
-                  ))
+              ? detailGroups.healthy.map((device) => (
+                  <div key={device.id} className="border-b border-white/10">
+                    <DeviceRow device={device} zh={zh} />
+                    <div className="pb-2 text-xs text-[#9eb2ce]">{device.room}</div>
+                  </div>
+                ))
               : null}
           </section>
         </div>

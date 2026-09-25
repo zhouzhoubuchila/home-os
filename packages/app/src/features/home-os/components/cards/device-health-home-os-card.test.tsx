@@ -1,7 +1,10 @@
 import { BATTERY_LEVEL_THRESHOLDS } from '@navet/app/features/dashboard/components/widgets/battery-constants';
 import { describe, expect, it } from 'vitest';
 import type { ResolvedSemanticEntity } from '../../core/types';
-import { resolveDeviceHealth } from '../../resolution/device-health-resolution';
+import {
+  groupDeviceHealthDetail,
+  resolveDeviceHealth,
+} from '../../resolution/device-health-resolution';
 import { homeOsEntity } from '../../tests/fixtures';
 import { deviceHealthSizeKind } from './device-health-home-os-card';
 
@@ -90,6 +93,24 @@ describe('device health resolution', () => {
     expect(result.devices[0].state).toBe('healthy');
   });
 
+  it('keeps appliance unavailability based on core entities, not device name', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('switch.washer', 'washer', {
+          availability: 'unavailable',
+          deviceName: 'Washing machine',
+        }),
+        entity('sensor.washer_signal', 'washer', {
+          entityCategory: 'diagnostic',
+          availability: 'available',
+        }),
+      ],
+      true
+    );
+    expect(result.devices[0].state).toBe('unavailable');
+    expect(result.attention[0].issues[0]).toBe('unavailable');
+  });
+
   it('marks all unavailable core entities unavailable and partial failures degraded', () => {
     const offline = resolveDeviceHealth(
       [
@@ -150,6 +171,73 @@ describe('device health resolution', () => {
     expect(result.devices.map((device) => device.id)).toEqual(['home_assistant:f']);
   });
 
+  it('excludes an entire router device when one entity has a network role', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('binary_sensor.tl_7dr7230_online', 'router', { roles: ['network.router.online'] }),
+        entity('sensor.tl_7dr7230_signal', 'router', {
+          entityCategory: 'diagnostic',
+          availability: 'unavailable',
+        }),
+        entity('light.lamp', 'lamp'),
+      ],
+      true
+    );
+    expect(result.devices.map((device) => device.id)).toEqual(['home_assistant:lamp']);
+  });
+
+  it('excludes TL-7DR7230 by its router integration without relying on every entity role', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('sensor.tl_7dr7230_clients', 'router', {
+          integration: 'tplink_router',
+          deviceName: 'TL-7DR7230',
+        }),
+        entity('sensor.tl_7dr7230_signal', 'router', {
+          entityCategory: 'diagnostic',
+          deviceName: 'TL-7DR7230',
+        }),
+      ],
+      true
+    );
+    expect(result.summary.total).toBe(0);
+  });
+
+  it('excludes Sun by integration even when its entity domain is sensor', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('sensor.next_sunrise', 'sun-device', { integration: 'sun', deviceName: 'Sun' }),
+        entity('sensor.next_dusk', 'sun-device', { deviceName: 'Sun' }),
+      ],
+      true
+    );
+    expect(result.summary.total).toBe(0);
+  });
+
+  it('excludes a logical Sun group but does not discard an appliance for its update entity', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('sun.sun', 'sun-device'),
+        entity('sensor.next_sunrise', 'sun-device'),
+        entity('update.washer_firmware', 'washer'),
+        entity('switch.washer', 'washer'),
+      ],
+      true
+    );
+    expect(result.devices.map((device) => device.id)).toEqual(['home_assistant:washer']);
+  });
+
+  it('excludes template-only logical devices', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('sensor.template_status', 'logical', { integration: 'template' }),
+        entity('sensor.template_value', 'logical', { integration: 'template' }),
+      ],
+      true
+    );
+    expect(result.summary.total).toBe(0);
+  });
+
   it('does not count unknown as healthy', () => {
     const result = resolveDeviceHealth(
       [entity('light.lamp', 'a', { availability: 'unknown' })],
@@ -157,6 +245,39 @@ describe('device health resolution', () => {
     );
     expect(result.summary.healthy).toBe(0);
     expect(result.summary.unknown).toBe(1);
+    expect(result.summary.attention).toBe(0);
+    expect(result.attention).toHaveLength(0);
+    expect(groupDeviceHealthDetail(result).unknown).toHaveLength(1);
+  });
+
+  it('puts unknown with 23% battery only in Needs Attention', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('switch.appliance', 'appliance', { availability: 'unknown' }),
+        entity('sensor.appliance_battery', 'appliance', { deviceClass: 'battery', state: 23 }),
+      ],
+      true
+    );
+    const groups = groupDeviceHealthDetail(result);
+    expect(result.summary.attention).toBe(1);
+    expect(result.summary.unknown).toBe(0);
+    expect(groups.attention).toHaveLength(1);
+    expect(groups.attention[0].issues).toEqual(['low-battery']);
+    expect(groups.unknown).toHaveLength(0);
+  });
+
+  it('deduplicates degraded and low battery, prioritizing degraded', () => {
+    const result = resolveDeviceHealth(
+      [
+        entity('sensor.temperature', 'sensor-device'),
+        entity('sensor.humidity', 'sensor-device', { availability: 'unavailable' }),
+        entity('sensor.battery', 'sensor-device', { deviceClass: 'battery', state: 23 }),
+      ],
+      true
+    );
+    expect(result.attention).toHaveLength(1);
+    expect(result.attention[0].issues).toEqual(['degraded', 'low-battery']);
+    expect(groupDeviceHealthDetail(result).attention).toHaveLength(1);
   });
 
   it('keeps a registered battery-only device unknown rather than inventing connectivity', () => {
