@@ -25,6 +25,7 @@ import { hasVacuumDialogControls, VacuumCleaningControls } from './vacuum-cleani
 import type { VacuumCleaningArea } from './vacuum-features';
 import { VacuumPlannerSection } from './vacuum-planner-section';
 import type { VacuumStatus } from './vacuum-utils';
+import '../vacuum-card/vacuum-lunar-series.css';
 
 const DEFAULT_VACUUM_ACCENT_COLOR = '#06b6d4';
 type VacuumSettingsTab = 'controls' | 'map' | 'card';
@@ -107,7 +108,9 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
   const startActionLabel = t(
     isLawnMower ? 'lawnMower.action.startMowing' : 'vacuum.action.startCleaning'
   );
-  const surface = getThemeSurfaceTokens(theme);
+  const lunarVacuum = !isLawnMower;
+  const dialogTheme = lunarVacuum ? 'dark' : theme;
+  const surface = getThemeSurfaceTokens(dialogTheme);
   const entityType = getEntityTypeLabel(entityId);
   const cleaningAreas = useMemo(
     () => availableCleaningAreas ?? capabilities?.availableCleaningAreas ?? [],
@@ -181,23 +184,39 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
   const resolvedTintColor =
     normalizeCustomCardTint(tintColor) ?? normalizeCustomCardTint(localTintColor);
   const sectionStyle = getInheritedDialogSectionStyle(theme, resolvedTintColor, accentColorValue);
-  const activeControlColor =
-    resolvedTintColor ?? normalizeCustomCardTint(accentColorValue) ?? DEFAULT_VACUUM_ACCENT_COLOR;
-  const activePillStyle = activeControlColor
+  const activeControlColor = lunarVacuum
+    ? DEFAULT_VACUUM_ACCENT_COLOR
+    : (resolvedTintColor ??
+      normalizeCustomCardTint(accentColorValue) ??
+      DEFAULT_VACUUM_ACCENT_COLOR);
+  const activePillStyle = lunarVacuum
     ? {
-        backgroundColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.14 : 0.22),
-        borderColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.24 : 0.42),
-        color: theme === 'light' ? undefined : withTintAlpha(activeControlColor, 0.96),
-        boxShadow: `inset 0 0 0 1px ${withTintAlpha(activeControlColor, theme === 'light' ? 0.14 : 0.26)}`,
+        backgroundColor: withTintAlpha(activeControlColor, 0.12),
+        borderColor: withTintAlpha(activeControlColor, 0.46),
+        color: '#c9f2ff',
+        boxShadow: `0 0 16px ${withTintAlpha(activeControlColor, 0.1)}`,
       }
-    : sectionStyle;
-  const softControlStyle = activeControlColor
+    : activeControlColor
+      ? {
+          backgroundColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.14 : 0.22),
+          borderColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.24 : 0.42),
+          color: theme === 'light' ? undefined : withTintAlpha(activeControlColor, 0.96),
+          boxShadow: `inset 0 0 0 1px ${withTintAlpha(activeControlColor, theme === 'light' ? 0.14 : 0.26)}`,
+        }
+      : sectionStyle;
+  const softControlStyle = lunarVacuum
     ? {
-        backgroundColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.08 : 0.14),
-        borderColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.16 : 0.26),
-        color: theme === 'light' ? undefined : withTintAlpha(activeControlColor, 0.92),
+        backgroundColor: withTintAlpha(activeControlColor, 0.14),
+        borderColor: withTintAlpha(activeControlColor, 0.36),
+        color: '#d9f6ff',
       }
-    : sectionStyle;
+    : activeControlColor
+      ? {
+          backgroundColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.08 : 0.14),
+          borderColor: withTintAlpha(activeControlColor, theme === 'light' ? 0.16 : 0.26),
+          color: theme === 'light' ? undefined : withTintAlpha(activeControlColor, 0.92),
+        }
+      : sectionStyle;
   const handleTintChange = (color: string) => {
     setLocalTintColor(color);
     onTintColorChange?.(color);
@@ -234,7 +253,17 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
       mobileCoverSheet
       bodyClassName="vacuum-settings-dialog-body relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
       overlayClassName={surface.dialogBackdrop}
-      contentClassName="flex h-auto max-h-[85vh] max-w-md flex-col"
+      contentClassName={cn(
+        'flex h-auto max-h-[85vh] max-w-md flex-col',
+        lunarVacuum && 'vacuum-lunar-dialog'
+      )}
+      contentGlowStyle={
+        lunarVacuum
+          ? {
+              background: `radial-gradient(circle at 85% 0%, ${withTintAlpha(resolvedTintColor ?? activeControlColor, 0.08)}, transparent 48%)`,
+            }
+          : undefined
+      }
     >
       <Tabs value={activeTab} defaultValue="controls" onValueChange={handleTabChange}>
         <header
@@ -250,7 +279,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             description={entityType}
             entityId={entityId}
             roomSelectorFallbackRoomName={room}
-            theme={theme}
+            theme={dialogTheme}
             className="mb-0 max-sm:pr-0"
           />
 
@@ -330,7 +359,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             <CustomCardTintPicker
               value={resolvedTintColor}
               onChange={handleTintChange}
-              isOn={theme !== 'light'}
+              isOn={dialogTheme !== 'light'}
               defaultColor={accentColorValue}
             />
           </TabPanel>
@@ -342,7 +371,13 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             <Button
               variant="secondary"
               onClick={handlePlannerStart}
-              className={theme !== 'light' ? 'border-white/10 bg-white/8 hover:bg-white/12' : ''}
+              className={
+                lunarVacuum
+                  ? 'border-cyan-200/20 bg-cyan-300/10 hover:bg-cyan-300/15'
+                  : theme !== 'light'
+                    ? 'border-white/10 bg-white/8 hover:bg-white/12'
+                    : ''
+              }
               style={softControlStyle}
             >
               {startActionLabel}

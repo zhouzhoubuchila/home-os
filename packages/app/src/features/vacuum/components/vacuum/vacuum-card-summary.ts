@@ -5,7 +5,6 @@ type VacuumSummaryFactKind = 'area' | 'battery' | 'time' | 'speed' | 'lastCleane
 
 interface ResolveVacuumCardSummaryOptions {
   status: VacuumDisplayStatus;
-  rawStatus?: string;
   isLawnMower?: boolean;
   currentRoom?: string;
   battery?: number;
@@ -52,7 +51,6 @@ function formatCleaningRoomLabel(room: string): string {
 
 export function resolveVacuumCardSummary({
   status,
-  rawStatus,
   isLawnMower = false,
   currentRoom,
   battery,
@@ -87,17 +85,13 @@ export function resolveVacuumCardSummary({
   const statusLabel =
     status === 'unavailable'
       ? t('vacuum.status.unavailable')
-      : typeof rawStatus === 'string' && rawStatus.trim().length > 0
-        ? rawStatus
-        : t(getVacuumStatusLabelKey(status, { isLawnMower }));
+      : t(getVacuumStatusLabelKey(status, { isLawnMower }));
 
   return {
     primaryText:
-      typeof rawStatus === 'string' && rawStatus.trim().length > 0
-        ? statusLabel
-        : status === 'cleaning' && typeof currentRoom === 'string' && currentRoom.trim().length > 0
-          ? `${statusLabel} ${formatCleaningRoomLabel(currentRoom)}`
-          : statusLabel,
+      status === 'cleaning' && typeof currentRoom === 'string' && currentRoom.trim().length > 0
+        ? `${statusLabel} ${formatCleaningRoomLabel(currentRoom)}`
+        : statusLabel,
     secondaryFacts: facts,
   };
 }

@@ -284,7 +284,7 @@ describe('VacuumCard', () => {
     expect(subscribeVisibilityAwareTaskMock).not.toHaveBeenCalled();
   });
 
-  it('keeps pose sampling for compact visuals with rich motion enabled', () => {
+  it('keeps the robot fixed without perimeter pose sampling', () => {
     render(
       <VacuumCard
         id="vacuum.roborock"
@@ -296,7 +296,8 @@ describe('VacuumCard', () => {
       />
     );
 
-    expect(subscribeVisibilityAwareTaskMock).toHaveBeenCalledTimes(1);
+    expect(subscribeVisibilityAwareTaskMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('vacuum-robot-surface')).toBeInTheDocument();
   });
 
   it('renders a fan-speed control only when the vacuum supports multiple fan speeds', () => {
@@ -526,7 +527,7 @@ describe('VacuumCard', () => {
     expect(screen.queryByTestId('lawn-mower-motion-wrapper')).not.toBeInTheDocument();
   });
 
-  it('renders charging vacuums with a monochrome illustration treatment', () => {
+  it('renders charging vacuums with the cool lunar illustration treatment', () => {
     useProviderEntityModelMock.mockReturnValueOnce({
       id: 'home_assistant:vacuum.roborock',
       canonicalId: 'home_assistant:vacuum.roborock',
@@ -554,7 +555,7 @@ describe('VacuumCard', () => {
     );
 
     expect(screen.getByTestId('vacuum-robot-surface')).toHaveStyle({
-      borderColor: '#a1a1aa',
+      borderColor: '#e4f3ff',
     });
   });
 
@@ -621,7 +622,7 @@ describe('VacuumCard', () => {
     expect(screen.queryByText(/vacuum\.metric\.runTime /)).not.toBeInTheDocument();
   });
 
-  it('renders the raw provider status text when supplied on the card model', () => {
+  it('localizes the normalized provider status instead of rendering Sleeping', () => {
     resolveVacuumGlanceMetricsMock.mockReturnValueOnce({
       battery: undefined,
       cleanedArea: undefined,
@@ -644,8 +645,8 @@ describe('VacuumCard', () => {
       />
     );
 
-    expect(screen.getAllByText('Sleeping').length).toBeGreaterThan(0);
-    expect(screen.queryByText('vacuum.status.idle')).not.toBeInTheDocument();
+    expect(screen.getAllByText('vacuum.status.idle').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Sleeping')).not.toBeInTheDocument();
   });
 
   it('shows the live cleaning state when the status attribute is stale', () => {
@@ -667,7 +668,7 @@ describe('VacuumCard', () => {
       />
     );
 
-    expect(screen.getAllByText('Cleaning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('vacuum.status.cleaning').length).toBeGreaterThan(0);
   });
 
   it('uses a sleeping status attribute instead of inferring charging complete from a docked vacuum', () => {
@@ -691,7 +692,7 @@ describe('VacuumCard', () => {
       />
     );
 
-    expect(screen.getAllByText('Sleeping').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('vacuum.status.idle').length).toBeGreaterThan(0);
     expect(screen.queryByText('Charging complete')).not.toBeInTheDocument();
   });
 
@@ -715,8 +716,8 @@ describe('VacuumCard', () => {
       />
     );
 
-    expect(screen.getAllByText('Cleaning').length).toBeGreaterThan(0);
-    expect(screen.queryByText('vacuum.status.cleaning bathroom')).not.toBeInTheDocument();
+    expect(screen.getAllByText('vacuum.status.cleaning bathroom').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Cleaning bathroom')).not.toBeInTheDocument();
   });
 
   it('keeps the generic cleaning label when no current room is available', () => {
@@ -731,13 +732,13 @@ describe('VacuumCard', () => {
         name="Robot"
         room="Hallway"
         status="idle"
-        size="small"
+        size="medium"
         onSizeChange={vi.fn()}
         isEditMode={false}
       />
     );
 
-    expect(screen.getAllByText('Cleaning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('vacuum.status.cleaning').length).toBeGreaterThan(0);
     expect(screen.queryByText('vacuum.status.cleaning hallway')).not.toBeInTheDocument();
   });
 
@@ -757,7 +758,7 @@ describe('VacuumCard', () => {
         id="vacuum.partial"
         name="Robot"
         status="idle"
-        size="small"
+        size="medium"
         onSizeChange={vi.fn()}
         isEditMode={false}
       />
@@ -767,7 +768,7 @@ describe('VacuumCard', () => {
     expect(container.querySelector('[title="vacuum.metric.runTime 0 min"]')).toBeInTheDocument();
   });
 
-  it('wraps small-card secondary facts instead of truncating them when several are present', () => {
+  it('limits the small-card summary to battery for a clear primary action', () => {
     mockedDisplayFanSpeed = 'turbo';
     resolveVacuumGlanceMetricsMock.mockReturnValueOnce({
       battery: 72,
@@ -791,16 +792,8 @@ describe('VacuumCard', () => {
       />
     );
 
-    const factsRow = container.querySelector('[title="vacuum.metric.area 42 m²"]')?.parentElement
-      ?.parentElement;
-    expect(factsRow?.className).toContain('flex-wrap');
-    expect(factsRow?.className).toContain('whitespace-normal');
-
-    const factValue = container
-      .querySelector('[title="vacuum.metric.area 42 m²"]')
-      ?.querySelector('.whitespace-normal');
-    expect(factValue?.className).toContain('whitespace-normal');
-    expect(factValue?.className).not.toContain('truncate');
+    expect(container.querySelector('[title="vacuum.settings.battery 72%"]')).toBeInTheDocument();
+    expect(container.querySelector('[title="vacuum.metric.area 42 m²"]')).not.toBeInTheDocument();
   });
 
   it('renders room, battery, runtime, fan speed, and last cleaned facts in stable order', () => {
@@ -821,7 +814,7 @@ describe('VacuumCard', () => {
         name="Robot"
         room="Kitchen"
         status="idle"
-        size="medium"
+        size="large"
         onSizeChange={vi.fn()}
         isEditMode={false}
       />
@@ -853,7 +846,7 @@ describe('VacuumCard', () => {
     expect(screen.getByText('medium-controls-disabled')).toBeInTheDocument();
   });
 
-  it('tones down the vacuum illustration surface while idle', () => {
+  it('uses a restrained navy illustration surface while idle', () => {
     render(
       <VacuumCard
         id="vacuum.resting"
@@ -866,13 +859,12 @@ describe('VacuumCard', () => {
     );
 
     const style = screen.getByTestId('vacuum-robot-surface').getAttribute('style') ?? '';
-    expect(style).toContain('border-color: rgb(161, 161, 170)');
-    expect(style).toContain('rgba(255, 255, 255, 0.06)');
-    expect(style).toContain('rgba(24, 24, 27, 0.96)');
-    expect(style).toContain('0 18px 38px -28px');
+    expect(style).toContain('border-color: rgb(228, 243, 255)');
+    expect(style).toContain('rgb(10, 20, 39)');
+    expect(style).toContain('rgba(89,195,231,0.09)');
   });
 
-  it('tones down the vacuum illustration surface while docked', () => {
+  it('uses the same restrained navy illustration surface while docked', () => {
     useProviderEntitySnapshotMock.mockReturnValueOnce({
       state: 'docked',
       attributes: {},
@@ -899,10 +891,9 @@ describe('VacuumCard', () => {
     );
 
     const style = screen.getByTestId('vacuum-robot-surface').getAttribute('style') ?? '';
-    expect(style).toContain('border-color: rgb(161, 161, 170)');
-    expect(style).toContain('rgba(255, 255, 255, 0.06)');
-    expect(style).toContain('rgba(24, 24, 27, 0.96)');
-    expect(style).toContain('0 18px 38px -28px');
+    expect(style).toContain('border-color: rgb(228, 243, 255)');
+    expect(style).toContain('rgb(10, 20, 39)');
+    expect(style).toContain('rgba(89,195,231,0.09)');
   });
 
   it('shows the side brush only while the vacuum is cleaning', () => {

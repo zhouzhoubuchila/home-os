@@ -1,8 +1,10 @@
 import { VacuumCard } from '@navet/app/features/vacuum';
+import { useSettingsStore } from '@navet/app/stores/settings-store';
 import { getStoryDocsDescription } from '@navet/app/storybook/story-docs';
 import { EntityCardStoryFrame, noopCardSizeChange } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ComponentProps } from 'react';
+import { useEffect } from 'react';
 
 function VacuumCardStory(args: Omit<ComponentProps<typeof VacuumCard>, 'onSizeChange'>) {
   return (
@@ -10,6 +12,16 @@ function VacuumCardStory(args: Omit<ComponentProps<typeof VacuumCard>, 'onSizeCh
       <VacuumCard {...args} onSizeChange={noopCardSizeChange} />
     </EntityCardStoryFrame>
   );
+}
+
+function ChineseVacuumCardStory(args: Omit<ComponentProps<typeof VacuumCard>, 'onSizeChange'>) {
+  useEffect(() => {
+    useSettingsStore.setState({ language: 'zh' });
+    return () => {
+      useSettingsStore.setState({ language: 'en' });
+    };
+  }, []);
+  return <VacuumCardStory {...args} />;
 }
 
 const baseVacuumArgs: Omit<ComponentProps<typeof VacuumCard>, 'onSizeChange'> = {
@@ -31,7 +43,7 @@ const meta = {
   argTypes: {
     size: {
       control: 'inline-radio',
-      options: ['small', 'medium', 'large'],
+      options: ['small', 'medium', 'large', 'extra-large'],
     },
     status: {
       control: 'select',
@@ -75,6 +87,25 @@ export const Small: Story = {
   args: {
     size: 'small',
   },
+};
+
+export const IdleSleeping: Story = {
+  render: (args) => <ChineseVacuumCardStory {...args} />,
+  args: {
+    name: 'S30 Pro Ultra 增强版',
+    rawStatus: 'Sleeping',
+    status: 'idle',
+    battery: 100,
+    size: 'medium',
+  },
+};
+
+export const Large: Story = {
+  args: { size: 'large' },
+};
+
+export const ExtraLarge: Story = {
+  args: { size: 'extra-large' },
 };
 
 export const Charging: Story = {

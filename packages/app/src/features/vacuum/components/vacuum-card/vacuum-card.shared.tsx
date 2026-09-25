@@ -35,8 +35,9 @@ import {
   normalizeVacuumStatus,
   type VacuumStatus,
 } from '../vacuum/vacuum-utils';
+import './vacuum-lunar-series.css';
 
-export type VacuumCardSize = 'small' | 'medium';
+export type VacuumCardSize = 'small' | 'medium' | 'large' | 'extra-large';
 export type VacuumDisplayState = VacuumStatus | 'unavailable';
 export type MotionLevel = 'high' | 'medium' | 'low';
 type IllustrationPalette = {
@@ -70,11 +71,10 @@ export interface VacuumCardProps {
 }
 
 export function normalizeVacuumCardSize(size: CardSize): VacuumCardSize {
-  if (size === 'small' || size === 'medium') {
+  if (size === 'small' || size === 'medium' || size === 'large' || size === 'extra-large') {
     return size;
   }
-
-  return 'medium';
+  return 'small';
 }
 
 function normalizeVacuumDisplayName(value: string): string {
@@ -170,9 +170,9 @@ export function resolveVacuumIllustrationPalette({
 }
 
 export function resolveVacuumIllustrationSurface({
-  theme,
+  theme: _theme,
   displayState,
-  titleColor,
+  titleColor: _titleColor,
 }: {
   theme: ReturnType<typeof useTheme>['theme'];
   displayState: VacuumDisplayState;
@@ -180,35 +180,15 @@ export function resolveVacuumIllustrationSurface({
 }): IllustrationSurface {
   if (displayState === 'error') {
     return {
-      background: 'radial-gradient(circle at top, rgba(251,191,36,0.16), rgba(15,23,42,0.92) 66%)',
-      baseColor: '#0f172a',
-      shadow: `0 24px 54px -28px ${titleColor}33`,
+      background: 'radial-gradient(circle at 34% 28%, #253244, #0b1528 70%)',
+      baseColor: '#0b1528',
+      shadow: '0 0 22px rgba(232,115,120,0.12)',
     };
   }
-
-  if (isMonochromeVacuumIllustrationState(displayState)) {
-    const restingBase =
-      theme === 'light'
-        ? 'rgba(244,244,245,0.96)'
-        : theme === 'glass'
-          ? 'rgba(24,24,27,0.86)'
-          : 'rgba(24,24,27,0.96)';
-    const restingBaseColor = theme === 'light' ? '#f4f4f5' : '#18181b';
-
-    return {
-      background:
-        theme === 'light'
-          ? `radial-gradient(circle at top, rgba(255,255,255,0.92), ${restingBase} 68%)`
-          : `radial-gradient(circle at top, rgba(255,255,255,0.06), ${restingBase} 68%)`,
-      baseColor: restingBaseColor,
-      shadow: `0 18px 38px -28px ${titleColor}1f`,
-    };
-  }
-
   return {
-    background: 'radial-gradient(circle at top, rgba(255,255,255,0.18), rgba(15,23,42,0.94) 66%)',
-    baseColor: '#0f172a',
-    shadow: `0 24px 54px -28px ${titleColor}33`,
+    background: 'radial-gradient(circle at 34% 28%, #253a54, #0a1427 70%)',
+    baseColor: '#0a1427',
+    shadow: '0 10px 28px rgba(1,8,24,0.48), 0 0 18px rgba(89,195,231,0.09)',
   };
 }
 
@@ -221,6 +201,7 @@ function VacuumStatusMetric({
   titleColor,
   subtitleColor,
   theme,
+  isLawnMower,
   className,
 }: {
   primaryText: string;
@@ -229,13 +210,17 @@ function VacuumStatusMetric({
   titleColor: string;
   subtitleColor: string;
   theme: ReturnType<typeof useTheme>['theme'];
+  isLawnMower: boolean;
   className?: string;
 }) {
   const valueSizeStyle =
-    size === 'medium'
-      ? { fontSize: '1.6rem', lineHeight: 0.96 }
-      : { fontSize: '1.2rem', lineHeight: 0.98 };
-  const shouldWrapFacts = size === 'small' && secondaryFacts.length > 1;
+    size === 'small'
+      ? { fontSize: '1.2rem', lineHeight: 0.98 }
+      : size === 'medium'
+        ? { fontSize: '1.6rem', lineHeight: 0.96 }
+        : { fontSize: '2rem', lineHeight: 1 };
+  const shouldWrapFacts =
+    (isLawnMower ? size === 'small' : size !== 'small') && secondaryFacts.length > 1;
 
   return (
     <CardMetric
@@ -246,7 +231,7 @@ function VacuumStatusMetric({
             className={cn(
               'min-w-0 text-xs leading-4 text-inherit',
               shouldWrapFacts
-                ? 'flex flex-wrap items-start gap-x-2 gap-y-1 whitespace-normal'
+                ? 'flex flex-wrap items-start gap-x-3 gap-y-1 whitespace-normal'
                 : 'flex items-center gap-2 overflow-hidden whitespace-nowrap'
             )}
           >
@@ -306,24 +291,34 @@ function CompactMetricContent({
   titleColor,
   subtitleColor,
   theme,
+  isLawnMower,
 }: {
   size: VacuumCardSize;
   summary: SharedCardSummary;
   titleColor: string;
   subtitleColor: string;
   theme: ReturnType<typeof useTheme>['theme'];
+  isLawnMower: boolean;
 }) {
-  const contentClassName = size === 'medium' ? 'min-w-0 flex-1 pr-24' : 'min-w-0 flex-1';
+  const contentClassName = size === 'small' ? 'min-w-0 flex-1' : 'min-w-0 flex-1 pr-24';
+  const visibleFacts = isLawnMower
+    ? summary.secondaryFacts
+    : size === 'small'
+      ? summary.secondaryFacts.filter((fact) => fact.kind === 'battery')
+      : size === 'medium'
+        ? summary.secondaryFacts.filter((fact) => fact.kind !== 'lastCleaned')
+        : summary.secondaryFacts;
 
   return (
     <div className="flex min-h-0 items-start justify-start">
       <VacuumStatusMetric
         primaryText={summary.primaryText}
-        secondaryFacts={summary.secondaryFacts}
+        secondaryFacts={visibleFacts}
         size={size}
         titleColor={titleColor}
         subtitleColor={subtitleColor}
         theme={theme}
+        isLawnMower={isLawnMower}
         className={contentClassName}
       />
     </div>
@@ -331,9 +326,9 @@ function CompactMetricContent({
 }
 
 export function getCompactVisualClassName(size: VacuumCardSize): string {
-  return size === 'medium'
-    ? 'pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-visible'
-    : 'pointer-events-none absolute right-[-1.1rem] top-[-0.2rem] z-0 h-[6.3rem] min-h-0 w-[6.3rem]';
+  return size === 'large' || size === 'extra-large'
+    ? 'pointer-events-none absolute right-6 top-1/2 z-0 h-32 w-32 -translate-y-1/2'
+    : 'pointer-events-none absolute right-2 top-1/2 z-0 h-28 w-28 -translate-y-1/2';
 }
 
 function resolveVacuumCardStatusSource(entity: {
@@ -360,18 +355,6 @@ function resolveVacuumCardStatusSource(entity: {
   }
 
   return entityState ?? attributeCandidates.find((value) => typeof value === 'string');
-}
-
-function formatRawVacuumStatus(value: string): string {
-  const normalized = value
-    .trim()
-    .replace(/[_\s]+/g, ' ')
-    .toLowerCase();
-  if (normalized.length === 0) {
-    return value;
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 export interface SharedVacuumCardState {
@@ -435,7 +418,12 @@ export function useVacuumCardState(
   }: VacuumCardProps,
   options: { entityVariant: 'vacuum' | 'lawn-mower' }
 ): SharedVacuumCardState {
-  const resolvedSize = normalizeVacuumCardSize(size);
+  const resolvedSize =
+    options.entityVariant === 'lawn-mower'
+      ? size === 'small'
+        ? 'small'
+        : 'medium'
+      : normalizeVacuumCardSize(size);
   const providerEntity = useProviderEntityModel(id);
   const currentProviderId = useIntegrationStore((state) => state.currentProviderId);
   const resolvedProviderId =
@@ -459,7 +447,7 @@ export function useVacuumCardState(
     state: liveEntity?.state,
     attributes: liveAttrs,
   });
-  const liveStatus = normalizeVacuumStatus(rawLiveStatus, status);
+  const liveStatus = normalizeVacuumStatus(rawLiveStatus ?? rawStatus, status);
   const vacuumCapabilities = resolveVacuumCapabilities({
     providerEntity,
     vacuumEntity: liveEntity,
@@ -506,11 +494,6 @@ export function useVacuumCardState(
   const liveBattery = glanceMetrics.battery;
   const liveFanSpeed = vacuumCapabilities.currentFanSpeed;
   const liveFanSpeeds = vacuumCapabilities.fanSpeedOptions;
-  const rawDisplayStatusSource = typeof rawLiveStatus === 'string' ? rawLiveStatus : rawStatus;
-  const rawDisplayStatus =
-    typeof rawDisplayStatusSource === 'string' && rawDisplayStatusSource.trim().length > 0
-      ? formatRawVacuumStatus(rawDisplayStatusSource)
-      : undefined;
   const shouldInferDockedAsCharging = options.entityVariant !== 'lawn-mower';
   const computedStatus: VacuumStatus =
     currentStatus === 'charging'
@@ -554,14 +537,16 @@ export function useVacuumCardState(
     displayState === 'unavailable' ? 'docked' : displayState
   );
   const cardColors = colors.vacuum[vacuumThemeStatus];
-  const activeShellBackgroundClassName = isActive ? `bg-gradient-to-br ${cardColors.gradient}` : '';
-  const frameClassName = cn(
-    cardShell.rootFrameClassName,
-    activeShellBackgroundClassName,
-    cardColors.border,
-    stateSurface.containerClassName,
-    isUnavailable && 'opacity-80 saturate-[0.72]'
-  );
+  const frameClassName =
+    options.entityVariant === 'vacuum'
+      ? cn(cardShell.rootFrameClassName, 'vacuum-lunar-card', isUnavailable && 'opacity-80')
+      : cn(
+          cardShell.rootFrameClassName,
+          isActive && `bg-gradient-to-br ${cardColors.gradient}`,
+          cardColors.border,
+          stateSurface.containerClassName,
+          isUnavailable && 'opacity-80 saturate-[0.72]'
+        );
   const headerTone =
     displayState === 'returning'
       ? 'purple'
@@ -570,21 +555,24 @@ export function useVacuumCardState(
         : displayState === 'error'
           ? 'amber'
           : 'neutral';
-  const headerAccentColor = headerTone === 'primary' ? accentColor : null;
+  const headerAccentColor =
+    options.entityVariant === 'vacuum' ? '#8fd8f5' : headerTone === 'primary' ? accentColor : null;
   const metricReadableTokens = getCardReadableTextTokens({
     theme,
     tone: headerTone,
     accentColor: headerAccentColor,
   });
-  const illustrationPalette = resolveVacuumIllustrationPalette({
-    theme,
-    displayState,
-    titleColor: metricReadableTokens.titleColor,
-    subtitleColor: metricReadableTokens.subtitleColor,
-  });
+  const illustrationPalette =
+    options.entityVariant === 'vacuum'
+      ? { titleColor: '#e4f3ff', subtitleColor: '#8fd8f5' }
+      : resolveVacuumIllustrationPalette({
+          theme,
+          displayState,
+          titleColor: metricReadableTokens.titleColor,
+          subtitleColor: metricReadableTokens.subtitleColor,
+        });
   const cardSummary = resolveVacuumCardSummary({
     status: displayState,
-    rawStatus: rawDisplayStatus,
     isLawnMower: options.entityVariant === 'lawn-mower',
     currentRoom: liveCurrentRoom,
     battery: liveBattery,
@@ -614,21 +602,26 @@ export function useVacuumCardState(
     theme,
     accentColor,
     frameClassName,
-    overlay: (
-      <>
-        {isActive ? (
-          <div className={`absolute inset-0 bg-gradient-to-br ${cardColors.glow} to-transparent`} />
-        ) : null}
-        {stateSurface.overlayClassName ? (
-          <div className={`absolute inset-0 ${stateSurface.overlayClassName}`} />
-        ) : null}
-        {isUnavailable ? <div className="absolute inset-0 bg-slate-950/12" /> : null}
-      </>
-    ),
+    overlay:
+      options.entityVariant === 'vacuum' ? null : (
+        <>
+          {isActive ? (
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${cardColors.glow} to-transparent`}
+            />
+          ) : null}
+          {stateSurface.overlayClassName ? (
+            <div className={`absolute inset-0 ${stateSurface.overlayClassName}`} />
+          ) : null}
+          {isUnavailable ? <div className="absolute inset-0 bg-slate-950/12" /> : null}
+        </>
+      ),
     headerTone,
     headerAccentColor,
-    primaryTextClassName: stateSurface.primaryTextClassName,
-    mutedTextClassName: stateSurface.mutedTextClassName,
+    primaryTextClassName:
+      options.entityVariant === 'vacuum' ? 'text-[#f5f8ff]' : stateSurface.primaryTextClassName,
+    mutedTextClassName:
+      options.entityVariant === 'vacuum' ? 'text-[#e2eafa]/65' : stateSurface.mutedTextClassName,
     motionLevel,
     illustrationPalette,
     cardSummary,
@@ -700,6 +693,7 @@ export function SharedVacuumCardShell({
       titleColor={state.illustrationPalette.titleColor}
       subtitleColor={state.illustrationPalette.subtitleColor}
       theme={state.theme}
+      isLawnMower={state.isLawnMower}
     />
   );
 
@@ -708,12 +702,15 @@ export function SharedVacuumCardShell({
       <BaseCard
         size={state.resolvedSize}
         frameClassName={state.frameClassName}
+        data-vacuum-state={state.isLawnMower ? undefined : state.displayState}
+        data-vacuum-size={state.isLawnMower ? undefined : state.resolvedSize}
+        data-vacuum-motion={state.isLawnMower ? undefined : state.motionLevel}
         disableDefaultSheen
         overlay={state.overlay}
         contentClassName="h-full"
       >
         <div className="relative flex h-full flex-col">
-          {state.resolvedSize === 'medium' ? compactVisual : null}
+          {state.resolvedSize !== 'small' ? compactVisual : null}
           <div className="relative z-10 flex h-full flex-col">
             <EntityCardHeader
               title={state.liveName}
@@ -736,8 +733,8 @@ export function SharedVacuumCardShell({
             />
 
             <CardMetricActionLayout
-              size={state.resolvedSize}
-              className="pt-1"
+              size={state.resolvedSize === 'extra-large' ? 'large' : state.resolvedSize}
+              className={state.isLawnMower ? 'pt-1' : 'vacuum-lunar-metric-layout pt-1'}
               metric={compactMetric}
               actions={controls}
             />

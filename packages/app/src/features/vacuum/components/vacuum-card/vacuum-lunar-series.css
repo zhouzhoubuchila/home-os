@@ -1,0 +1,118 @@
+.vacuum-lunar-card {
+  color: rgba(245, 248, 255, 0.96);
+  border-color: rgba(190, 211, 255, 0.15) !important;
+  background: linear-gradient(145deg, #050816 0%, #0d1630 58%, #080d21 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(230, 240, 255, 0.06), 0 18px 48px -34px rgba(3, 9, 30, 0.8);
+}
+
+.vacuum-lunar-card::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 82% 32%, rgba(78, 160, 218, 0.15), transparent 46%),
+    linear-gradient(115deg, transparent 48%, rgba(117, 103, 201, 0.045) 72%, transparent 100%);
+}
+
+.vacuum-lunar-card[data-vacuum-state='cleaning']::before,
+.vacuum-lunar-card[data-vacuum-state='mopping']::before {
+  animation: vacuum-lunar-atmosphere 32s ease-in-out infinite alternate;
+}
+
+.vacuum-lunar-card button {
+  border-color: rgba(190, 211, 255, 0.16) !important;
+  background: rgba(5, 13, 34, 0.72) !important;
+  color: rgba(226, 240, 255, 0.9) !important;
+}
+
+.vacuum-lunar-card button:hover:not(:disabled) {
+  border-color: rgba(143, 216, 245, 0.42) !important;
+  box-shadow: 0 0 18px rgba(60, 184, 225, 0.12);
+}
+
+.vacuum-lunar-card button > span {
+  color: inherit !important;
+}
+
+.vacuum-lunar-card[data-vacuum-size='large'] .vacuum-lunar-metric-layout > :first-child,
+.vacuum-lunar-card[data-vacuum-size='extra-large'] .vacuum-lunar-metric-layout > :first-child {
+  margin-bottom: auto;
+}
+
+.vacuum-lunar-dialog {
+  color: rgba(245, 248, 255, 0.96) !important;
+  border: 1px solid rgba(190, 211, 255, 0.17) !important;
+  background: linear-gradient(155deg, #080d21 0%, #0d1630 65%, #050816 100%) !important;
+  box-shadow: 0 28px 80px rgba(1, 5, 19, 0.72), inset 0 1px 0 rgba(226, 240, 255, 0.06);
+}
+
+.vacuum-lunar-dialog [data-card-dialog-header] {
+  border-color: rgba(190, 211, 255, 0.13) !important;
+}
+
+.vacuum-lunar-dialog button {
+  border-color: rgba(190, 211, 255, 0.15);
+  color: rgba(226, 240, 255, 0.88);
+}
+
+.vacuum-lunar-dialog button:hover:not(:disabled) {
+  border-color: rgba(143, 216, 245, 0.35);
+}
+
+.vacuum-lunar-dialog [data-state='active'],
+.vacuum-lunar-dialog [aria-selected='true'] {
+  border-color: rgba(143, 216, 245, 0.5) !important;
+  color: #c9f2ff !important;
+}
+
+.vacuum-lunar-side-brush {
+  animation: vacuum-lunar-brush 5s linear infinite;
+}
+
+.vacuum-lunar-charge-ring {
+  animation: vacuum-lunar-charge 14s ease-in-out infinite;
+}
+
+.vacuum-lunar-card[data-vacuum-state='returning'] .vacuum-lunar-dock::after {
+  content: '';
+  position: absolute;
+  top: 0.55rem;
+  left: 0.3rem;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #8fd8f5;
+  box-shadow: 0 0 5px rgba(143, 216, 245, 0.42);
+  animation: vacuum-lunar-return-light 9s ease-in-out infinite;
+}
+
+@keyframes vacuum-lunar-brush {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes vacuum-lunar-atmosphere {
+  from { opacity: 0.65; transform: translateX(-1%); }
+  to { opacity: 1; transform: translateX(2%); }
+}
+
+@keyframes vacuum-lunar-charge {
+  0%, 100% { opacity: 0.22; transform: scale(0.98); }
+  50% { opacity: 0.5; transform: scale(1.03); }
+}
+
+@keyframes vacuum-lunar-return-light {
+  0%, 12% { opacity: 0; transform: translateX(0); }
+  35%, 70% { opacity: 0.7; }
+  88%, 100% { opacity: 0; transform: translateX(2.7rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vacuum-lunar-card::before,
+  .vacuum-lunar-card .vacuum-lunar-dock::after,
+  .vacuum-lunar-card *,
+  .vacuum-lunar-dialog * { animation: none !important; }
+}
+
+.vacuum-lunar-card[data-effective-effects-quality='low']::before,
+.vacuum-lunar-card[data-vacuum-motion='low'] *,
+.vacuum-lunar-card[data-vacuum-motion='low'] .vacuum-lunar-dock::after { animation: none !important; }
