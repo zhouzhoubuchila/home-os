@@ -52,6 +52,7 @@ import {
 } from './lunar/moon-card-model';
 import { NetworkHomeOsCard } from './network-home-os-card';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
+import './lighting-lunar-card.css';
 
 export interface HomeOsWidgetData extends PveHomeOsCardData {
   kind?: HomeOsCardKind;
@@ -201,7 +202,7 @@ function HouseholdCard({
   );
 }
 
-function LightingCard({
+export function LightingCard({
   size,
   entities,
   isEditMode,
@@ -218,6 +219,13 @@ function LightingCard({
   const controllable = lights.filter((light) => light.controllable);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const layoutSize =
+    size === 'small' || size === 'tiny' || size === 'extra-small'
+      ? 'small'
+      : size === 'medium' || size === 'medium-vertical'
+        ? 'medium'
+        : 'large';
+  const visibleOn = on.slice(0, layoutSize === 'large' ? 6 : 3);
   const turnOff = async () => {
     if (!confirming) {
       setConfirming(true);
@@ -245,22 +253,50 @@ function LightingCard({
     <BaseCard
       size={size}
       title={copy.wholeHomeLighting}
-      headerLeading={<Lightbulb className="h-5 w-5" />}
+      subtitle="LIGHTING / HOME"
+      headerLayout="eyebrow-first"
+      headerLeading={<Lightbulb className="h-4 w-4 text-[#dcecff]" />}
+      themeOverride="dark"
+      frameClassName="lighting-lunar-card"
+      disableDefaultSheen
+      data-lighting-on={on.length > 0 ? 'true' : 'false'}
+      data-lighting-size={layoutSize}
+      data-lighting-confirming={confirming ? 'true' : 'false'}
+      data-lighting-busy={busy ? 'true' : 'false'}
     >
-      <div className="flex h-full flex-col justify-between gap-3">
-        <div>
-          <strong className="text-3xl tabular-nums">{on.length}</strong>
-          <p className="text-sm text-current/55">
+      <div className="lighting-lunar-content relative flex h-full min-h-0 flex-col justify-between gap-1">
+        <div className="lighting-lunar-core" aria-hidden="true">
+          <Lightbulb className="h-5 w-5" />
+        </div>
+        <div className="relative z-10">
+          <strong className="lighting-lunar-count block tabular-nums" aria-live="polite">
+            {on.length}
+          </strong>
+          <p className="lighting-lunar-status text-xs">
             {on.length} {copy.lightsOn}
           </p>
         </div>
-        {size !== 'small' ? (
-          <p className="line-clamp-2 text-xs text-current/55">
-            {on.map(({ name }) => name).join(' · ') || copy.allLightsOff}
-          </p>
+        {layoutSize !== 'small' ? (
+          <div className="lighting-lunar-list relative z-10 flex min-h-0 flex-wrap content-start gap-x-2 gap-y-0.5 text-xs">
+            {visibleOn.length > 0 ? (
+              visibleOn.map((light) => (
+                <span key={light.id} className="max-w-full truncate">
+                  {light.name}
+                </span>
+              ))
+            ) : (
+              <span>{copy.allLightsOff}</span>
+            )}
+          </div>
         ) : null}
         {!isEditMode && controllable.length ? (
-          <Button size="small" variant="secondary" onClick={() => void turnOff()} loading={busy}>
+          <Button
+            size="small"
+            variant="secondary"
+            className="lighting-lunar-off-button relative z-10"
+            onClick={() => void turnOff()}
+            loading={busy}
+          >
             {confirming ? copy.confirmTurnOff : copy.turnAllOff}
           </Button>
         ) : null}

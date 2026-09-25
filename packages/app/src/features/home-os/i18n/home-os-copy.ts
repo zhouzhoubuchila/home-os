@@ -195,7 +195,7 @@ const zh: { [Key in keyof typeof en]: string } = {
   lightsOn: '盏灯已开启',
   allLightsOff: '所有灯光已关闭',
   turnAllOff: '全部关闭',
-  confirmTurnOff: '确认全部关闭',
+  confirmTurnOff: '确认关闭',
   lightsFailed: '部分灯光关闭失败',
   turnOn: '开启',
   turnOff: '关闭',
