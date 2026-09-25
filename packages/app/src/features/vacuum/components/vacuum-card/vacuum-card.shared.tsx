@@ -721,6 +721,16 @@ export function SharedVacuumCardShell({
               tone={state.headerTone}
               titleClassName={state.primaryTextClassName}
               subtitleClassName={state.mutedTextClassName}
+              titleStyle={
+                !state.isLawnMower && state.resolvedSize === 'medium'
+                  ? { color: 'rgba(245,248,255,0.93)' }
+                  : undefined
+              }
+              subtitleStyle={
+                !state.isLawnMower && state.resolvedSize === 'medium'
+                  ? { color: 'rgba(210,225,245,0.66)' }
+                  : undefined
+              }
               leading={
                 <EntityCardHeaderIcon
                   IconComponent={Bot}
@@ -728,6 +738,7 @@ export function SharedVacuumCardShell({
                   size={state.resolvedSize}
                   baseColor={state.headerAccentColor}
                   tone={state.headerTone}
+                  themeOverride={state.isLawnMower ? undefined : 'dark'}
                 />
               }
             />

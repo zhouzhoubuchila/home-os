@@ -280,6 +280,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             entityId={entityId}
             roomSelectorFallbackRoomName={room}
             theme={dialogTheme}
+            forceDarkRoomSelector={lunarVacuum}
             className="mb-0 max-sm:pr-0"
           />
 
@@ -287,6 +288,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             {shouldShowControlsTab ? (
               <CardDialogTabTrigger
                 active={activeTab === 'controls'}
+                themeOverride={lunarVacuum ? 'dark' : undefined}
                 accentColor={activeControlColor}
                 icon={Sliders}
                 onClick={() => setActiveTab('controls')}
@@ -297,6 +299,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             {shouldShowMapTab ? (
               <CardDialogTabTrigger
                 active={activeTab === 'map'}
+                themeOverride={lunarVacuum ? 'dark' : undefined}
                 accentColor={activeControlColor}
                 icon={MapIcon}
                 onClick={() => setActiveTab('map')}
@@ -306,6 +309,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             ) : null}
             <CardDialogTabTrigger
               active={activeTab === 'card'}
+              themeOverride={lunarVacuum ? 'dark' : undefined}
               accentColor={activeControlColor}
               icon={Palette}
               onClick={() => setActiveTab('card')}
@@ -320,6 +324,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
             <TabPanel value="controls" className="space-y-5">
               <VacuumCleaningControls
                 isLawnMower={isLawnMower}
+                themeOverride={lunarVacuum ? 'dark' : undefined}
                 fanSpeed={selectedFanSpeed}
                 onFanSpeedChange={(speed) => {
                   setSelectedFanSpeed(speed);
@@ -339,7 +344,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
 
           {shouldShowMapTab ? (
             <TabPanel value="map">
-              <CardDialogSection className="mb-0">
+              <CardDialogSection className="mb-0" themeOverride={lunarVacuum ? 'dark' : undefined}>
                 <div className="mb-0">
                   <div className="text-sm font-medium text-white">{t('vacuum.settings.plan')}</div>
                 </div>
@@ -350,6 +355,7 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
                   canOrderAreaCleaning={capabilities?.canOrderAreaCleaning ?? false}
                   accentColor={activeControlColor}
                   activePillStyle={activePillStyle}
+                  themeOverride={lunarVacuum ? 'dark' : undefined}
                 />
               </CardDialogSection>
             </TabPanel>
@@ -365,7 +371,11 @@ export const VacuumSettingsDialog = memo(function VacuumSettingsDialog({
           </TabPanel>
 
           <CardDialogFooter className="mt-6 items-center justify-end gap-2">
-            <Button variant="soft" onClick={onClose}>
+            <Button
+              variant="soft"
+              onClick={onClose}
+              className={lunarVacuum ? 'vacuum-lunar-cancel' : undefined}
+            >
               {t('common.cancel')}
             </Button>
             <Button

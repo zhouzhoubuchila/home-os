@@ -9,6 +9,7 @@ import {
 } from '@navet/app/components/system/tokens/foundations';
 import { cn } from '@navet/app/components/ui/utils';
 import { useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { type ButtonHTMLAttributes, type ElementType, forwardRef, type ReactNode } from 'react';
 
 interface InteractivePillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,6 +20,7 @@ interface InteractivePillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ElementType;
   intent?: InteractivePillIntent;
   size?: 'default' | 'small' | 'compact';
+  themeOverride?: ThemeType;
   variant?: InteractivePillVariant;
 }
 
@@ -50,6 +52,7 @@ export const InteractivePill = forwardRef<HTMLButtonElement, InteractivePillProp
       icon: Icon,
       intent = 'navigation',
       size = 'default',
+      themeOverride,
       variant = 'default',
       style,
       ...props
@@ -57,13 +60,14 @@ export const InteractivePill = forwardRef<HTMLButtonElement, InteractivePillProp
     ref
   ) {
     const { theme, primaryColor } = useTheme();
+    const resolvedTheme = themeOverride ?? theme;
     const sizeClassName = INTERACTIVE_PILL_SIZE_CLASS_NAMES[size];
     const pillStyles = getInteractivePillStyles({
       accentColor,
       intent,
       isActive: active,
       primaryColor,
-      theme,
+      theme: resolvedTheme,
       variant,
     });
 
@@ -76,7 +80,7 @@ export const InteractivePill = forwardRef<HTMLButtonElement, InteractivePillProp
           sizeClassName.frame,
           navetRadiusTokens.pill,
           sizeClassName.text,
-          getThemeFocusRingClassName(theme),
+          getThemeFocusRingClassName(resolvedTheme),
           pillStyles.className,
           className
         )}

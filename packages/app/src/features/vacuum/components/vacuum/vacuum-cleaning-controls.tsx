@@ -1,5 +1,6 @@
 import { CardDialogChoicePill, CardDialogSection } from '@navet/app/components/patterns';
 import { useI18n } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { Crosshair, Home, Sparkles } from 'lucide-react';
 import type { VacuumCapabilities } from './vacuum-features';
 
@@ -15,6 +16,7 @@ interface VacuumCleaningControlsProps {
   onCleanSpot?: () => void;
   capabilities?: VacuumCapabilities;
   accentColor?: string;
+  themeOverride?: ThemeType;
 }
 
 export function hasVacuumDialogControls(options: {
@@ -43,6 +45,7 @@ export function VacuumCleaningControls({
   onCleanSpot,
   capabilities,
   accentColor,
+  themeOverride,
 }: VacuumCleaningControlsProps) {
   const { t } = useI18n();
   const returnActionLabel = t(
@@ -65,13 +68,18 @@ export function VacuumCleaningControls({
   return (
     <div className="mt-5 flex flex-col gap-5">
       {canReturnHome ? (
-        <CardDialogSection label={t('vacuum.settings.actions')} className="mb-0">
+        <CardDialogSection
+          label={t('vacuum.settings.actions')}
+          className="mb-0"
+          themeOverride={themeOverride}
+        >
           <CardDialogChoicePill
             active={false}
             accentColor={accentColor}
             onClick={onReturnHome}
             size="compact"
             className="min-w-24"
+            themeOverride={themeOverride}
           >
             <Home className="mr-1.5 h-3.5 w-3.5" />
             {returnActionLabel}
@@ -80,7 +88,11 @@ export function VacuumCleaningControls({
       ) : null}
 
       {hasSecondaryActions ? (
-        <CardDialogSection label={t('vacuum.settings.moreActions')} className="mb-0">
+        <CardDialogSection
+          label={t('vacuum.settings.moreActions')}
+          className="mb-0"
+          themeOverride={themeOverride}
+        >
           <div className="flex flex-wrap gap-2">
             {capabilities?.canLocate ? (
               <CardDialogChoicePill
@@ -89,6 +101,7 @@ export function VacuumCleaningControls({
                 onClick={() => onLocate?.()}
                 size="compact"
                 className="min-w-24"
+                themeOverride={themeOverride}
               >
                 <Crosshair className="mr-1.5 h-3.5 w-3.5" />
                 {t('vacuum.action.locate')}
@@ -101,6 +114,7 @@ export function VacuumCleaningControls({
                 onClick={() => onCleanSpot?.()}
                 size="compact"
                 className="min-w-24"
+                themeOverride={themeOverride}
               >
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                 {t('vacuum.action.cleanSpot')}
@@ -111,7 +125,11 @@ export function VacuumCleaningControls({
       ) : null}
 
       {hasFanSpeedChoices ? (
-        <CardDialogSection label={t('vacuum.settings.fanSpeed')} className="mb-0">
+        <CardDialogSection
+          label={t('vacuum.settings.fanSpeed')}
+          className="mb-0"
+          themeOverride={themeOverride}
+        >
           <div className="flex flex-wrap gap-2">
             {fanSpeedOptions.map((speed) => (
               <CardDialogChoicePill
@@ -125,6 +143,7 @@ export function VacuumCleaningControls({
                 }}
                 size="compact"
                 className="min-w-18"
+                themeOverride={themeOverride}
               >
                 {speed}
               </CardDialogChoicePill>

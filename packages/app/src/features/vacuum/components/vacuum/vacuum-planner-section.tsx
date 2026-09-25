@@ -2,6 +2,7 @@ import { getInteractivePillStyles } from '@navet/app/components/shared/theme/int
 import { getThemeFocusRingClassName, navetRadiusTokens } from '@navet/app/components/system/tokens';
 import { cn } from '@navet/app/components/ui/utils';
 import { useI18n, useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import type { CSSProperties } from 'react';
 import type { VacuumCleaningArea } from './vacuum-features';
 
@@ -12,6 +13,7 @@ interface VacuumPlannerSectionProps {
   canOrderAreaCleaning: boolean;
   accentColor?: string;
   activePillStyle?: CSSProperties;
+  themeOverride?: ThemeType;
 }
 
 export function VacuumPlannerSection({
@@ -21,9 +23,11 @@ export function VacuumPlannerSection({
   canOrderAreaCleaning,
   accentColor,
   activePillStyle,
+  themeOverride,
 }: VacuumPlannerSectionProps) {
   const { t } = useI18n();
   const { theme, primaryColor } = useTheme();
+  const resolvedTheme = themeOverride ?? theme;
 
   const handleAreaToggle = (areaId: string) => {
     onSelectedAreaIdsChange(
@@ -65,7 +69,7 @@ export function VacuumPlannerSection({
                 intent: 'navigation',
                 isActive: active,
                 primaryColor,
-                theme,
+                theme: resolvedTheme,
                 variant: 'default',
               });
 
@@ -77,7 +81,7 @@ export function VacuumPlannerSection({
                   className={cn(
                     'group relative min-h-12 w-full rounded-[18px] border px-3 py-2.5 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform,filter]',
                     navetRadiusTokens.pill,
-                    getThemeFocusRingClassName(theme),
+                    getThemeFocusRingClassName(resolvedTheme),
                     pillStyles.className
                   )}
                   style={{ ...pillStyles.style, ...(active ? activePillStyle : undefined) }}

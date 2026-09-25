@@ -1,5 +1,6 @@
+import { useThemeStore } from '@navet/app/stores/theme-store';
 import { renderWithProviders } from '@navet/app/test/render';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { VacuumSettingsDialog } from '../vacuum-settings-dialog';
 
@@ -12,6 +13,66 @@ vi.mock('@navet/app/components/shared/entity-room-selector', () => ({
 }));
 
 describe('VacuumSettingsDialog', () => {
+  it('keeps nested controls dark and readable under a global light theme', () => {
+    const previousTheme = useThemeStore.getState().theme;
+    act(() => useThemeStore.setState({ theme: 'light' }));
+    entityRoomSelectorMock.mockClear();
+
+    try {
+      renderWithProviders(
+        <VacuumSettingsDialog
+          entityId="vacuum.roborock"
+          isOpen
+          onClose={vi.fn()}
+          onStartCleaning={vi.fn()}
+          onPauseCleaning={vi.fn()}
+          onReturnHome={vi.fn()}
+          name="Robot"
+          room="Kitchen"
+          theme="light"
+          accentColorValue="#06b6d4"
+          currentStatus="idle"
+          fanSpeed="Turbo"
+          fanSpeeds={['Silent', 'Standard', 'Strong', 'Turbo']}
+          availableCleaningAreas={[{ id: 'kitchen', label: 'Kitchen' }]}
+          supportsFanSpeed
+          capabilities={{
+            canStart: true,
+            canPause: true,
+            canStop: false,
+            canReturnHome: true,
+            canLocate: true,
+            canCleanSpot: true,
+            canSetFanSpeed: true,
+            currentFanSpeed: 'Turbo',
+            fanSpeedOptions: ['Silent', 'Standard', 'Strong', 'Turbo'],
+            canCycleFanSpeed: true,
+            canShowMap: true,
+            canCleanByArea: true,
+            canOrderAreaCleaning: false,
+            availableCleaningAreas: [{ id: 'kitchen', label: 'Kitchen' }],
+          }}
+        />
+      );
+
+      expect(screen.getByRole('dialog')).toHaveClass('vacuum-lunar-dialog');
+      expect(entityRoomSelectorMock.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({ forceDark: true })
+      );
+      expect(screen.getByText('Actions')).toHaveClass('text-white');
+      expect(screen.getByText('Fan Speed')).toHaveClass('text-white');
+      expect(screen.getByRole('button', { name: 'Controls' })).toHaveClass('text-white');
+      expect(screen.getByRole('button', { name: 'Map' })).toHaveClass('text-white');
+      expect(screen.getByRole('button', { name: 'Silent' })).toHaveClass('bg-white/5');
+      expect(screen.getByRole('button', { name: 'Turbo' })).toHaveStyle({
+        backgroundColor: '#06b6d414',
+      });
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass('vacuum-lunar-cancel');
+    } finally {
+      act(() => useThemeStore.setState({ theme: previousTheme }));
+    }
+  });
+
   it('passes the assigned room as the eyebrow fallback room name', () => {
     entityRoomSelectorMock.mockClear();
 

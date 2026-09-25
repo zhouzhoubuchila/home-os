@@ -48,6 +48,7 @@ interface CardDialogSectionProps {
   helperTextClassName?: string;
   label?: ReactNode;
   labelClassName?: string;
+  themeOverride?: ThemeType;
 }
 
 interface CardDialogBodyProps {
@@ -63,6 +64,7 @@ interface CardDialogTabTriggerProps {
   onClick?: () => void;
   className?: string;
   style?: CSSProperties;
+  themeOverride?: ThemeType;
 }
 
 interface CardDialogChoicePillProps
@@ -74,6 +76,7 @@ interface CardDialogChoicePillProps
   onClick?: () => void;
   size?: 'default' | 'small' | 'compact';
   style?: CSSProperties;
+  themeOverride?: ThemeType;
 }
 
 interface CardDialogDoneFooterProps {
@@ -360,10 +363,13 @@ export const CardDialogSection = memo(function CardDialogSection({
   helperTextClassName,
   label,
   labelClassName,
+  themeOverride,
 }: CardDialogSectionProps) {
   const { theme } = useTheme();
-  const resolvedLabelClassName = theme === 'light' ? 'text-slate-950' : 'text-white';
-  const resolvedHelperTextClassName = theme === 'light' ? 'text-slate-700' : 'text-white/82';
+  const resolvedTheme = themeOverride ?? theme;
+  const resolvedLabelClassName = resolvedTheme === 'light' ? 'text-slate-950' : 'text-white';
+  const resolvedHelperTextClassName =
+    resolvedTheme === 'light' ? 'text-slate-700' : 'text-white/82';
 
   return (
     <div className={cn('mb-6 min-w-0 last:mb-0', className)}>
@@ -409,6 +415,7 @@ export const CardDialogTabTrigger = memo(function CardDialogTabTrigger({
   onClick,
   className,
   style,
+  themeOverride,
 }: CardDialogTabTriggerProps) {
   return (
     <InteractivePill
@@ -419,6 +426,7 @@ export const CardDialogTabTrigger = memo(function CardDialogTabTrigger({
       icon={icon}
       onClick={onClick}
       style={style}
+      themeOverride={themeOverride}
     >
       {children}
     </InteractivePill>
@@ -433,6 +441,7 @@ export const CardDialogChoicePill = memo(function CardDialogChoicePill({
   onClick,
   size = 'default',
   style,
+  themeOverride,
   ...props
 }: CardDialogChoicePillProps) {
   return (
@@ -443,6 +452,7 @@ export const CardDialogChoicePill = memo(function CardDialogChoicePill({
       className={cn('min-w-22', className)}
       size={size}
       style={style}
+      themeOverride={themeOverride}
       {...props}
     >
       {children}

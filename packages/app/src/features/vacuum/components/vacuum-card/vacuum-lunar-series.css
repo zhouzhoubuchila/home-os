@@ -59,6 +59,12 @@
   border-color: rgba(143, 216, 245, 0.35);
 }
 
+.vacuum-lunar-dialog .vacuum-lunar-cancel {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(190, 211, 255, 0.14) !important;
+  color: rgba(226, 234, 250, 0.78) !important;
+}
+
 .vacuum-lunar-dialog [data-state='active'],
 .vacuum-lunar-dialog [aria-selected='true'] {
   border-color: rgba(143, 216, 245, 0.5) !important;
