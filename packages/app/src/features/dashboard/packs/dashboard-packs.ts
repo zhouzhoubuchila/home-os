@@ -1,8 +1,14 @@
+import type { CardSize } from '@navet/app/components/shared/card-size-selector';
 import { defaultTranslate, type TranslateFn, type TranslationKey } from '@navet/app/i18n';
 import type { DeviceWithType } from '@navet/app/types/device.types';
 import type { HomeDashboardLayoutState } from '../hooks/use-home-dashboard-layout';
+import type { CustomCard } from '../stores/custom-cards-store';
 
-export type DashboardPackId = 'command-center' | 'security-monitor' | 'energy-wall';
+export type DashboardPackId =
+  | 'command-center'
+  | 'security-monitor'
+  | 'energy-wall'
+  | 'home-os-recommended';
 
 export interface DashboardPackDefinition {
   id: DashboardPackId;
@@ -17,6 +23,10 @@ interface DashboardPackSectionDefinition {
 }
 
 export const DASHBOARD_PACKS: DashboardPackDefinition[] = [
+  {
+    id: 'home-os-recommended',
+    labelKey: 'dashboard.packs.homeOsRecommended',
+  },
   {
     id: 'command-center',
     labelKey: 'dashboard.packs.commandCenter',
@@ -103,6 +113,8 @@ function energyDevices(devices: DeviceWithType[]) {
 
 function makeSectionDefinitions(packId: DashboardPackId): DashboardPackSectionDefinition[] {
   switch (packId) {
+    case 'home-os-recommended':
+      return [];
     case 'security-monitor':
       return [
         {
@@ -176,6 +188,89 @@ function makeSectionDefinitions(packId: DashboardPackId): DashboardPackSectionDe
         },
       ];
   }
+}
+
+const HOME_OS_RECOMMENDED_GROUPS = [
+  { id: 'daily', titleKey: 'dashboard.packs.section.daily', kinds: ['lunar', 'weather'] },
+  {
+    id: 'home',
+    titleKey: 'dashboard.packs.section.home',
+    kinds: ['household', 'lighting', 'device-health', 'alerts'],
+  },
+  {
+    id: 'infrastructure',
+    titleKey: 'dashboard.packs.section.infrastructure',
+    kinds: ['pve', 'home-assistant', 'router', 'internet'],
+  },
+  { id: 'utilities', titleKey: 'dashboard.packs.section.utilities', kinds: ['electricity', 'gas'] },
+] as const;
+
+/** Reorders only cards already selected on this dashboard; applying it is an explicit user action. */
+export function buildHomeOsRecommendedLayout(
+  current: HomeDashboardLayoutState,
+  customCards: readonly CustomCard[],
+  t: TranslateFn = defaultTranslate
+): { layout: HomeDashboardLayoutState; cardSizes: Record<string, CardSize> } {
+  const selectedIds = new Set(current.cardIds);
+  const byKind = new Map<string, string[]>();
+  let batteryId: string | undefined;
+  for (const card of customCards) {
+    if (!selectedIds.has(card.id)) continue;
+    if (card.type === 'battery' && !batteryId) batteryId = card.id;
+    if (card.type !== 'home-os' || typeof card.data?.kind !== 'string') continue;
+    const ids = byKind.get(card.data.kind) ?? [];
+    ids.push(card.id);
+    byKind.set(card.data.kind, ids);
+  }
+
+  const usedIds = new Set<string>();
+  const cardSizes: Record<string, CardSize> = {};
+  const grouped = HOME_OS_RECOMMENDED_GROUPS.map((group) => {
+    const cardIds = group.kinds.flatMap((kind) => byKind.get(kind) ?? []);
+    for (const id of cardIds) {
+      usedIds.add(id);
+      cardSizes[id] = 'extra-large';
+    }
+    return { id: group.id, titleKey: group.titleKey, cardIds };
+  });
+  if (batteryId && !usedIds.has(batteryId)) {
+    grouped[3].cardIds.push(batteryId);
+    usedIds.add(batteryId);
+    cardSizes[batteryId] = 'medium';
+  }
+  grouped[3].cardIds.push(...current.cardIds.filter((id) => !usedIds.has(id)));
+
+  const sections = grouped.flatMap((group) =>
+    group.cardIds.length
+      ? [
+          {
+            id: `dashboard-pack-home-os-recommended-${group.id}`,
+            title: t(group.titleKey),
+            x: 0,
+            y: 0,
+            w: 12,
+            h: 1,
+            span: 12,
+            cardIds: group.cardIds,
+          },
+        ]
+      : []
+  );
+  sections.forEach((section, index) => {
+    section.y = index;
+  });
+  return {
+    layout: {
+      mode: 'sectioned',
+      showHero: true,
+      cardIds: sections.flatMap((section) => section.cardIds),
+      sections: sections.map(({ cardIds: _cardIds, ...section }) => section),
+      cardSectionAssignments: Object.fromEntries(
+        sections.flatMap((section) => section.cardIds.map((id) => [id, section.id]))
+      ),
+    },
+    cardSizes,
+  };
 }
 
 export function buildDashboardPackLayout(

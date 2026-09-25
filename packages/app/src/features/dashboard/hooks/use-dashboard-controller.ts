@@ -60,6 +60,7 @@ import { resolveDashboardNavigationRooms } from '../dashboards/dashboard-collect
 import { useDashboardCollectionStore } from '../dashboards/dashboard-collection-store';
 import {
   buildDashboardPackLayout,
+  buildHomeOsRecommendedLayout,
   DASHBOARD_PACKS,
   type DashboardPackId,
 } from '../packs/dashboard-packs';
@@ -553,11 +554,13 @@ export function useDashboardController(): DashboardController {
   const onboarding = useOnboardingController({ allEntityIds, changeRoom, resetDashboard });
   const handleApplyDashboardPack = useCallback(
     (packId: DashboardPackId) => {
-      const nextLayout = buildDashboardPackLayout(
-        packId,
-        availableDeviceMapRef.current.values(),
-        t
-      );
+      const recommended =
+        packId === 'home-os-recommended'
+          ? buildHomeOsRecommendedLayout(homeLayoutController.layout, activeHomeCustomCards, t)
+          : null;
+      const nextLayout =
+        recommended?.layout ??
+        buildDashboardPackLayout(packId, availableDeviceMapRef.current.values(), t);
       const packLabelKey =
         DASHBOARD_PACKS.find((pack) => pack.id === packId)?.labelKey ?? 'dashboard.packs.title';
 
@@ -567,9 +570,12 @@ export function useDashboardController(): DashboardController {
       }
 
       applyHomeLayout(nextLayout);
+      for (const [cardId, size] of Object.entries(recommended?.cardSizes ?? {})) {
+        updateActiveCardSize(cardId, size);
+      }
       toast.success(t('dashboard.feedback.packApplied', { name: t(packLabelKey) }));
     },
-    [applyHomeLayout, t]
+    [activeHomeCustomCards, applyHomeLayout, homeLayoutController.layout, t, updateActiveCardSize]
   );
 
   const {

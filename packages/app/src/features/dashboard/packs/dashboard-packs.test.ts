@@ -1,6 +1,8 @@
 import type { DeviceWithType } from '@navet/app/types/device.types';
 import { describe, expect, it } from 'vitest';
-import { buildDashboardPackLayout } from './dashboard-packs';
+import type { HomeDashboardLayoutState } from '../hooks/use-home-dashboard-layout';
+import type { CustomCard } from '../stores/custom-cards-store';
+import { buildDashboardPackLayout, buildHomeOsRecommendedLayout } from './dashboard-packs';
 
 function device(overrides: Partial<DeviceWithType> & Pick<DeviceWithType, 'id' | 'type'>) {
   return {
@@ -12,6 +14,105 @@ function device(overrides: Partial<DeviceWithType> & Pick<DeviceWithType, 'id' |
 }
 
 describe('dashboard packs', () => {
+  it('groups existing Home OS cards into paired rows and keeps extra cards', () => {
+    const kinds = [
+      'internet',
+      'lunar',
+      'alerts',
+      'weather',
+      'router',
+      'device-health',
+      'lighting',
+      'household',
+      'pve',
+      'home-assistant',
+      'gas',
+      'electricity',
+    ];
+    const cards = kinds.map((kind) => ({
+      id: kind,
+      type: 'home-os',
+      size: 'medium',
+      room: 'All',
+      data: { kind },
+      createdAt: 0,
+    })) as CustomCard[];
+    cards.push({ id: 'battery', type: 'battery', size: 'large', room: 'All', createdAt: 0 });
+    const original: HomeDashboardLayoutState = {
+      mode: 'flow',
+      showHero: false,
+      cardIds: [
+        'internet',
+        'battery',
+        'lunar',
+        'extra',
+        ...kinds.filter((kind) => kind !== 'internet' && kind !== 'lunar'),
+      ],
+      sections: [],
+      cardSectionAssignments: {},
+    };
+    const { layout, cardSizes } = buildHomeOsRecommendedLayout(original, cards);
+    expect(original.mode).toBe('flow');
+    expect(original.cardIds[0]).toBe('internet');
+    expect(layout.mode).toBe('sectioned');
+    expect(layout.cardIds).toEqual([
+      'lunar',
+      'weather',
+      'household',
+      'lighting',
+      'device-health',
+      'alerts',
+      'pve',
+      'home-assistant',
+      'router',
+      'internet',
+      'electricity',
+      'gas',
+      'battery',
+      'extra',
+    ]);
+    expect(layout.sections.map((section) => section.title)).toEqual([
+      'Daily',
+      'Home',
+      'Infrastructure',
+      'Energy & Utilities',
+    ]);
+    expect(layout.sections.every((section) => section.w === 12)).toBe(true);
+    expect(cardSizes.lunar).toBe('extra-large');
+    expect(cardSizes.battery).toBe('medium');
+    expect(cardSizes.extra).toBeUndefined();
+    expect(new Set(layout.cardIds).size).toBe(layout.cardIds.length);
+  });
+
+  it('does not add unselected cards to the recommended layout', () => {
+    const current: HomeDashboardLayoutState = {
+      mode: 'flow',
+      showHero: false,
+      cardIds: ['weather'],
+      sections: [],
+      cardSectionAssignments: {},
+    };
+    const cards = [
+      {
+        id: 'weather',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'weather' },
+        createdAt: 0,
+      },
+      {
+        id: 'lunar',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'lunar' },
+        createdAt: 0,
+      },
+    ] as CustomCard[];
+    expect(buildHomeOsRecommendedLayout(current, cards).layout.cardIds).toEqual(['weather']);
+  });
+
   it('builds a command center around attention, comfort, household, and action cards', () => {
     const layout = buildDashboardPackLayout('command-center', [
       device({
