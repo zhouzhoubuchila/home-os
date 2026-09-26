@@ -44,6 +44,7 @@ import {
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 import { DeviceHealthHomeOsCard } from './device-health-home-os-card';
+import { FamilyCalendarHomeOsCard } from './family-calendar-home-os-card';
 import { HomeAssistantHomeOsCard } from './home-assistant-home-os-card';
 import { HouseholdPresenceCard } from './household-presence-card';
 import { MoonCard } from './lunar/moon-card';
@@ -53,6 +54,7 @@ import {
 } from './lunar/moon-card-model';
 import { NetworkHomeOsCard } from './network-home-os-card';
 import { PveHomeOsCard, type PveHomeOsCardData } from './pve-home-os-card';
+import { SceneCoreHomeOsCard } from './scene-core-home-os-card';
 import './lighting-lunar-card.css';
 
 export interface HomeOsWidgetData extends PveHomeOsCardData {
@@ -60,6 +62,7 @@ export interface HomeOsWidgetData extends PveHomeOsCardData {
 }
 
 interface HomeOsWidgetProps {
+  cardId?: string;
   size: CardSize;
   data?: HomeOsWidgetData;
   isEditMode: boolean;
@@ -336,43 +339,6 @@ function AlertsCard({
   );
 }
 
-function ModesCard({
-  size,
-  entities,
-  isEditMode,
-  copy,
-}: {
-  size: CardSize;
-  entities: ResolvedSemanticEntity[];
-  isEditMode: boolean;
-  copy: ReturnType<typeof getHomeOsCopy>;
-}) {
-  const modes = entities.filter((entity) => !entity.ignored && entity.roles.includes('home.mode'));
-  return (
-    <BaseCard size={size} title={copy.homeModes} headerLeading={<Sparkles className="h-5 w-5" />}>
-      <div className="grid h-full content-start gap-2">
-        {modes.slice(0, sizeLimit(size)).map((mode) => (
-          <Button
-            key={mode.entity.canonicalId}
-            size="small"
-            variant="secondary"
-            disabled={isEditMode || mode.controlPolicy === 'readonly'}
-            onClick={() =>
-              void dispatchEntityCommand(
-                { type: 'turn_on', entityId: mode.entity.externalId },
-                mode.entity.providerId
-              ).catch(() => toast.error(`Could not activate ${mode.displayName}`))
-            }
-          >
-            {mode.displayName}
-          </Button>
-        ))}
-        {!modes.length ? <p className="text-sm text-current/55">{copy.noModes}</p> : null}
-      </div>
-    </BaseCard>
-  );
-}
-
 const ICONS: Record<HomeOsCardKind, typeof Server> = {
   household: Users,
   lighting: Lightbulb,
@@ -393,6 +359,7 @@ const ICONS: Record<HomeOsCardKind, typeof Server> = {
 };
 
 export function HomeOsWidget({
+  cardId,
   size,
   data,
   isEditMode,
@@ -524,7 +491,23 @@ export function HomeOsWidget({
       />
     );
   if (definition.kind === 'modes')
-    return <ModesCard size={size} entities={entities} isEditMode={isEditMode} copy={copy} />;
+    return (
+      <SceneCoreHomeOsCard
+        size={size}
+        entities={entities}
+        isEditMode={isEditMode}
+        language={language}
+        title={copy.homeModes}
+      />
+    );
+  if (definition.kind === 'calendar')
+    return (
+      <FamilyCalendarHomeOsCard
+        cardId={cardId ?? 'home-os:family-calendar'}
+        size={size}
+        isEditMode={isEditMode}
+      />
+    );
   if (definition.kind === 'lunar')
     return withDetail(
       <MoonCard

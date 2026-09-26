@@ -327,6 +327,7 @@ export function WidgetCard({
     case 'home-os':
       widgetContent = (
         <HomeOsWidget
+          cardId={card.id}
           size={card.size}
           data={
             card.data as import('@navet/app/features/home-os/components/cards/home-os-widget').HomeOsWidgetData

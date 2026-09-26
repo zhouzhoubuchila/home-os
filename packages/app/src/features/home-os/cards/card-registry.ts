@@ -149,7 +149,9 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
     'calendar',
     { en: 'Home OS · Family calendar', zh: 'Home OS · 家庭日历' },
     { en: 'Upcoming state from family calendars.', zh: '家庭日历的近期状态。' },
-    ['family.calendar']
+    ['family.calendar'],
+    'medium',
+    null
   ),
   card(
     'modes',

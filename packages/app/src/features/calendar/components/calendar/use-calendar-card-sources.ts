@@ -22,8 +22,23 @@ const SOURCE_COLOR_CLASSES = [
 ] as const;
 const CALENDAR_TIME_WINDOW_REFRESH_MS = 60 * 1000;
 
-export function useCalendarCardSources(cardId?: string, fallbackEvents: CalendarEvent[] = []) {
+interface CalendarCardSourceOptions {
+  selectAllByDefault?: boolean;
+  retainLastOnMissing?: boolean;
+  deduplicateEvents?: boolean;
+}
+
+export function useCalendarCardSources(
+  cardId?: string,
+  fallbackEvents: CalendarEvent[] = [],
+  options: CalendarCardSourceOptions = {}
+) {
   const { t } = useI18n();
+  const {
+    selectAllByDefault = false,
+    retainLastOnMissing = true,
+    deduplicateEvents = false,
+  } = options;
   const calendars = useProviderCalendarDevicesCollection();
   const [timeWindowTick, setTimeWindowTick] = useState(() => Date.now());
   const [calendarSources, setCalendarSources] = usePersistedState<PersistedCalendarSources>(
@@ -67,8 +82,12 @@ export function useCalendarCardSources(cardId?: string, fallbackEvents: Calendar
     }
 
     const stored = calendarSources[cardId];
-    if (Array.isArray(stored) && stored.length > 0) {
+    if (Array.isArray(stored) && (stored.length > 0 || selectAllByDefault)) {
       return stored;
+    }
+
+    if (selectAllByDefault) {
+      return [...new Set(availableCalendars.map((calendar) => calendar.id))];
     }
 
     const aggregateCard = calendars.find((calendar) => calendar.id === cardId);
@@ -77,7 +96,7 @@ export function useCalendarCardSources(cardId?: string, fallbackEvents: Calendar
     }
 
     return [cardId];
-  }, [calendarSources, calendars, cardId]);
+  }, [availableCalendars, calendarSources, calendars, cardId, selectAllByDefault]);
   const viewMode = useMemo<CalendarViewMode>(() => {
     if (!cardId) {
       return 'week';
@@ -107,20 +126,32 @@ export function useCalendarCardSources(cardId?: string, fallbackEvents: Calendar
         return fallbackEvents;
       }
 
-      return lastResolvedSelectedEventsRef.current;
+      return retainLastOnMissing ? lastResolvedSelectedEventsRef.current : [];
     }
 
     const now = new Date(timeWindowTick);
     const endDate = new Date(now);
     endDate.setDate(now.getDate() + (viewMode === 'week' ? 7 : 31));
 
-    return matchedCalendars
-      .flatMap((calendar) =>
-        calendar.events.map((event) => ({
-          ...event,
-          color: calendar.color,
-        }))
-      )
+    const events = matchedCalendars.flatMap((calendar) =>
+      calendar.events.map((event) => ({
+        ...event,
+        color: calendar.color,
+      }))
+    );
+    const uniqueEvents = deduplicateEvents
+      ? events.filter(
+          (event, index, all) =>
+            all.findIndex(
+              (candidate) =>
+                candidate.id === event.id &&
+                candidate.sourceId === event.sourceId &&
+                candidate.sortKey === event.sortKey
+            ) === index
+        )
+      : events;
+
+    return uniqueEvents
       .filter((event) => isCalendarEventVisibleInWindow(event, now, endDate))
       .sort((left, right) => {
         const leftKey = getCalendarEventSortValue(left);
@@ -128,7 +159,16 @@ export function useCalendarCardSources(cardId?: string, fallbackEvents: Calendar
         return leftKey.localeCompare(rightKey);
       })
       .slice(0, viewMode === 'week' ? 7 : 12);
-  }, [availableCalendars, cardId, fallbackEvents, selectedCalendarIds, timeWindowTick, viewMode]);
+  }, [
+    availableCalendars,
+    cardId,
+    deduplicateEvents,
+    fallbackEvents,
+    retainLastOnMissing,
+    selectedCalendarIds,
+    timeWindowTick,
+    viewMode,
+  ]);
 
   useEffect(() => {
     if (selectedEvents.length > 0 || fallbackEvents.length === 0) {

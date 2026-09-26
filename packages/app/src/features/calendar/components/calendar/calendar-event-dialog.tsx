@@ -99,7 +99,16 @@ export function CalendarEventDialog({
         </div>
 
         <div className="mt-6 flex justify-end">
-          <Button variant="soft" size="small" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="soft"
+            size="small"
+            className={
+              theme === 'dark'
+                ? '!border-white/15 !bg-white/8 !text-white hover:!bg-white/12'
+                : undefined
+            }
+            onClick={() => onOpenChange(false)}
+          >
             {t('common.done')}
           </Button>
         </div>
