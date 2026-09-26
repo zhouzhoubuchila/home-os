@@ -1,9 +1,9 @@
 .household-presence-card {
   --presence-accent: 111, 212, 225;
   --presence-core: 164, 235, 230;
-  color: rgba(245, 248, 255, 0.94);
-  background: radial-gradient(circle at 79% 43%, rgba(43, 103, 123, 0.16), transparent 43%), linear-gradient(132deg, #080d21, #0e1933 62%, #0a1228);
-  border-color: rgba(190, 211, 255, 0.12);
+  color: var(--home-os-lunar-text, rgba(245, 248, 255, 0.96));
+  background: radial-gradient(circle at 79% 43%, rgba(43, 103, 123, 0.16), transparent 43%), linear-gradient(132deg, var(--home-os-lunar-bg-1, #080d21), #0e1933 62%, #0a1228);
+  border-color: var(--home-os-lunar-border, rgba(190, 211, 255, 0.14));
   transition: border-color 260ms ease;
 }
 

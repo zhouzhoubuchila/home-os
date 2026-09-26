@@ -5,7 +5,7 @@ import {
   getAppBuildChannelLabel,
 } from '@navet/app/constants/app-build-metadata';
 import { APP_VERSION } from '@navet/app/constants/app-version';
-import { HOME_OS_VERSION } from '@navet/app/features/home-os/core/version';
+import { HOME_OS_BUILD_METADATA, HOME_OS_VERSION } from '@navet/app/features/home-os/core/version';
 import { useI18n } from '@navet/app/hooks';
 import { ExternalLink, FileText, Info, Scale } from 'lucide-react';
 import type { ReactNode, SVGProps } from 'react';
@@ -145,8 +145,8 @@ export function SettingsProjectSection({ controller }: SettingsProjectSectionPro
               label={language === 'zh' ? 'Home OS 构建信息' : 'Home OS build'}
               value={
                 <span className="font-mono text-[0.82rem]">
-                  {APP_BUILD_METADATA.gitShaShort} · {buildDate} ·{' '}
-                  {APP_BUILD_METADATA.releaseChannel}
+                  {HOME_OS_BUILD_METADATA.gitShaShort} · {buildDate} ·{' '}
+                  {HOME_OS_BUILD_METADATA.releaseChannel}
                 </span>
               }
               styles={styles}

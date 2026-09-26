@@ -130,7 +130,7 @@ describe('Home OS V2.0.3.3 semantic compatibility', () => {
     expect(formatHomeOsValueWithUnit(23, 'celsius')).toBe('23°C');
     expect(formatHomeOsValueWithUnit(12.6, 'km/h')).toBe('12.6 km/h');
     expect(formatHomeOsValueWithUnit(1016.6, 'hPa')).toBe('1016.6 hPa');
-    expect(formatHomeOsWeatherCondition('clear-night', 'zh')).toBe('晴夜');
+    expect(formatHomeOsWeatherCondition('clear-night', 'zh')).toBe('晴朗夜间');
   });
 
   it('distinguishes camera media failure modes without routing camera entities through Media Browser', () => {

@@ -1,8 +1,8 @@
 .scene-core-card,
 .time-arc-card {
-  color: rgba(245, 248, 255, 0.96);
-  border-color: rgba(190, 211, 255, 0.13) !important;
-  background: linear-gradient(140deg, #050816, #081126 56%, #0d1832) !important;
+  color: var(--home-os-lunar-text, rgba(245, 248, 255, 0.96));
+  border-color: var(--home-os-lunar-border, rgba(190, 211, 255, 0.14)) !important;
+  background: linear-gradient(140deg, var(--home-os-lunar-bg-0, #050816), #081126 56%, var(--home-os-lunar-bg-2, #0d1630)) !important;
   isolation: isolate;
 }
 

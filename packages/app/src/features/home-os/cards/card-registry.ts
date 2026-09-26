@@ -133,12 +133,18 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
     { en: 'Gas usage and account summary.', zh: '燃气用量与账户摘要。' },
     ['energy.gas.']
   ),
-  card(
-    'weather',
-    { en: 'Home OS · Weather', zh: 'Home OS · 天气增强' },
-    { en: 'Current weather from the configured provider.', zh: '来自已配置 Provider 的实时天气。' },
-    ['weather.']
-  ),
+  {
+    ...card(
+      'weather',
+      { en: 'Home OS · Weather', zh: 'Home OS · 天气增强' },
+      {
+        en: 'Current weather from the configured provider.',
+        zh: '来自已配置 Provider 的实时天气。',
+      },
+      ['weather.']
+    ),
+    supportedSizes: ['small', 'medium', 'large', 'extra-large'],
+  },
   card(
     'air-quality',
     { en: 'Home OS · Air quality', zh: 'Home OS · 空气质量' },
@@ -170,12 +176,15 @@ export const HOME_OS_CARD_REGISTRY: readonly HomeOsCardDefinition[] = [
     { en: 'Vacuum and cleaning status.', zh: '扫地机和清洁设备状态。' },
     ['home.cleaning']
   ),
-  card(
-    'lunar',
-    { en: 'Home OS · Lunar calendar', zh: 'Home OS · 农历节气' },
-    { en: 'Local lunar date, solar term, and daily guidance.', zh: '本地计算农历、节气与宜忌。' },
-    []
-  ),
+  {
+    ...card(
+      'lunar',
+      { en: 'Home OS · Lunar calendar', zh: 'Home OS · 农历节气' },
+      { en: 'Local lunar date, solar term, and daily guidance.', zh: '本地计算农历、节气与宜忌。' },
+      []
+    ),
+    supportedSizes: ['small', 'medium', 'large', 'extra-large'],
+  },
 ];
 
 export const getHomeOsCardDefinition = (kind: unknown) =>

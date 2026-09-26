@@ -9,13 +9,19 @@ import {
 } from '@navet/app/constants/app-build-metadata';
 import { APP_VERSION } from '@navet/app/constants/app-version';
 import { DASHBOARD_CONFIG_VERSION } from '@navet/app/constants/dashboard-config-version';
-import { HOME_OS_VERSION } from '@navet/app/features/home-os/core/version';
+import { HOME_OS_BUILD_METADATA, HOME_OS_VERSION } from '@navet/app/features/home-os/core/version';
 import { describe, expect, it } from 'vitest';
 
 describe('APP_BUILD_METADATA', () => {
   it('exposes the Home OS product version independently from Navet', () => {
-    expect(HOME_OS_VERSION).toBe('2.0.4');
+    expect(HOME_OS_VERSION).toBe('2.0.5');
     expect(HOME_OS_VERSION).not.toBe(APP_VERSION);
+    expect(HOME_OS_BUILD_METADATA).toMatchObject({
+      productVersion: '2.0.5',
+      gitShaShort: APP_BUILD_METADATA.gitShaShort,
+      buildDate: APP_BUILD_METADATA.buildDate,
+      releaseChannel: APP_BUILD_METADATA.releaseChannel,
+    });
   });
 
   it('exposes the injected build metadata constants', () => {

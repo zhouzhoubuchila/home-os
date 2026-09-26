@@ -1,5 +1,13 @@
 # Changelog
 
+## Home OS 2.0.5 - 2026-09-27
+
+- Reorganized the opt-in Home OS Recommended homepage around Lunar and Weather heroes, household controls, home operation, infrastructure, and utilities.
+- Added Calendar, Modes, Cleaning, Media Stack, and Battery Overview to the recommended layout; removed Device Health from the default homepage while keeping it available for manual addition and diagnostics. Attention Center remains the homepage action entry.
+- Added the lightweight Home OS Status Rail using existing presence, lighting, attention, Internet, and battery data without inventing telemetry.
+- Unified Lunar Series surface tokens and introduced three motion tiers, including low-power and reduced-motion behavior.
+- Refined Desktop, Tablet, and Mobile grid behavior and section presentation without replacing Navet's editor, persistence, or Home Assistant provider.
+
 ## 0.15.1 - 2026-08-31
 
 ## New features

@@ -1,6 +1,8 @@
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
+import { SummaryBar } from '@navet/app/features/sensors/components/info-badge-strip';
 import { useThemeStore } from '@navet/app/stores/theme-store';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Battery, House, Lightbulb, TriangleAlert, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { buildHomeOverviewCollections } from '../components/home-dashboard-overview.shared';
 import { HomePresentation } from '../components/home-dashboard-overview-presentation';
@@ -12,7 +14,10 @@ const kinds = [
   'lunar',
   'weather',
   'household',
+  'modes',
   'lighting',
+  'calendar',
+  'cleaning',
   'device-health',
   'alerts',
   'pve',
@@ -32,6 +37,7 @@ const cards: CustomCard[] = [
     createdAt: 0,
   })),
   { id: 'fixture-battery', type: 'battery', size: 'medium', room: 'All', createdAt: 0 },
+  { id: 'fixture-media', type: 'media-stack', size: 'medium', room: 'All', createdAt: 0 },
 ];
 const original: HomeDashboardLayoutState = {
   mode: 'flow',
@@ -47,12 +53,20 @@ const collections = buildHomeOverviewCollections({
   homeLayout: recommended.layout,
 });
 
-function RecommendedLayoutFixture() {
-  const [gridCols, setGridCols] = useState(() => (window.innerWidth < 768 ? 2 : 6));
+function RecommendedLayoutFixture({
+  scenario = 'normal',
+  motionPolicy = 'normal',
+}: {
+  scenario?: 'normal' | 'unavailable' | 'warning';
+  motionPolicy?: 'normal' | 'low' | 'off';
+}) {
+  const columns = () =>
+    window.innerWidth < 640 ? 2 : window.innerWidth < 1024 ? 4 : window.innerWidth < 1600 ? 6 : 8;
+  const [gridCols, setGridCols] = useState(columns);
   useEffect(() => {
     const previousTheme = useThemeStore.getState().theme;
     useThemeStore.getState().setTheme('dark');
-    const onResize = () => setGridCols(window.innerWidth < 768 ? 2 : 6);
+    const onResize = () => setGridCols(columns());
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -60,10 +74,56 @@ function RecommendedLayoutFixture() {
     };
   }, []);
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-6 text-slate-100 md:px-8">
+    <main
+      className="home-os-v3-surface min-h-screen bg-slate-950 px-5 py-6 text-slate-100 md:px-8"
+      data-home-os-motion-policy={motionPolicy}
+      data-qa-scenario={scenario}
+    >
       <p className="mb-5 text-xs text-slate-400">
-        Layout QA fixture · no live Home Assistant telemetry
+        Layout QA fixture · {scenario} · no live Home Assistant telemetry
       </p>
+      <div className="mb-3">
+        <SummaryBar
+          items={[
+            {
+              id: 'household',
+              title: 'Household',
+              value: scenario === 'unavailable' ? 'Unknown' : '1 / 2 home',
+              icon: House,
+              iconColor: '#a5b4fc',
+            },
+            {
+              id: 'lighting',
+              title: 'Lighting',
+              value: '2 on',
+              icon: Lightbulb,
+              iconColor: '#f5d8ab',
+            },
+            {
+              id: 'alerts',
+              title: 'Attention',
+              value: scenario === 'warning' ? '2 need attention' : 'All clear',
+              icon: TriangleAlert,
+              iconColor: '#f3bd83',
+              tone: scenario === 'warning' ? 'warning' : 'success',
+            },
+            {
+              id: 'internet',
+              title: 'Internet',
+              value: scenario === 'unavailable' ? 'Unknown' : 'Online',
+              icon: Wifi,
+              iconColor: '#8fd8f5',
+            },
+            {
+              id: 'battery',
+              title: 'Battery',
+              value: scenario === 'warning' ? '1 low' : '0 low',
+              icon: Battery,
+              iconColor: '#a8c9f5',
+            },
+          ]}
+        />
+      </div>
       <HomePresentation
         flowCards={collections.flowCards}
         sections={collections.sectionCards}
@@ -91,4 +151,20 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const FullHome: Story = {};
+export const Normal: Story = {};
+export const Unavailable: Story = { args: { scenario: 'unavailable' } };
+export const Warning: Story = { args: { scenario: 'warning' } };
+export const LowEffects: Story = { args: { motionPolicy: 'low' } };
+export const ReducedMotion: Story = { args: { motionPolicy: 'off' } };
+export const TabletLandscape: Story = {
+  globals: { viewport: { value: 'ipadPro', isRotated: true } },
+};
+export const TabletPortrait: Story = {
+  globals: { viewport: { value: 'ipadPro', isRotated: false } },
+};
+export const Mobile: Story = {
+  globals: { viewport: { value: 'iphone14', isRotated: false } },
+};
+export const Desktop: Story = {
+  globals: { viewport: { value: 'desktop1080p', isRotated: false } },
+};

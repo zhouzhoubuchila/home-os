@@ -11,7 +11,7 @@ describe('Home OS card registry', () => {
         expect.objectContaining({
           id: definition.templateId,
           cardType: 'home-os',
-          supportedSizes: ['small', 'medium', 'large'],
+          supportedSizes: definition.supportedSizes,
           initialData: { kind: definition.kind },
         })
       );

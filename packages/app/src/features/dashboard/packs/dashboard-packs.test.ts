@@ -10,7 +10,9 @@ import type { CustomCard } from '../stores/custom-cards-store';
 import {
   buildDashboardPackLayout,
   buildHomeOsRecommendedLayout,
+  getHomeOsRecommendedHeroOffset,
   getHomeOsRecommendedSectionGridCols,
+  isHomeOsRecommendedSingleColumnHero,
 } from './dashboard-packs';
 
 function device(overrides: Partial<DeviceWithType> & Pick<DeviceWithType, 'id' | 'type'>) {
@@ -33,6 +35,9 @@ describe('dashboard packs', () => {
       'device-health',
       'lighting',
       'household',
+      'modes',
+      'calendar',
+      'cleaning',
       'pve',
       'home-assistant',
       'gas',
@@ -47,6 +52,7 @@ describe('dashboard packs', () => {
       createdAt: 0,
     })) as CustomCard[];
     cards.push({ id: 'battery', type: 'battery', size: 'large', room: 'All', createdAt: 0 });
+    cards.push({ id: 'media', type: 'media-stack', size: 'small', room: 'All', createdAt: 0 });
     const original: HomeDashboardLayoutState = {
       mode: 'flow',
       showHero: false,
@@ -68,16 +74,19 @@ describe('dashboard packs', () => {
       'lunar',
       'weather',
       'household',
+      'modes',
       'lighting',
-      'device-health',
+      'calendar',
       'alerts',
-      'pve',
-      'home-assistant',
-      'router',
+      'media',
+      'cleaning',
+      'battery',
       'internet',
+      'router',
+      'home-assistant',
+      'pve',
       'electricity',
       'gas',
-      'battery',
       'extra',
     ]);
     expect(layout.sections.map((section) => section.title)).toEqual([
@@ -95,10 +104,14 @@ describe('dashboard packs', () => {
     ]);
     expect(cardSizes.lunar).toBe('extra-large');
     expect(cardSizes.weather).toBe('extra-large');
-    for (const kind of kinds.filter((kind) => kind !== 'lunar' && kind !== 'weather')) {
+    for (const kind of kinds.filter(
+      (kind) => !['lunar', 'weather', 'device-health'].includes(kind)
+    )) {
       expect(cardSizes[kind]).toBe('medium');
     }
     expect(cardSizes.battery).toBe('medium');
+    expect(cardSizes.media).toBe('medium');
+    expect(cardSizes['device-health']).toBeUndefined();
     expect(cardSizes.extra).toBeUndefined();
     expect(new Set(layout.cardIds).size).toBe(layout.cardIds.length);
 
@@ -109,9 +122,9 @@ describe('dashboard packs', () => {
     expect(topology.flowCards).toEqual([]);
     expect(topology.sectionCards.map((section) => section.cardIds)).toEqual([
       ['lunar', 'weather'],
-      ['household', 'lighting', 'device-health', 'alerts'],
-      ['pve', 'home-assistant', 'router', 'internet'],
-      ['electricity', 'gas', 'battery', 'extra'],
+      ['household', 'modes', 'lighting', 'calendar', 'alerts', 'media', 'cleaning', 'battery'],
+      ['internet', 'router', 'home-assistant', 'pve'],
+      ['electricity', 'gas', 'extra'],
     ]);
     expect(
       buildSectionStacks(topology.sectionCards)
@@ -125,8 +138,15 @@ describe('dashboard packs', () => {
     const utilities = topology.sectionCards[3];
     expect(getHomeOsRecommendedSectionGridCols(daily.id, 6)).toBe(6);
     for (const section of [home, infrastructure, utilities]) {
-      expect(getHomeOsRecommendedSectionGridCols(section.id, 6)).toBe(4);
+      expect(getHomeOsRecommendedSectionGridCols(section.id, 6)).toBe(6);
+      expect(getHomeOsRecommendedSectionGridCols(section.id, 12)).toBe(8);
     }
+    expect(getHomeOsRecommendedSectionGridCols('custom-section', 12)).toBe(12);
+    expect(getHomeOsRecommendedHeroOffset(daily.id, daily.cardIds, cardSizes, 16)).toBe(2);
+    expect(getHomeOsRecommendedHeroOffset(daily.id, daily.cardIds, cardSizes, 4)).toBe(0);
+    expect(isHomeOsRecommendedSingleColumnHero(daily.id, 8)).toBe(true);
+    expect(isHomeOsRecommendedSingleColumnHero(daily.id, 12)).toBe(false);
+    expect(isHomeOsRecommendedSingleColumnHero('custom-section', 8)).toBe(false);
     const dailyPlacements = packDashboardGridItems(
       daily.cardIds.map((id) => ({ id, size: cardSizes[id] })),
       12
@@ -135,32 +155,36 @@ describe('dashboard packs', () => {
     expect(dailyPlacements.get('weather')).toEqual({ column: 7, row: 1 });
     const homePlacements = packDashboardGridItems(
       home.cardIds.map((id) => ({ id, size: cardSizes[id] })),
-      8
+      16
     );
     expect(home.cardIds.map((id) => homePlacements.get(id))).toEqual([
       { column: 1, row: 1 },
       { column: 5, row: 1 },
+      { column: 9, row: 1 },
+      { column: 13, row: 1 },
       { column: 1, row: 3 },
       { column: 5, row: 3 },
+      { column: 9, row: 3 },
+      { column: 13, row: 3 },
     ]);
     const infraPlacements = packDashboardGridItems(
       infrastructure.cardIds.map((id) => ({ id, size: cardSizes[id] })),
-      8
+      16
     );
     expect(infrastructure.cardIds.map((id) => infraPlacements.get(id))).toEqual([
       { column: 1, row: 1 },
       { column: 5, row: 1 },
-      { column: 1, row: 3 },
-      { column: 5, row: 3 },
+      { column: 9, row: 1 },
+      { column: 13, row: 1 },
     ]);
     const utilityPlacements = packDashboardGridItems(
-      utilities.cardIds.slice(0, 3).map((id) => ({ id, size: cardSizes[id] })),
-      8
+      utilities.cardIds.slice(0, 2).map((id) => ({ id, size: cardSizes[id] })),
+      12
     );
-    expect(utilityPlacements.get('battery')).toEqual({ column: 1, row: 3 });
+    expect(utilityPlacements.get('electricity')).toEqual({ column: 1, row: 1 });
   });
 
-  it('does not add unselected cards to the recommended layout', () => {
+  it('only adds existing cards when the user explicitly applies the recommendation', () => {
     const current: HomeDashboardLayoutState = {
       mode: 'flow',
       showHero: false,
@@ -186,7 +210,11 @@ describe('dashboard packs', () => {
         createdAt: 0,
       },
     ] as CustomCard[];
-    expect(buildHomeOsRecommendedLayout(current, cards).layout.cardIds).toEqual(['weather']);
+    expect(buildHomeOsRecommendedLayout(current, cards).layout.cardIds).toEqual([
+      'lunar',
+      'weather',
+    ]);
+    expect(current.cardIds).toEqual(['weather']);
   });
 
   it('builds a command center around attention, comfort, household, and action cards', () => {

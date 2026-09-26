@@ -195,12 +195,21 @@ const HOME_OS_RECOMMENDED_GROUPS = [
   {
     id: 'home',
     titleKey: 'dashboard.packs.section.home',
-    kinds: ['household', 'lighting', 'device-health', 'alerts'],
+    kinds: [
+      'household',
+      'modes',
+      'lighting',
+      'calendar',
+      'alerts',
+      'media-stack',
+      'cleaning',
+      'battery',
+    ],
   },
   {
     id: 'infrastructure',
     titleKey: 'dashboard.packs.section.infrastructure',
-    kinds: ['pve', 'home-assistant', 'router', 'internet'],
+    kinds: ['internet', 'router', 'home-assistant', 'pve'],
   },
   { id: 'utilities', titleKey: 'dashboard.packs.section.utilities', kinds: ['electricity', 'gas'] },
 ] as const;
@@ -209,9 +218,13 @@ const HOME_OS_RECOMMENDED_SIZES: Record<string, CardSize> = {
   lunar: 'extra-large',
   weather: 'extra-large',
   household: 'medium',
+  modes: 'medium',
   lighting: 'medium',
-  'device-health': 'medium',
+  calendar: 'medium',
   alerts: 'medium',
+  'media-stack': 'medium',
+  cleaning: 'medium',
+  battery: 'medium',
   pve: 'medium',
   'home-assistant': 'medium',
   router: 'medium',
@@ -222,30 +235,58 @@ const HOME_OS_RECOMMENDED_SIZES: Record<string, CardSize> = {
 
 const HOME_OS_RECOMMENDED_SECTION_PREFIX = 'dashboard-pack-home-os-recommended-';
 
-/** Use two medium cards per row inside the full-width recommended sections. */
+/** Use the normal Navet grid up to eight columns; avoid unbounded card stretching on ultra-wide screens. */
 export function getHomeOsRecommendedSectionGridCols(sectionId: string, availableCols: number) {
-  if (!sectionId.startsWith(HOME_OS_RECOMMENDED_SECTION_PREFIX) || sectionId.endsWith('-daily')) {
-    return availableCols;
-  }
-  return Math.min(availableCols, 4);
+  return isHomeOsRecommendedSection(sectionId) ? Math.min(availableCols, 8) : availableCols;
 }
 
-/** Reorders only cards already selected on this dashboard; applying it is an explicit user action. */
+export function isHomeOsRecommendedSection(sectionId: string) {
+  return sectionId.startsWith(HOME_OS_RECOMMENDED_SECTION_PREFIX);
+}
+
+/** The runtime reports CSS columns: two Extra Large cards need twelve to share a row. */
+export function isHomeOsRecommendedSingleColumnHero(
+  sectionId: string | undefined,
+  renderedGridCols: number
+) {
+  return (
+    !!sectionId?.endsWith('-daily') &&
+    isHomeOsRecommendedSection(sectionId) &&
+    renderedGridCols < 12
+  );
+}
+
+/** Center the pair of 3-column Hero cards without changing their Navet card footprints. */
+export function getHomeOsRecommendedHeroOffset(
+  sectionId: string | undefined,
+  cardIds: readonly string[],
+  cardSizes: Readonly<Record<string, CardSize>>,
+  renderedGridCols: number
+) {
+  if (
+    !sectionId?.endsWith('-daily') ||
+    !isHomeOsRecommendedSection(sectionId) ||
+    cardIds.length !== 2 ||
+    !cardIds.every((id) => cardSizes[id] === 'extra-large')
+  )
+    return 0;
+  return Math.max(0, Math.floor((renderedGridCols - 12) / 2));
+}
+
+/** Reuses existing cards only; applying the recommendation is an explicit user action. */
 export function buildHomeOsRecommendedLayout(
   current: HomeDashboardLayoutState,
   customCards: readonly CustomCard[],
   t: TranslateFn = defaultTranslate
 ): { layout: HomeDashboardLayoutState; cardSizes: Record<string, CardSize> } {
-  const selectedIds = new Set(current.cardIds);
   const byKind = new Map<string, string[]>();
-  let batteryId: string | undefined;
   for (const card of customCards) {
-    if (!selectedIds.has(card.id)) continue;
-    if (card.type === 'battery' && !batteryId) batteryId = card.id;
-    if (card.type !== 'home-os' || typeof card.data?.kind !== 'string') continue;
-    const ids = byKind.get(card.data.kind) ?? [];
+    const kind = card.type === 'home-os' ? card.data?.kind : card.type;
+    if (typeof kind !== 'string' || kind === 'device-health' || kind === 'air-quality') continue;
+    if (!HOME_OS_RECOMMENDED_SIZES[kind]) continue;
+    const ids = byKind.get(kind) ?? [];
     ids.push(card.id);
-    byKind.set(card.data.kind, ids);
+    byKind.set(kind, ids);
   }
 
   const usedIds = new Set<string>();
@@ -260,12 +301,15 @@ export function buildHomeOsRecommendedLayout(
     }
     return { id: group.id, titleKey: group.titleKey, cardIds };
   });
-  if (batteryId && !usedIds.has(batteryId)) {
-    grouped[3].cardIds.push(batteryId);
-    usedIds.add(batteryId);
-    cardSizes[batteryId] = 'medium';
-  }
-  grouped[3].cardIds.push(...current.cardIds.filter((id) => !usedIds.has(id)));
+  grouped[grouped.length - 1].cardIds.push(
+    ...current.cardIds.filter(
+      (id) =>
+        !usedIds.has(id) &&
+        !customCards.some(
+          (card) => card.id === id && card.type === 'home-os' && card.data?.kind === 'device-health'
+        )
+    )
+  );
 
   const sections = grouped.flatMap((group) =>
     group.cardIds.length

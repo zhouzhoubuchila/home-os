@@ -6,7 +6,10 @@ import type { DeviceWithType } from '@navet/app/types/device.types';
 import { Wand2 } from 'lucide-react';
 import { type CSSProperties, useMemo } from 'react';
 import type { HomeEditorSection } from '../hooks/use-home-dashboard-editor';
-import { getHomeOsRecommendedSectionGridCols } from '../packs/dashboard-packs';
+import {
+  getHomeOsRecommendedSectionGridCols,
+  isHomeOsRecommendedSection,
+} from '../packs/dashboard-packs';
 import type { CustomCard } from '../stores/custom-cards-store';
 import { getRenderedRowLayouts } from '../utils/layout-engine';
 import {
@@ -64,6 +67,9 @@ export function HomePresentation({
   const nonEmptySections = useMemo(
     () => sections.filter((section) => section.cardIds.length > 0),
     [sections]
+  );
+  const isRecommendedHome = nonEmptySections.some((section) =>
+    isHomeOsRecommendedSection(section.id)
   );
   const presentationRowStacks = useMemo(
     () => buildSectionStacks(nonEmptySections),
@@ -143,8 +149,8 @@ export function HomePresentation({
   }
 
   return (
-    <div className="space-y-3 md:space-y-8">
-      <div className="flex flex-col gap-6">
+    <div className={isRecommendedHome ? 'space-y-3 md:space-y-5' : 'space-y-3 md:space-y-8'}>
+      <div className={isRecommendedHome ? 'flex flex-col gap-3 md:gap-5' : 'flex flex-col gap-6'}>
         {presentationRowLayouts.map(({ rowLayouts, rowStacks }, rowIndex) => (
           <div
             key={rowIndex}
@@ -177,14 +183,29 @@ export function HomePresentation({
                 >
                   {stack.map((section) => (
                     <div key={section.id}>
-                      <div className="mb-3 flex items-center gap-3">
-                        <h2 className={`text-lg font-semibold md:text-xl ${surface.textPrimary}`}>
+                      <div
+                        className={
+                          isRecommendedHome
+                            ? 'mb-2 flex items-center'
+                            : 'mb-3 flex items-center gap-3'
+                        }
+                      >
+                        <h2
+                          className={
+                            isRecommendedHome
+                              ? `text-[10px] font-medium uppercase tracking-[0.18em] ${surface.textMuted}`
+                              : `text-lg font-semibold md:text-xl ${surface.textPrimary}`
+                          }
+                        >
                           {section.title}
                         </h2>
-                        <div className={`h-px flex-1 ${surface.borderStrong}`} />
+                        {!isRecommendedHome ? (
+                          <div className={`h-px flex-1 ${surface.borderStrong}`} />
+                        ) : null}
                       </div>
                       <PresentationCardGrid
                         cardIds={section.cardIds}
+                        sectionId={section.id}
                         gridCols={getHomeOsRecommendedSectionGridCols(section.id, renderedSpan)}
                         allCards={allCards}
                         cardSizes={cardSizes}

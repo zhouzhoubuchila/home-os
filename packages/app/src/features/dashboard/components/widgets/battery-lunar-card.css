@@ -1,12 +1,12 @@
 .battery-lunar-card {
-  --battery-lunar-bg: #050816;
-  --battery-lunar-text: rgba(245, 248, 255, 0.96);
+  --battery-lunar-bg: var(--home-os-lunar-bg-0, #050816);
+  --battery-lunar-text: var(--home-os-lunar-text, rgba(245, 248, 255, 0.96));
   --battery-lunar-muted: rgba(210, 220, 242, 0.58);
-  --battery-lunar-border: rgba(190, 211, 255, 0.14);
+  --battery-lunar-border: var(--home-os-lunar-border, rgba(190, 211, 255, 0.14));
   position: relative;
   isolation: isolate;
   color: var(--battery-lunar-text);
-  background: linear-gradient(145deg, #050816 0%, #081126 58%, #0d1832 100%);
+  background: linear-gradient(145deg, var(--home-os-lunar-bg-0, #050816) 0%, #081126 58%, var(--home-os-lunar-bg-2, #0d1630) 100%);
   border-color: var(--battery-lunar-border);
   box-shadow: 0 24px 60px -42px rgba(5, 8, 22, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }

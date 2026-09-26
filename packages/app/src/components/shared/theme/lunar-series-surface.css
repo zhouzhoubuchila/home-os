@@ -1,0 +1,52 @@
+/* Home OS-only surface grammar. Card-specific artwork and composition remain local. */
+:root {
+  --home-os-lunar-bg-0: #050816;
+  --home-os-lunar-bg-1: #080d21;
+  --home-os-lunar-bg-2: #0d1630;
+  --home-os-lunar-depth: 0 18px 48px -34px rgba(3, 9, 30, 0.8);
+  --home-os-lunar-highlight: inset 0 1px 0 rgba(230, 240, 255, 0.06);
+  --home-os-lunar-border: rgba(190, 211, 255, 0.14);
+  --home-os-lunar-border-strong: rgba(190, 211, 255, 0.2);
+  --home-os-lunar-text: rgba(245, 248, 255, 0.96);
+  --home-os-lunar-text-secondary: rgba(226, 234, 250, 0.68);
+  --home-os-lunar-text-muted: rgba(210, 220, 242, 0.42);
+  --home-os-lunar-surface: rgba(255, 255, 255, 0.045);
+  --home-os-lunar-surface-hover: rgba(255, 255, 255, 0.075);
+  --home-os-lunar-radius-card: 22px;
+  --home-os-lunar-radius-panel: 16px;
+  --home-os-lunar-radius-control: 10px;
+  --home-os-lunar-icon-shell: rgba(125, 175, 255, 0.1);
+  --home-os-lunar-button: rgba(255, 255, 255, 0.035);
+  --home-os-lunar-focus: rgba(143, 216, 245, 0.65);
+  --home-os-lunar-success: #8adbc9;
+  --home-os-lunar-warning: #e9c987;
+  --home-os-lunar-error: #ffaaa8;
+  --home-os-lunar-glow: rgba(92, 160, 255, 0.16);
+}
+
+/* Tier A keeps ambient motion; Tier B is state-led; Tier C has no idle loops in V3. */
+.home-os-v3-surface [data-home-os-motion-tier='C'] [class*='atmosphere'],
+.home-os-v3-surface [data-home-os-motion-tier='C'] [class*='data-flow'] {
+  animation: none !important;
+}
+
+.home-os-v3-surface[data-home-os-motion-policy='low'] [data-home-os-motion-tier='B'] [class*='atmosphere'],
+.home-os-v3-surface[data-home-os-motion-policy='low'] [data-home-os-motion-tier='C'] * {
+  animation: none !important;
+}
+
+.home-os-v3-surface[data-home-os-motion-policy='off'] *,
+.home-os-v3-surface[data-home-os-motion-policy='off'] *::before,
+.home-os-v3-surface[data-home-os-motion-policy='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-os-v3-surface *,
+  .home-os-v3-surface *::before,
+  .home-os-v3-surface *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
