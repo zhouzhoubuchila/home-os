@@ -13,6 +13,7 @@ import {
   Sparkles as ModeIcon,
   Moon,
   Network,
+  Radio,
   Server,
   Sparkles,
   Users,
@@ -264,6 +265,15 @@ export function createCardTemplates(t: TranslateFn, language: string = 'en'): Ca
       initialData: {
         sensorCategoryFilter: 'energy',
       },
+    },
+    {
+      id: 'media-stack',
+      cardType: 'media-stack',
+      nameKey: 'dashboard.addCard.templates.mediaStack.name',
+      descriptionKey: 'dashboard.addCard.templates.mediaStack.description',
+      icon: <Radio className="w-5 h-5" />,
+      defaultSize: 'medium',
+      supportedSizes: ['small', 'medium', 'large'],
     },
     {
       id: 'button',

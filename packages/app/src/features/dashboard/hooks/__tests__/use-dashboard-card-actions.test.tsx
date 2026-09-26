@@ -1,4 +1,5 @@
 import type { CardTemplate } from '@navet/app/features/dashboard/components/add-card-dialog/index';
+import { createCardTemplates } from '@navet/app/features/dashboard/components/add-card-dialog/templates';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDashboardCardActions } from '../use-dashboard-card-actions';
@@ -187,6 +188,42 @@ describe('useDashboardCardActions', () => {
     expect(toastSuccess).toHaveBeenCalledWith(
       'dashboard.feedback.widgetAdded:{"type":"dashboard.addCard.templates.info.name","room":"Kitchen"}'
     );
+  });
+
+  it('creates a media-stack card from the registered template without choosing players', () => {
+    const template = createCardTemplates((key) => key).find((entry) => entry.id === 'media-stack');
+    if (!template) throw new Error('media-stack template is missing');
+    const addCard = vi.fn(() => ({
+      id: 'custom-media-stack',
+      type: 'media-stack' as const,
+      size: 'medium' as const,
+      room: 'Kitchen',
+      createdAt: 1,
+    }));
+    const { result } = renderHook(() =>
+      useDashboardCardActions({
+        activeRoom: 'Kitchen',
+        activeSection: 'dashboard',
+        isEditMode: true,
+        addCard,
+        removeCard: vi.fn(),
+        updateCard: vi.fn(),
+        hideAutoEntity: vi.fn(),
+        showAutoEntity: vi.fn(),
+        t: (key: string) => key,
+        addCardTargetSectionId: null,
+        homeLayoutMode: 'flow',
+        homeLayoutSections: [],
+        addHomeLayoutCard: vi.fn(),
+        removeHomeLayoutCard: vi.fn(),
+        addHomeLayoutSection: vi.fn(),
+      })
+    );
+
+    act(() => result.current.handleAddCard(template, template.defaultSize));
+
+    expect(addCard).toHaveBeenCalledWith('media-stack', 'medium', 'Kitchen', undefined);
+    expect(addCard.mock.results[0]?.value.type).toBe('media-stack');
   });
 
   it('maps the scene template to a button widget with preset scene data', () => {

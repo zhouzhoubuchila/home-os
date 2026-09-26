@@ -313,12 +313,13 @@ describe('AddCardDialogContainer', () => {
     expect(screen.queryByRole('button', { name: /^extra-small\b/i })).not.toBeInTheDocument();
   });
 
-  it('hides the media stack template from the custom card chooser', () => {
+  it('shows and adds the media stack template without preset players', () => {
+    const onAddCard = vi.fn();
     renderWithProviders(
       <AddCardDialogContainer
         open
         onClose={() => {}}
-        onAddCard={vi.fn()}
+        onAddCard={onAddCard}
         onAddLibraryCard={() => {}}
         currentRoom="Living Room"
         libraryCards={demoLibraryCards}
@@ -326,7 +327,14 @@ describe('AddCardDialogContainer', () => {
       />
     );
 
-    expect(screen.queryByText('Media Stack')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Media Stack').closest('button') as HTMLButtonElement);
+    fireEvent.click(screen.getByRole('button', { name: /add widget/i }));
+
+    expect(onAddCard).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'media-stack', cardType: 'media-stack' }),
+      'medium'
+    );
+    expect(onAddCard.mock.calls[0]?.[0].initialData).toBeUndefined();
   });
 
   it('sorts custom cards by translated name in ascending order', () => {
@@ -349,6 +357,7 @@ describe('AddCardDialogContainer', () => {
       'Energy Now',
       'Info',
       'Map',
+      'Media Stack',
       'Photo',
       'Quick Note',
       'RSS Feed',
