@@ -26,5 +26,6 @@ describe('family adapter', () => {
     const members = buildFamilyMembers(resolved);
     expect(members).toHaveLength(1);
     expect(members[0]?.trackerEntityIds).toEqual(['device_tracker.alex_phone']);
+    expect(members[0]?.providerId).toBe('home_assistant');
   });
 });

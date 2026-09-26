@@ -1,3 +1,4 @@
+import type { IntegrationProviderId } from '@navet/app/types/provider';
 import { HOME_OS_ROLES } from '../core/semantic-roles';
 import type { HomeOsFunctionalDevice, ResolvedSemanticEntity } from '../core/types';
 import { resolveFunctionalDevices } from './functional-device-adapter';
@@ -6,6 +7,7 @@ export interface FamilyMember {
   id: string;
   name: string;
   personEntityId: string;
+  providerId?: IntegrationProviderId;
   trackerEntityIds: string[];
   state: string;
   lastChanged?: string;
@@ -47,6 +49,7 @@ function memberFromPerson(
     id,
     name,
     personEntityId: person.entity.externalId,
+    providerId: person.entity.providerId,
     trackerEntityIds: trackers.map((tracker) => tracker.entity.externalId),
     state: String(person.entity.primaryState ?? 'unknown'),
     lastChanged: asString(person.entity.attributes.lastChanged) ?? person.entity.lastUpdated,

@@ -27,6 +27,7 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { selectHomeAssistantHostTelemetry } from '../../resolution/home-assistant-host-telemetry';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
+import { HouseholdMemberAvatar } from '../cards/household-member-avatar';
 import { useHouseholdPresenceMotion } from '../cards/household-presence-card';
 import {
   buildHouseholdPresenceDetailDescription,
@@ -289,9 +290,7 @@ export function HomeOsDetailDialog({
           >
             <div className="flex justify-between gap-3">
               <span className="flex items-center gap-2 font-medium">
-                <span className="household-presence-member-avatar">
-                  {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1)}
-                </span>
+                <HouseholdMemberAvatar member={member} size="detail" />
                 <span className="household-presence-member-dot" aria-hidden="true" />
                 {member.name}
               </span>

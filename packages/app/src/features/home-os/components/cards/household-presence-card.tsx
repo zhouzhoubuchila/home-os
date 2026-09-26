@@ -7,6 +7,7 @@ import { House, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FamilyMember } from '../../adapters/family-adapter';
 import { formatHomeOsDisplayState } from '../../i18n/display-state';
+import { HouseholdMemberAvatar } from './household-member-avatar';
 import { buildHouseholdPresenceModel } from './household-presence-model';
 import { memberPresenceState } from './household-presence-state';
 import './household-presence-card.css';
@@ -131,9 +132,7 @@ export function HouseholdPresenceCard({
                 data-member-presence={state}
                 data-member-arrived={arrivals.has(member.id) ? 'true' : 'false'}
               >
-                <span className="household-presence-member-avatar">
-                  {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1)}
-                </span>
+                <HouseholdMemberAvatar member={member} size="small" />
                 <span className="household-presence-member-name">{member.name}</span>
                 <span className="household-presence-member-dot" aria-hidden="true" />
                 <span className="household-presence-member-status">
