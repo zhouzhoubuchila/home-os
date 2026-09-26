@@ -14,10 +14,10 @@ import { describe, expect, it } from 'vitest';
 
 describe('APP_BUILD_METADATA', () => {
   it('exposes the Home OS product version independently from Navet', () => {
-    expect(HOME_OS_VERSION).toBe('2.0.5');
+    expect(HOME_OS_VERSION).toBe('2.0.6');
     expect(HOME_OS_VERSION).not.toBe(APP_VERSION);
     expect(HOME_OS_BUILD_METADATA).toMatchObject({
-      productVersion: '2.0.5',
+      productVersion: '2.0.6',
       gitShaShort: APP_BUILD_METADATA.gitShaShort,
       buildDate: APP_BUILD_METADATA.buildDate,
       releaseChannel: APP_BUILD_METADATA.releaseChannel,

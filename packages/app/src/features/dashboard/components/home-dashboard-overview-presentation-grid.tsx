@@ -1,6 +1,7 @@
 import {
   type CardSize,
   getCardSpanClass,
+  getDashboardCardGridSpan,
   getResponsiveCardSize,
 } from '@navet/app/components/shared/card-size-selector';
 import { getHomeOsMotionTier } from '@navet/app/components/shared/theme/lunar-series-surface';
@@ -9,8 +10,8 @@ import type { DeviceWithType } from '@navet/app/types/device.types';
 import { memo } from 'react';
 import { useHomeGridRuntime } from '../hooks/use-home-grid-runtime';
 import {
-  getHomeOsRecommendedHeroOffset,
-  isHomeOsRecommendedSingleColumnHero,
+  getHomeOsRecommendedHeroGridColumn,
+  isHomeOsRecommendedSection,
 } from '../packs/dashboard-packs';
 import type { CustomCard } from '../stores/custom-cards-store';
 import { DashboardCardItem } from './dashboard-card-item';
@@ -26,6 +27,13 @@ interface PresentationCardGridProps {
   onUpdateCard?: (cardId: string, data: Record<string, unknown>) => void;
   showHero: boolean;
   densePerformanceMode?: boolean;
+}
+
+function cardKind(entry: DeviceWithType | CustomCard | undefined): string | undefined {
+  if (!entry || !isCustomCard(entry)) return undefined;
+  return entry.type === 'home-os' && typeof entry.data?.kind === 'string'
+    ? entry.data.kind
+    : entry.type;
 }
 
 export const PresentationCardGrid = memo(function PresentationCardGrid({
@@ -59,13 +67,19 @@ export const PresentationCardGrid = memo(function PresentationCardGrid({
     gridCols,
     isEditMode: false,
   });
-  const heroOffset = getHomeOsRecommendedHeroOffset(
-    sectionId,
-    cardIds,
-    cardSizes,
-    renderedGridCols
-  );
-  const expandSingleColumnHero = isHomeOsRecommendedSingleColumnHero(sectionId, renderedGridCols);
+  const isDailyHero = !!sectionId?.endsWith('-daily') && isHomeOsRecommendedSection(sectionId);
+  const lunarId = isDailyHero
+    ? cardIds.find((id) => cardKind(allCards.get(id)) === 'lunar')
+    : undefined;
+  const weatherId = isDailyHero
+    ? cardIds.find((id) => cardKind(allCards.get(id)) === 'weather')
+    : undefined;
+  const hasHeroPair = !!lunarId && !!weatherId;
+  const heroRowSpan = getDashboardCardGridSpan('extra-large').rows;
+  const pairIsSideBySide =
+    hasHeroPair &&
+    getHomeOsRecommendedHeroGridColumn(sectionId, 'lunar', true, renderedGridCols) !== '1 / -1';
+  const reservedHeroRows = hasHeroPair && !pairIsSideBySide ? heroRowSpan * 2 : heroRowSpan;
 
   return (
     <div ref={outerRef} className="relative w-full" style={outerContainerStyle}>
@@ -84,10 +98,10 @@ export const PresentationCardGrid = memo(function PresentationCardGrid({
             const size = cardSizes[cardId] ?? entry.size;
             const resolvedGridSize = getResponsiveCardSize(size, breakpointCols);
             const placement = gridPlacements.get(cardId);
-            const kind = isCustomCard(entry)
-              ? entry.type === 'home-os' && typeof entry.data?.kind === 'string'
-                ? entry.data.kind
-                : entry.type
+            const kind = cardKind(entry);
+            const isPrimaryHero = cardId === lunarId || cardId === weatherId;
+            const heroGridColumn = isPrimaryHero
+              ? getHomeOsRecommendedHeroGridColumn(sectionId, kind, hasHeroPair, renderedGridCols)
               : undefined;
 
             return (
@@ -95,14 +109,20 @@ export const PresentationCardGrid = memo(function PresentationCardGrid({
                 key={cardId}
                 data-home-card-id={cardId}
                 data-home-os-motion-tier={getHomeOsMotionTier(kind)}
-                className={cn(
-                  getCardSpanClass(resolvedGridSize),
-                  expandSingleColumnHero && 'col-span-full md:col-span-full',
-                  '[&>*]:h-full'
-                )}
+                className={cn(getCardSpanClass(resolvedGridSize), '[&>*]:h-full')}
                 style={{
-                  gridColumnStart: placement ? placement.column + heroOffset : undefined,
-                  gridRowStart: placement?.row,
+                  gridColumn: heroGridColumn,
+                  gridColumnStart: heroGridColumn ? undefined : placement?.column,
+                  gridRowStart:
+                    cardId === lunarId
+                      ? 1
+                      : cardId === weatherId
+                        ? pairIsSideBySide || !lunarId
+                          ? 1
+                          : heroRowSpan + 1
+                        : isDailyHero && placement
+                          ? placement.row + reservedHeroRows
+                          : placement?.row,
                 }}
               >
                 {!isCustomCard(entry) ? (

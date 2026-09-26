@@ -1,4 +1,4 @@
-import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import { type CardSize, getDashboardCardGridSpan } from '@navet/app/components/shared/card-size';
 import { defaultTranslate, type TranslateFn, type TranslationKey } from '@navet/app/i18n';
 import type { DeviceWithType } from '@navet/app/types/device.types';
 import type { HomeDashboardLayoutState } from '../hooks/use-home-dashboard-layout';
@@ -234,6 +234,13 @@ const HOME_OS_RECOMMENDED_SIZES: Record<string, CardSize> = {
 };
 
 const HOME_OS_RECOMMENDED_SECTION_PREFIX = 'dashboard-pack-home-os-recommended-';
+const HOME_OS_HERO_PAIR_CSS_COLUMNS = getDashboardCardGridSpan('extra-large').cols * 2;
+
+function recommendedKind(card: CustomCard): string | undefined {
+  return card.type === 'home-os' && typeof card.data?.kind === 'string'
+    ? card.data.kind
+    : card.type;
+}
 
 /** Use the normal Navet grid up to eight columns; avoid unbounded card stretching on ultra-wide screens. */
 export function getHomeOsRecommendedSectionGridCols(sectionId: string, availableCols: number) {
@@ -244,33 +251,22 @@ export function isHomeOsRecommendedSection(sectionId: string) {
   return sectionId.startsWith(HOME_OS_RECOMMENDED_SECTION_PREFIX);
 }
 
-/** The runtime reports CSS columns: two Extra Large cards need twelve to share a row. */
-export function isHomeOsRecommendedSingleColumnHero(
+/** The runtime reports rendered CSS columns, not logical card columns. */
+export function getHomeOsRecommendedHeroGridColumn(
   sectionId: string | undefined,
-  renderedGridCols: number
-) {
-  return (
-    !!sectionId?.endsWith('-daily') &&
-    isHomeOsRecommendedSection(sectionId) &&
-    renderedGridCols < 12
-  );
-}
-
-/** Center the pair of 3-column Hero cards without changing their Navet card footprints. */
-export function getHomeOsRecommendedHeroOffset(
-  sectionId: string | undefined,
-  cardIds: readonly string[],
-  cardSizes: Readonly<Record<string, CardSize>>,
-  renderedGridCols: number
-) {
+  kind: string | undefined,
+  hasHeroPair: boolean,
+  renderedCssColumns: number
+): string | undefined {
   if (
     !sectionId?.endsWith('-daily') ||
     !isHomeOsRecommendedSection(sectionId) ||
-    cardIds.length !== 2 ||
-    !cardIds.every((id) => cardSizes[id] === 'extra-large')
+    (kind !== 'lunar' && kind !== 'weather')
   )
-    return 0;
-  return Math.max(0, Math.floor((renderedGridCols - 12) / 2));
+    return undefined;
+  if (!hasHeroPair || renderedCssColumns < HOME_OS_HERO_PAIR_CSS_COLUMNS) return '1 / -1';
+  const halfWidth = Math.floor(renderedCssColumns / 2);
+  return kind === 'lunar' ? `1 / span ${halfWidth}` : `${halfWidth + 1} / span ${halfWidth}`;
 }
 
 /** Reuses existing cards only; applying the recommendation is an explicit user action. */
@@ -279,37 +275,52 @@ export function buildHomeOsRecommendedLayout(
   customCards: readonly CustomCard[],
   t: TranslateFn = defaultTranslate
 ): { layout: HomeDashboardLayoutState; cardSizes: Record<string, CardSize> } {
-  const byKind = new Map<string, string[]>();
+  const byKind = new Map<string, CustomCard[]>();
+  const cardsById = new Map(customCards.map((card) => [card.id, card]));
+  const currentRank = new Map(current.cardIds.map((id, index) => [id, index]));
   for (const card of customCards) {
-    const kind = card.type === 'home-os' ? card.data?.kind : card.type;
-    if (typeof kind !== 'string' || kind === 'device-health' || kind === 'air-quality') continue;
+    const kind = recommendedKind(card);
+    if (!kind) continue;
     if (!HOME_OS_RECOMMENDED_SIZES[kind]) continue;
-    const ids = byKind.get(kind) ?? [];
-    ids.push(card.id);
-    byKind.set(kind, ids);
+    const candidates = byKind.get(kind) ?? [];
+    candidates.push(card);
+    byKind.set(kind, candidates);
   }
 
   const usedIds = new Set<string>();
   const cardSizes: Record<string, CardSize> = {};
-  const grouped = HOME_OS_RECOMMENDED_GROUPS.map((group) => {
-    const cardIds = group.kinds.flatMap((kind) => byKind.get(kind) ?? []);
-    for (const kind of group.kinds) {
-      for (const id of byKind.get(kind) ?? []) {
-        usedIds.add(id);
-        cardSizes[id] = HOME_OS_RECOMMENDED_SIZES[kind];
+  const grouped: Array<{ id: string; titleKey: TranslationKey; cardIds: string[] }> =
+    HOME_OS_RECOMMENDED_GROUPS.map((group) => {
+      const cardIds: string[] = [];
+      for (const kind of group.kinds) {
+        const selected = byKind.get(kind)?.sort((left, right) => {
+          const leftRank = currentRank.get(left.id);
+          const rightRank = currentRank.get(right.id);
+          if (leftRank !== undefined || rightRank !== undefined)
+            return (leftRank ?? Infinity) - (rightRank ?? Infinity);
+          return left.createdAt - right.createdAt || left.id.localeCompare(right.id);
+        })[0];
+        if (!selected) continue;
+        cardIds.push(selected.id);
+        usedIds.add(selected.id);
+        cardSizes[selected.id] = HOME_OS_RECOMMENDED_SIZES[kind];
       }
-    }
-    return { id: group.id, titleKey: group.titleKey, cardIds };
+      return { id: group.id, titleKey: group.titleKey, cardIds };
+    });
+  const retainedIds = new Set(usedIds);
+  const customIds = current.cardIds.filter((id) => {
+    if (retainedIds.has(id)) return false;
+    retainedIds.add(id);
+    const existingCard = cardsById.get(id);
+    const kind = existingCard ? recommendedKind(existingCard) : undefined;
+    return (
+      kind !== 'device-health' &&
+      kind !== 'air-quality' &&
+      (kind === undefined || !HOME_OS_RECOMMENDED_SIZES[kind])
+    );
   });
-  grouped[grouped.length - 1].cardIds.push(
-    ...current.cardIds.filter(
-      (id) =>
-        !usedIds.has(id) &&
-        !customCards.some(
-          (card) => card.id === id && card.type === 'home-os' && card.data?.kind === 'device-health'
-        )
-    )
-  );
+  if (customIds.length)
+    grouped.push({ id: 'custom', titleKey: 'common.custom', cardIds: customIds });
 
   const sections = grouped.flatMap((group) =>
     group.cardIds.length

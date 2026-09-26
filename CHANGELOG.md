@@ -1,5 +1,11 @@
 # Changelog
 
+## Home OS 2.0.6 - 2026-09-27
+
+- Fixed duplicate canonical cards in Home OS Recommended by selecting one stable existing instance per kind without deleting Card Library data.
+- Fixed the V3 Lunar and Weather Hero layout so wide screens use balanced side-by-side columns and narrower screens stack cleanly.
+- Kept historical CustomCard layouts compatible while separating unmatched user cards from Energy & Utilities.
+
 ## Home OS 2.0.5 - 2026-09-27
 
 - Reorganized the opt-in Home OS Recommended homepage around Lunar and Weather heroes, household controls, home operation, infrastructure, and utilities.

@@ -1,9 +1,10 @@
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { SummaryBar } from '@navet/app/features/sensors/components/info-badge-strip';
+import { useBreakpointCols } from '@navet/app/hooks/use-breakpoint-cols';
 import { useThemeStore } from '@navet/app/stores/theme-store';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Battery, House, Lightbulb, TriangleAlert, Wifi } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { buildHomeOverviewCollections } from '../components/home-dashboard-overview.shared';
 import { HomePresentation } from '../components/home-dashboard-overview-presentation';
 import type { HomeDashboardLayoutState } from '../hooks/use-home-dashboard-layout';
@@ -52,24 +53,46 @@ const collections = buildHomeOverviewCollections({
   allCustomCards: cards,
   homeLayout: recommended.layout,
 });
+function duplicateCard(sourceId: string, id: string, createdAt: number): CustomCard {
+  const source = cards.find((card) => card.id === sourceId);
+  if (!source) throw new Error(`Missing Storybook card: ${sourceId}`);
+  return { ...source, id, createdAt };
+}
+const duplicateCards: CustomCard[] = [
+  ...cards,
+  duplicateCard('fixture-lunar', 'fixture-lunar-2', 2),
+  duplicateCard('fixture-lunar', 'fixture-lunar-3', 3),
+  duplicateCard('fixture-weather', 'fixture-weather-2', 2),
+  duplicateCard('fixture-battery', 'fixture-battery-2', 2),
+  duplicateCard('fixture-media', 'fixture-media-2', 2),
+];
+const duplicateOriginal: HomeDashboardLayoutState = {
+  ...original,
+  cardIds: duplicateCards.map((card) => card.id),
+};
+const duplicateRecommended = buildHomeOsRecommendedLayout(duplicateOriginal, duplicateCards);
+const duplicateCollections = buildHomeOverviewCollections({
+  deviceMap: new Map(),
+  allCustomCards: duplicateCards,
+  homeLayout: duplicateRecommended.layout,
+});
 
 function RecommendedLayoutFixture({
   scenario = 'normal',
   motionPolicy = 'normal',
+  duplicateCanonical = false,
 }: {
   scenario?: 'normal' | 'unavailable' | 'warning';
   motionPolicy?: 'normal' | 'low' | 'off';
+  duplicateCanonical?: boolean;
 }) {
-  const columns = () =>
-    window.innerWidth < 640 ? 2 : window.innerWidth < 1024 ? 4 : window.innerWidth < 1600 ? 6 : 8;
-  const [gridCols, setGridCols] = useState(columns);
+  const gridCols = useBreakpointCols();
+  const activeRecommended = duplicateCanonical ? duplicateRecommended : recommended;
+  const activeCollections = duplicateCanonical ? duplicateCollections : collections;
   useEffect(() => {
     const previousTheme = useThemeStore.getState().theme;
     useThemeStore.getState().setTheme('dark');
-    const onResize = () => setGridCols(columns());
-    window.addEventListener('resize', onResize);
     return () => {
-      window.removeEventListener('resize', onResize);
       useThemeStore.getState().setTheme(previousTheme);
     };
   }, []);
@@ -125,14 +148,14 @@ function RecommendedLayoutFixture({
         />
       </div>
       <HomePresentation
-        flowCards={collections.flowCards}
-        sections={collections.sectionCards}
+        flowCards={activeCollections.flowCards}
+        sections={activeCollections.sectionCards}
         gridCols={gridCols}
         isPortraitHome={false}
-        allCards={collections.allCards}
-        cardSizes={recommended.cardSizes}
+        allCards={activeCollections.allCards}
+        cardSizes={activeRecommended.cardSizes}
         updateCardSize={() => {}}
-        showHero={recommended.layout.showHero}
+        showHero={activeRecommended.layout.showHero}
         isSectioned
         accentColor="#78b9eb"
         surface={getThemeSurfaceTokens('dark')}
@@ -166,5 +189,9 @@ export const Mobile: Story = {
   globals: { viewport: { value: 'iphone14', isRotated: false } },
 };
 export const Desktop: Story = {
+  globals: { viewport: { value: 'desktop1080p', isRotated: false } },
+};
+export const DuplicateCanonicalCards: Story = {
+  args: { duplicateCanonical: true },
   globals: { viewport: { value: 'desktop1080p', isRotated: false } },
 };

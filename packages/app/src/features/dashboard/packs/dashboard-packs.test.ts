@@ -10,9 +10,8 @@ import type { CustomCard } from '../stores/custom-cards-store';
 import {
   buildDashboardPackLayout,
   buildHomeOsRecommendedLayout,
-  getHomeOsRecommendedHeroOffset,
+  getHomeOsRecommendedHeroGridColumn,
   getHomeOsRecommendedSectionGridCols,
-  isHomeOsRecommendedSingleColumnHero,
 } from './dashboard-packs';
 
 function device(overrides: Partial<DeviceWithType> & Pick<DeviceWithType, 'id' | 'type'>) {
@@ -94,6 +93,7 @@ describe('dashboard packs', () => {
       'Home',
       'Infrastructure',
       'Energy & Utilities',
+      'Custom',
     ]);
     expect(layout.sections.every((section) => section.w === 12)).toBe(true);
     expect(layout.sections.map((section) => [section.x, section.y])).toEqual([
@@ -101,6 +101,7 @@ describe('dashboard packs', () => {
       [0, 1],
       [0, 2],
       [0, 3],
+      [0, 4],
     ]);
     expect(cardSizes.lunar).toBe('extra-large');
     expect(cardSizes.weather).toBe('extra-large');
@@ -124,7 +125,8 @@ describe('dashboard packs', () => {
       ['lunar', 'weather'],
       ['household', 'modes', 'lighting', 'calendar', 'alerts', 'media', 'cleaning', 'battery'],
       ['internet', 'router', 'home-assistant', 'pve'],
-      ['electricity', 'gas', 'extra'],
+      ['electricity', 'gas'],
+      ['extra'],
     ]);
     expect(
       buildSectionStacks(topology.sectionCards)
@@ -142,11 +144,12 @@ describe('dashboard packs', () => {
       expect(getHomeOsRecommendedSectionGridCols(section.id, 12)).toBe(8);
     }
     expect(getHomeOsRecommendedSectionGridCols('custom-section', 12)).toBe(12);
-    expect(getHomeOsRecommendedHeroOffset(daily.id, daily.cardIds, cardSizes, 16)).toBe(2);
-    expect(getHomeOsRecommendedHeroOffset(daily.id, daily.cardIds, cardSizes, 4)).toBe(0);
-    expect(isHomeOsRecommendedSingleColumnHero(daily.id, 8)).toBe(true);
-    expect(isHomeOsRecommendedSingleColumnHero(daily.id, 12)).toBe(false);
-    expect(isHomeOsRecommendedSingleColumnHero('custom-section', 8)).toBe(false);
+    expect(getHomeOsRecommendedHeroGridColumn(daily.id, 'lunar', true, 16)).toBe('1 / span 8');
+    expect(getHomeOsRecommendedHeroGridColumn(daily.id, 'weather', true, 16)).toBe('9 / span 8');
+    expect(getHomeOsRecommendedHeroGridColumn(daily.id, 'lunar', true, 12)).toBe('1 / span 6');
+    expect(getHomeOsRecommendedHeroGridColumn(daily.id, 'weather', true, 8)).toBe('1 / -1');
+    expect(getHomeOsRecommendedHeroGridColumn(daily.id, 'lunar', false, 16)).toBe('1 / -1');
+    expect(getHomeOsRecommendedHeroGridColumn('custom-section', 'lunar', true, 16)).toBeUndefined();
     const dailyPlacements = packDashboardGridItems(
       daily.cardIds.map((id) => ({ id, size: cardSizes[id] })),
       12
@@ -215,6 +218,149 @@ describe('dashboard packs', () => {
       'weather',
     ]);
     expect(current.cardIds).toEqual(['weather']);
+  });
+
+  it('selects one stable canonical instance without deleting historical library cards', () => {
+    const cards: CustomCard[] = [
+      ...['lunar-c', 'lunar-a', 'lunar-b'].map((id, index) => ({
+        id,
+        type: 'home-os' as const,
+        size: 'medium' as const,
+        room: 'All',
+        data: { kind: 'lunar' },
+        createdAt: index + 2,
+      })),
+      ...['weather-b', 'weather-a'].map((id, index) => ({
+        id,
+        type: 'home-os' as const,
+        size: 'medium' as const,
+        room: 'All',
+        data: { kind: 'weather' },
+        createdAt: index + 10,
+      })),
+      ...['battery-b', 'battery-a'].map((id, index) => ({
+        id,
+        type: 'battery' as const,
+        size: 'medium' as const,
+        room: 'All',
+        createdAt: index + 20,
+      })),
+      ...['media-b', 'media-a'].map((id, index) => ({
+        id,
+        type: 'media-stack' as const,
+        size: 'medium' as const,
+        room: 'All',
+        createdAt: index + 30,
+      })),
+    ];
+    const libraryIds = cards.map((card) => card.id);
+    const current: HomeDashboardLayoutState = {
+      mode: 'flow',
+      showHero: false,
+      cardIds: [],
+      sections: [],
+      cardSectionAssignments: {},
+    };
+    const first = buildHomeOsRecommendedLayout(current, cards).layout;
+    const reordered = buildHomeOsRecommendedLayout(current, [...cards].reverse()).layout;
+    expect(first.cardIds).toEqual(['lunar-c', 'weather-b', 'media-b', 'battery-b']);
+    expect(reordered.cardIds).toEqual(first.cardIds);
+    expect(cards.map((card) => card.id)).toEqual(libraryIds);
+    expect(cards).toHaveLength(9);
+  });
+
+  it('prefers the active Lunar card and never reintroduces duplicate canonical cards as Utilities', () => {
+    const cards: CustomCard[] = [
+      ...['lunar-old', 'lunar-active', 'lunar-spare'].map((id, index) => ({
+        id,
+        type: 'home-os' as const,
+        size: 'medium' as const,
+        room: 'All',
+        data: { kind: 'lunar' },
+        createdAt: index,
+      })),
+      {
+        id: 'weather',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'weather' },
+        createdAt: 0,
+      },
+      {
+        id: 'electricity',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'electricity' },
+        createdAt: 0,
+      },
+      {
+        id: 'device-health',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'device-health' },
+        createdAt: 0,
+      },
+      {
+        id: 'air-quality',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'air-quality' },
+        createdAt: 0,
+      },
+      { id: 'custom-button', type: 'button', size: 'small', room: 'All', createdAt: 0 },
+    ];
+    const current: HomeDashboardLayoutState = {
+      mode: 'flow',
+      showHero: false,
+      cardIds: [
+        'lunar-active',
+        'lunar-old',
+        'weather',
+        'lunar-spare',
+        'device-health',
+        'air-quality',
+        'custom-button',
+      ],
+      sections: [],
+      cardSectionAssignments: {},
+    };
+    const { layout } = buildHomeOsRecommendedLayout(current, cards);
+    expect(layout.cardIds).toEqual(['lunar-active', 'weather', 'electricity', 'custom-button']);
+    expect(layout.sections.at(-2)?.title).toBe('Energy & Utilities');
+    expect(layout.sections.at(-1)?.title).toBe('Custom');
+    expect(layout.cardSectionAssignments['custom-button']).toMatch(/-custom$/);
+    expect(layout.cardIds).not.toContain('lunar-old');
+    expect(layout.cardIds).not.toContain('lunar-spare');
+    expect(cards.map((card) => card.id)).toContain('lunar-spare');
+  });
+
+  it('gives a lone Lunar hero the full Daily width', () => {
+    const cards: CustomCard[] = [
+      {
+        id: 'only-lunar',
+        type: 'home-os',
+        size: 'medium',
+        room: 'All',
+        data: { kind: 'lunar' },
+        createdAt: 0,
+      },
+    ];
+    const current: HomeDashboardLayoutState = {
+      mode: 'flow',
+      showHero: false,
+      cardIds: [],
+      sections: [],
+      cardSectionAssignments: {},
+    };
+    const { layout } = buildHomeOsRecommendedLayout(current, cards);
+    expect(layout.cardIds).toEqual(['only-lunar']);
+    expect(getHomeOsRecommendedHeroGridColumn(layout.sections[0].id, 'lunar', false, 16)).toBe(
+      '1 / -1'
+    );
   });
 
   it('builds a command center around attention, comfort, household, and action cards', () => {
