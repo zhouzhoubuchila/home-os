@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FamilyMember } from '../adapters/family-adapter';
 import { HouseholdPresenceCard } from '../components/cards/household-presence-card';
 import {
+  buildHouseholdPresenceDetailDescription,
   buildHouseholdPresenceModel,
   buildHouseholdPresenceSummary,
 } from '../components/cards/household-presence-model';
@@ -65,6 +66,9 @@ describe('Household Presence state-driven motion', () => {
       ).summary
     ).toBe('成员状态暂不可用');
     expect(buildHouseholdPresenceSummary([], 'zh').summary).toBe('暂无家庭成员');
+    expect(buildHouseholdPresenceDetailDescription(buildHouseholdPresenceSummary([], 'zh'))).toBe(
+      '暂无家庭成员'
+    );
     expect(buildHouseholdPresenceSummary([member('not_home')], 'zh').summary).toBe(
       '当前无人确认在家'
     );

@@ -58,7 +58,7 @@ export function ModalSurface({
       theme={resolvedTheme}
       overlayClassName={overlayClassName}
       disableOpenAutoFocus={disableOpenAutoFocus}
-      contentClassName={cn(getUiKitModalContentClassName(theme), contentClassName)}
+      contentClassName={cn(getUiKitModalContentClassName(resolvedTheme), contentClassName)}
       contentStyle={contentStyle}
       contentGlowClassName={contentGlowClassName}
       contentGlowStyle={contentGlowStyle}

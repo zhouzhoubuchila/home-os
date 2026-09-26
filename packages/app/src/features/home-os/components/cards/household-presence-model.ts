@@ -47,3 +47,11 @@ export function buildHouseholdPresenceModel(
     layoutSize,
   };
 }
+
+export function buildHouseholdPresenceDetailDescription(
+  summary: ReturnType<typeof buildHouseholdPresenceSummary>
+) {
+  return summary.totalCount > 0
+    ? `${summary.homeCount} / ${summary.totalCount} · ${summary.summary}`
+    : summary.summary;
+}

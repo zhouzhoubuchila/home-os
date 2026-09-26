@@ -28,7 +28,10 @@ import {
 import { selectHomeAssistantHostTelemetry } from '../../resolution/home-assistant-host-telemetry';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { useHouseholdPresenceMotion } from '../cards/household-presence-card';
-import { buildHouseholdPresenceSummary } from '../cards/household-presence-model';
+import {
+  buildHouseholdPresenceDetailDescription,
+  buildHouseholdPresenceSummary,
+} from '../cards/household-presence-model';
 import { householdPresenceState, memberPresenceState } from '../cards/household-presence-state';
 import { MoonCardDetail } from '../cards/lunar/moon-card';
 import {
@@ -593,7 +596,9 @@ export function HomeOsDetailDialog({
       }
       description={
         kind === 'household'
-          ? `${presenceSummary?.homeCount ?? 0} / ${presenceSummary?.totalCount ?? 0} · ${presenceSummary?.summary ?? ''}`
+          ? presenceSummary
+            ? buildHouseholdPresenceDetailDescription(presenceSummary)
+            : undefined
           : copy.detailDescription
       }
       themeOverride={kind === 'household' ? 'dark' : undefined}
