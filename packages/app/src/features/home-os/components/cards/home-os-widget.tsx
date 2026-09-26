@@ -168,20 +168,20 @@ function HouseholdCard({
   size,
   entities,
   title,
-  status,
+  language,
   t,
   functionalDevices,
 }: {
   size: CardSize;
   entities: ResolvedSemanticEntity[];
   title: string;
-  status: string;
+  language: string;
   t: TranslateFn;
   functionalDevices: readonly HomeOsFunctionalDevice[];
 }) {
   const members = buildFamilyMembers(entities, functionalDevices);
   return (
-    <HouseholdPresenceCard size={size} members={members} title={title} status={status} t={t} />
+    <HouseholdPresenceCard size={size} members={members} title={title} language={language} t={t} />
   );
 }
 
@@ -503,7 +503,7 @@ export function HomeOsWidget({
         size={size}
         entities={entities}
         title={copy.household}
-        status={copy.peopleAtHome}
+        language={language}
         t={t}
         functionalDevices={functionalDevices}
       />

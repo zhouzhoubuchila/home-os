@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { FamilyMember } from '../../adapters/family-adapter';
 import { HouseholdPresenceCard } from './household-presence-card';
 
-type Scenario = 'home' | 'away' | 'unknown' | 'empty';
+type Scenario = 'home' | 'away' | 'office' | 'unknown' | 'empty';
 
 function Preview({
   size,
@@ -52,7 +52,7 @@ function Preview({
         ];
   return (
     <EntityCardStoryFrame size={size}>
-      <HouseholdPresenceCard size={size} members={members} title="家庭状态" status="在家" t={t} />
+      <HouseholdPresenceCard size={size} members={members} title="家庭状态" language="zh" t={t} />
     </EntityCardStoryFrame>
   );
 }
@@ -63,7 +63,7 @@ const meta = {
   args: { size: 'medium', scenario: 'home', multiple: false },
   argTypes: {
     size: { control: 'inline-radio', options: ['small', 'medium', 'large'] },
-    scenario: { control: 'inline-radio', options: ['home', 'away', 'unknown', 'empty'] },
+    scenario: { control: 'inline-radio', options: ['home', 'away', 'office', 'unknown', 'empty'] },
   },
 } satisfies Meta<typeof Preview>;
 
@@ -75,3 +75,4 @@ export const MediumAway: Story = { args: { scenario: 'away' } };
 export const MediumUnknown: Story = { args: { scenario: 'unknown' } };
 export const MultipleMembersHome: Story = { args: { multiple: true } };
 export const MediumEmpty: Story = { args: { scenario: 'empty' } };
+export const CustomZoneAway: Story = { args: { scenario: 'office' } };

@@ -5,6 +5,7 @@ import {
 } from '@navet/app/components/system/tokens/ui-kit-surfaces';
 import { cn } from '@navet/app/components/ui/utils';
 import { useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import type { CSSProperties, ReactNode } from 'react';
 
 export interface ModalSurfaceProps {
@@ -23,6 +24,7 @@ export interface ModalSurfaceProps {
   contentOverlayClassName?: string | null;
   disableOpenAutoFocus?: boolean;
   mobileCoverSheet?: boolean;
+  themeOverride?: ThemeType;
 }
 
 export function ModalSurface({
@@ -41,8 +43,10 @@ export function ModalSurface({
   contentOverlayClassName,
   disableOpenAutoFocus,
   mobileCoverSheet = false,
+  themeOverride,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
+  const resolvedTheme = themeOverride ?? theme;
 
   return (
     <BaseCardDialog
@@ -51,7 +55,7 @@ export function ModalSurface({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
-      theme={theme}
+      theme={resolvedTheme}
       overlayClassName={overlayClassName}
       disableOpenAutoFocus={disableOpenAutoFocus}
       contentClassName={cn(getUiKitModalContentClassName(theme), contentClassName)}

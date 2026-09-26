@@ -28,6 +28,7 @@ import {
 import { selectHomeAssistantHostTelemetry } from '../../resolution/home-assistant-host-telemetry';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { useHouseholdPresenceMotion } from '../cards/household-presence-card';
+import { buildHouseholdPresenceSummary } from '../cards/household-presence-model';
 import { householdPresenceState, memberPresenceState } from '../cards/household-presence-state';
 import { MoonCardDetail } from '../cards/lunar/moon-card';
 import {
@@ -237,7 +238,7 @@ export function HomeOsDetailDialog({
   const presenceMotion = useHouseholdPresenceMotion();
   const homeAssistantConfig = useHomeAssistant((state) => state.config);
   const copy = getHomeOsCopy(language);
-  const surface = getThemeSurfaceTokens(theme);
+  const surface = getThemeSurfaceTokens(kind === 'household' ? 'dark' : theme);
   const config = useHomeOsConfigStore((state) => state.config);
   const definition = getHomeOsCardDefinition(kind);
   const visible = entities.filter((item) => !item.ignored && item.displayMode !== 'hidden');
@@ -263,9 +264,13 @@ export function HomeOsDetailDialog({
                       ? 'family.calendar'
                       : '';
   let content: ReactNode;
+  const presenceMembers =
+    kind === 'household' ? buildFamilyMembers(visible, config.functionalDevices ?? []) : [];
+  const presenceSummary =
+    kind === 'household' ? buildHouseholdPresenceSummary(presenceMembers, language) : undefined;
 
   if (kind === 'household') {
-    const members = buildFamilyMembers(visible, config.functionalDevices ?? []);
+    const members = presenceMembers;
     content = members.length ? (
       <div
         className="household-presence-detail grid gap-2"
@@ -281,6 +286,9 @@ export function HomeOsDetailDialog({
           >
             <div className="flex justify-between gap-3">
               <span className="flex items-center gap-2 font-medium">
+                <span className="household-presence-member-avatar">
+                  {member.avatar ? <img src={member.avatar} alt="" /> : member.name.slice(0, 1)}
+                </span>
                 <span className="household-presence-member-dot" aria-hidden="true" />
                 {member.name}
               </span>
@@ -288,26 +296,43 @@ export function HomeOsDetailDialog({
                 {formatHomeOsDisplayState(member.state, t)}
               </span>
             </div>
-            <p className={`mt-1 text-xs ${surface.textSecondary}`}>
-              {member.location ?? copy.roomUnknown}
-              {member.battery !== undefined ? ` · ${member.battery}%` : ''}
-            </p>
-            <p className={`mt-2 text-xs ${surface.textMuted}`}>
-              {copy.trackerSources}:{' '}
-              {member.trackerSources.length
-                ? member.trackerSources
-                    .map(
-                      (tracker) =>
-                        `${tracker.name}${tracker.platform ? ` (${tracker.platform})` : ''}: ${tracker.state}`
-                    )
-                    .join(' · ')
-                : copy.noMappedData}
-            </p>
+            <div className={`mt-1 flex flex-wrap gap-x-2 text-xs ${surface.textSecondary}`}>
+              {member.location ? <span>{member.location}</span> : null}
+              {typeof member.battery === 'number' ? <span>{member.battery}%</span> : null}
+            </div>
+            <div className="mt-2 grid gap-1.5">
+              <span className={`text-xs ${surface.textMuted}`}>{copy.trackerSources}</span>
+              {member.trackerSources.length ? (
+                member.trackerSources.map((tracker) => (
+                  <div
+                    key={tracker.entityId}
+                    className={`grid grid-cols-[1fr_auto] gap-x-3 rounded-lg border border-current/10 px-2 py-1.5 text-xs ${surface.textSecondary}`}
+                  >
+                    <span>
+                      {tracker.name}
+                      <span className={`ml-1 ${surface.textMuted}`}>{tracker.platform ?? ''}</span>
+                    </span>
+                    <span>{formatHomeOsDisplayState(tracker.state, t)}</span>
+                  </div>
+                ))
+              ) : (
+                <span className={`text-xs ${surface.textMuted}`}>{copy.noTrackers}</span>
+              )}
+            </div>
+            <details className={`mt-2 text-xs ${surface.textMuted}`}>
+              <summary>{copy.advanced}</summary>
+              <div className="mt-1 grid gap-1 break-all">
+                <span>{member.personEntityId}</span>
+                {member.trackerEntityIds.map((id) => (
+                  <span key={id}>{id}</span>
+                ))}
+              </div>
+            </details>
           </div>
         ))}
       </div>
     ) : (
-      <p>{copy.noMappedData}</p>
+      <p>{presenceSummary?.summary ?? copy.noTrackers}</p>
     );
   } else if (kind === 'lighting') {
     const lights = buildHomeOsLights(visible, config.functionalDevices ?? []);
@@ -561,10 +586,21 @@ export function HomeOsDetailDialog({
     <ModalSurface
       isOpen={isOpen}
       onOpenChange={onOpenChange}
-      title={`${copy.detailTitle} · ${language === 'zh' ? definition?.name.zh : definition?.name.en}`}
-      description={copy.detailDescription}
+      title={
+        kind === 'household'
+          ? `${copy.presenceDetailEyebrow} · ${copy.household}`
+          : `${copy.detailTitle} · ${language === 'zh' ? definition?.name.zh : definition?.name.en}`
+      }
+      description={
+        kind === 'household'
+          ? `${presenceSummary?.homeCount ?? 0} / ${presenceSummary?.totalCount ?? 0} · ${presenceSummary?.summary ?? ''}`
+          : copy.detailDescription
+      }
+      themeOverride={kind === 'household' ? 'dark' : undefined}
       mobileCoverSheet
-      contentClassName="max-w-2xl"
+      contentClassName={
+        kind === 'household' ? 'max-w-2xl household-presence-detail-surface' : 'max-w-2xl'
+      }
       bodyClassName="max-h-[70vh] overflow-y-auto p-5"
     >
       <div className="space-y-4">

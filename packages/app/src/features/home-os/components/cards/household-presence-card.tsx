@@ -7,7 +7,8 @@ import { House, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FamilyMember } from '../../adapters/family-adapter';
 import { formatHomeOsDisplayState } from '../../i18n/display-state';
-import { householdPresenceState, memberPresenceState } from './household-presence-state';
+import { buildHouseholdPresenceModel } from './household-presence-model';
+import { memberPresenceState } from './household-presence-state';
 import './household-presence-card.css';
 
 type PresenceMotion = 'high' | 'medium' | 'low' | 'off';
@@ -24,18 +25,19 @@ export function HouseholdPresenceCard({
   size,
   members,
   title,
-  status,
+  language,
   t,
 }: {
   size: CardSize;
   members: readonly FamilyMember[];
   title: string;
-  status: string;
+  language: string;
   t: TranslateFn;
 }) {
-  const presenceState = householdPresenceState(members);
+  const model = buildHouseholdPresenceModel(members, size, language);
+  const presenceState = model.state;
   const motion = useHouseholdPresenceMotion();
-  const homeCount = members.filter((member) => memberPresenceState(member.state) === 'home').length;
+  const homeCount = model.homeCount;
   const previousStates = useRef(
     new Map(members.map((member) => [member.id, memberPresenceState(member.state)]))
   );
@@ -73,8 +75,6 @@ export function HouseholdPresenceCard({
     return () => window.clearTimeout(timeout);
   }, [homeCount]);
 
-  const visibleLimit =
-    size === 'small' || size === 'tiny' || size === 'extra-small' ? 2 : size === 'medium' ? 4 : 8;
   return (
     <BaseCard
       size={size}
@@ -96,16 +96,20 @@ export function HouseholdPresenceCard({
             aria-live="polite"
             data-count-changing={outgoingCount === null ? 'false' : 'true'}
           >
-            {outgoingCount !== null ? (
+            {model.totalCount === 0 ? (
+              <strong className="household-presence-number-empty">—</strong>
+            ) : outgoingCount !== null ? (
               <span className="household-presence-number-old" aria-hidden="true">
                 {outgoingCount}/{members.length}
               </span>
             ) : null}
-            <strong className="household-presence-number-new">
-              {homeCount}/{members.length}
-            </strong>
+            {model.totalCount > 0 ? (
+              <strong className="household-presence-number-new">
+                {homeCount}/{model.totalCount}
+              </strong>
+            ) : null}
           </div>
-          <p className="household-presence-caption">{status}</p>
+          <p className="household-presence-caption">{model.summary}</p>
         </div>
         <div className="household-presence-orb" aria-hidden="true">
           <div className="household-presence-orb-halo" />
@@ -118,7 +122,7 @@ export function HouseholdPresenceCard({
           </div>
         </div>
         <div className="household-presence-members">
-          {members.slice(0, visibleLimit).map((member) => {
+          {model.visibleMembers.map((member) => {
             const state = memberPresenceState(member.state);
             return (
               <div
@@ -138,6 +142,16 @@ export function HouseholdPresenceCard({
               </div>
             );
           })}
+          {model.hiddenCount > 0 ? (
+            <span className="household-presence-more">
+              +{model.hiddenCount}{' '}
+              {language.toLowerCase().startsWith('zh')
+                ? '位成员'
+                : model.hiddenCount === 1
+                  ? 'more'
+                  : 'more'}
+            </span>
+          ) : null}
         </div>
       </div>
     </BaseCard>

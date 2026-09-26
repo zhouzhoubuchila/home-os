@@ -8,7 +8,8 @@ export function memberPresenceState(state: string): MemberPresenceState {
   if (normalized === 'home') return 'home';
   if (normalized === 'not_home' || normalized === 'away') return 'away';
   if (normalized === 'unavailable') return 'unavailable';
-  return 'unknown';
+  if (!normalized || normalized === 'unknown') return 'unknown';
+  return 'away';
 }
 
 export function householdPresenceState(members: readonly FamilyMember[]): HouseholdPresenceState {
