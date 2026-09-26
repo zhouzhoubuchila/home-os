@@ -45,6 +45,7 @@ import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
 import { HomeOsDetailDialog } from '../detail/home-os-detail-dialog';
 import { DeviceHealthHomeOsCard } from './device-health-home-os-card';
 import { HomeAssistantHomeOsCard } from './home-assistant-home-os-card';
+import { HouseholdPresenceCard } from './household-presence-card';
 import { MoonCard } from './lunar/moon-card';
 import {
   buildMoonCardModel,
@@ -179,26 +180,8 @@ function HouseholdCard({
   functionalDevices: readonly HomeOsFunctionalDevice[];
 }) {
   const members = buildFamilyMembers(entities, functionalDevices);
-  const homeCount = members.filter((member) => member.state === 'home').length;
   return (
-    <BaseCard size={size} title={title} headerLeading={<Users className="h-5 w-5" />}>
-      <div className="flex h-full flex-col justify-between gap-3">
-        <div>
-          <strong className="text-3xl tabular-nums">
-            {homeCount}/{members.length}
-          </strong>
-          <p className="text-sm text-current/55">{status}</p>
-        </div>
-        <div className="grid gap-1 text-sm">
-          {members.slice(0, sizeLimit(size)).map((member) => (
-            <div key={member.id} className="flex justify-between gap-2">
-              <span className="truncate">{member.name}</span>
-              <span className="text-current/60">{formatHomeOsDisplayState(member.state, t)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </BaseCard>
+    <HouseholdPresenceCard size={size} members={members} title={title} status={status} t={t} />
   );
 }
 

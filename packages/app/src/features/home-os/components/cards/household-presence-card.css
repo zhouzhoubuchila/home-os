@@ -1,0 +1,131 @@
+.household-presence-card {
+  --presence-accent: 111, 212, 225;
+  --presence-core: 164, 235, 230;
+  color: rgba(245, 248, 255, 0.94);
+  background: radial-gradient(circle at 79% 43%, rgba(43, 103, 123, 0.16), transparent 43%), linear-gradient(132deg, #080d21, #0e1933 62%, #0a1228);
+  border-color: rgba(190, 211, 255, 0.12);
+  transition: border-color 260ms ease;
+}
+
+.household-presence-card[data-presence-state='away'] {
+  --presence-accent: 116, 155, 210;
+  --presence-core: 147, 176, 214;
+}
+
+.household-presence-card[data-presence-state='unknown'],
+.household-presence-card[data-presence-state='empty'] {
+  --presence-accent: 116, 132, 165;
+  --presence-core: 146, 158, 181;
+}
+
+.household-presence-card:hover { border-color: rgba(190, 211, 255, 0.2); }
+
+.household-presence-content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  isolation: isolate;
+}
+
+.household-presence-atmosphere {
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 78% 38%, rgba(77, 148, 205, 0.07), transparent 34%), radial-gradient(circle at 30% 85%, rgba(101, 90, 205, 0.05), transparent 40%);
+}
+
+.household-presence-summary { position: relative; z-index: 1; max-width: 63%; }
+.household-presence-number { position: relative; height: 2.8rem; font-variant-numeric: tabular-nums; }
+.household-presence-number strong { font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 650; line-height: 1.1; letter-spacing: -0.04em; }
+.household-presence-number-old,
+.household-presence-number-new { position: absolute; top: 0; left: 0; white-space: nowrap; }
+.household-presence-number-old { color: rgba(226, 234, 250, 0.5); font-size: clamp(1.75rem, 3vw, 2.25rem); line-height: 1.1; letter-spacing: -0.04em; }
+.household-presence-caption { margin-top: 0.15rem; color: rgba(226, 234, 250, 0.62); font-size: 0.75rem; }
+
+.household-presence-orb {
+  position: absolute;
+  top: -3%;
+  right: 3%;
+  width: clamp(4.7rem, 30%, 6.2rem);
+  aspect-ratio: 1;
+  transition: transform 260ms ease;
+  pointer-events: none;
+}
+.household-presence-card:hover .household-presence-orb { transform: scale(1.015); }
+.household-presence-orb-halo { position: absolute; inset: -14%; border-radius: 50%; background: radial-gradient(circle, rgba(var(--presence-accent), 0.18), rgba(var(--presence-accent), 0.025) 47%, transparent 70%); opacity: 0.62; }
+.household-presence-orb-track { position: absolute; inset: 3%; border: 1px solid rgba(var(--presence-accent), 0.2); border-radius: 50%; }
+.household-presence-orb-ring { position: absolute; inset: 8%; border: 1px solid transparent; border-top-color: rgba(var(--presence-accent), 0.6); border-right-color: rgba(var(--presence-accent), 0.14); border-radius: 50%; }
+.household-presence-orb-core { position: absolute; inset: 29%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(var(--presence-accent), 0.32); border-radius: 50%; background: radial-gradient(circle at 42% 38%, rgba(var(--presence-core), 0.3), rgba(11, 28, 50, 0.92) 70%); color: rgba(229, 247, 255, 0.91); box-shadow: 0 0 22px rgba(var(--presence-accent), 0.09); }
+.household-presence-orb-node { position: absolute; inset: 3%; border-radius: 50%; }
+.household-presence-orb-node::before { content: ''; position: absolute; top: -1px; left: calc(50% - 2px); width: 3px; height: 3px; border-radius: 50%; background: rgba(var(--presence-accent), 0.48); }
+.household-presence-orb-node-b { inset: 10%; opacity: 0.34; }
+
+.household-presence-members { position: relative; z-index: 1; display: grid; min-height: 0; gap: 0.35rem; }
+.household-presence-member { display: flex; align-items: center; min-width: 0; gap: 0.45rem; color: rgba(238, 245, 255, 0.84); font-size: 0.75rem; }
+.household-presence-member-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; overflow: hidden; border: 1px solid rgba(var(--presence-accent), 0.28); border-radius: 50%; background: rgba(255, 255, 255, 0.05); color: rgba(240, 247, 255, 0.75); font-size: 0.65rem; }
+.household-presence-member-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.household-presence-member-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.household-presence-member-dot { position: relative; flex: none; width: 5px; height: 5px; border-radius: 50%; background: rgba(123, 149, 188, 0.75); }
+.household-presence-member[data-member-presence='home'] .household-presence-member-dot { background: #8fded5; }
+.household-presence-member[data-member-presence='unknown'] .household-presence-member-dot { background: rgba(139, 153, 180, 0.42); }
+.household-presence-member[data-member-presence='unavailable'] .household-presence-member-dot { background: #b698a5; }
+.household-presence-member-status { color: rgba(220, 231, 248, 0.54); }
+
+.household-presence-card[data-presence-motion='high'][data-presence-state='home'] .household-presence-orb-core,
+.household-presence-card[data-presence-motion='medium'][data-presence-state='home'] .household-presence-orb-core { animation: presence-core-breathe 7.5s ease-in-out infinite; }
+.household-presence-card[data-presence-motion='low'][data-presence-state='home'] .household-presence-orb-core { animation: presence-core-breathe 9s ease-in-out infinite; }
+.household-presence-card:is([data-presence-motion='high'], [data-presence-motion='medium'])[data-presence-state='home'] .household-presence-orb-ring { animation: presence-orbit 36s linear infinite; }
+.household-presence-card:is([data-presence-motion='high'], [data-presence-motion='medium'])[data-presence-state='away'] .household-presence-orb-ring { animation: presence-orbit 58s linear infinite; }
+.household-presence-card:is([data-presence-motion='high'], [data-presence-motion='medium'])[data-presence-state='unknown'] .household-presence-orb-ring { animation: presence-orbit 68s linear infinite; }
+.household-presence-card[data-presence-motion='high'][data-presence-state='home'] .household-presence-orb-node-a { animation: presence-orbit 32s linear infinite; }
+.household-presence-card[data-presence-motion='high'][data-presence-state='home'] .household-presence-orb-node-b { animation: presence-orbit 43s linear infinite reverse; }
+.household-presence-card[data-presence-motion='high'][data-presence-state='home'] .household-presence-orb-halo { animation: presence-halo 15s ease-in-out infinite; }
+.household-presence-card[data-presence-motion='high'][data-presence-state='away'] .household-presence-orb-core { animation: presence-away-core 17s ease-in-out infinite; }
+.household-presence-card[data-presence-motion='high'][data-presence-state='unknown'] .household-presence-orb-core { animation: presence-away-core 16s ease-in-out infinite; }
+.household-presence-card[data-presence-motion='high'] .household-presence-atmosphere { animation: presence-atmosphere 24s ease-in-out infinite alternate; }
+.household-presence-card:not([data-presence-state='home']) .household-presence-orb-node { opacity: 0; }
+.household-presence-card:is([data-presence-motion='high'], [data-presence-motion='medium']) .household-presence-member[data-member-presence='home'] .household-presence-member-dot::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: rgba(143, 222, 213, 0.22); animation: presence-halo 6.5s ease-in-out infinite; }
+.household-presence-card[data-presence-motion='off'] .household-presence-orb-node,
+.household-presence-card[data-presence-motion='low'] .household-presence-orb-node { opacity: 0; }
+.household-presence-card:not([data-presence-motion='off']) .household-presence-member[data-member-arrived='true'] { animation: presence-member-enter 480ms ease-out both; }
+.household-presence-card:not([data-presence-motion='off']) .household-presence-member[data-member-arrived='true'] .household-presence-member-dot { animation: presence-dot-arrive 620ms ease-out both; }
+.household-presence-card:not([data-presence-motion='off']) .household-presence-member[data-member-arrived='true'] .household-presence-member-avatar { animation: presence-avatar-arrive 850ms ease-out both; }
+.household-presence-card:not([data-presence-motion='off']) .household-presence-number[data-count-changing='true'] .household-presence-number-old { animation: presence-number-old 340ms ease-out both; }
+.household-presence-card:not([data-presence-motion='off']) .household-presence-number[data-count-changing='true'] .household-presence-number-new { animation: presence-number-new 340ms ease-out both; }
+.household-presence-card[data-presence-motion='off'] .household-presence-number-old { display: none; }
+
+@keyframes presence-core-breathe { 0%, 100% { transform: scale(1); opacity: .72; } 50% { transform: scale(1.035); opacity: .94; } }
+@keyframes presence-orbit { to { transform: rotate(360deg); } }
+@keyframes presence-halo { 0%, 100% { opacity: .45; } 50% { opacity: .72; } }
+@keyframes presence-away-core { 0%, 100% { opacity: .72; } 50% { opacity: .83; } }
+@keyframes presence-atmosphere { to { transform: translate(9px, -7px); opacity: .8; } }
+@keyframes presence-member-enter { from { opacity: .65; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes presence-dot-arrive { 50% { transform: scale(1.4); } }
+@keyframes presence-avatar-arrive { 50% { box-shadow: 0 0 0 4px rgba(125, 215, 225, .24); } }
+@keyframes presence-number-old { to { opacity: 0; transform: translateY(-2px); } }
+@keyframes presence-number-new { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+.household-presence-detail { animation: presence-detail-open 270ms ease-out both; }
+.household-presence-detail-member { animation: presence-detail-member-open 350ms ease-out both; animation-delay: var(--presence-stagger, 0ms); }
+.household-presence-detail-member[data-member-presence='home'] .household-presence-member-dot { background: #8fded5; }
+.household-presence-detail-member[data-member-presence='unknown'] .household-presence-member-dot { background: rgba(139, 153, 180, 0.42); }
+.household-presence-detail-member[data-member-presence='unavailable'] .household-presence-member-dot { background: #b698a5; }
+.household-presence-detail[data-presence-motion='high'] .household-presence-detail-member[data-member-presence='home'] .household-presence-member-dot::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: rgba(143, 222, 213, .2); animation: presence-halo 7s ease-in-out infinite; }
+.household-presence-detail[data-presence-motion='off'],
+.household-presence-detail[data-presence-motion='off'] * { animation: none !important; }
+@keyframes presence-detail-open { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes presence-detail-member-open { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .household-presence-card *, .household-presence-card *::before, .household-presence-card *::after,
+  .household-presence-detail, .household-presence-detail * { animation: none !important; transition: none !important; }
+  .household-presence-number-old { display: none; }
+}
+
+@media (max-width: 420px) {
+  .household-presence-orb { width: 4.7rem; }
+}

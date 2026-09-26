@@ -27,6 +27,8 @@ import {
 } from '../../resolution/final-home-os-resolution';
 import { selectHomeAssistantHostTelemetry } from '../../resolution/home-assistant-host-telemetry';
 import { useHomeOsConfigStore } from '../../stores/home-os-config-store';
+import { useHouseholdPresenceMotion } from '../cards/household-presence-card';
+import { householdPresenceState, memberPresenceState } from '../cards/household-presence-state';
 import { MoonCardDetail } from '../cards/lunar/moon-card';
 import {
   buildMoonCardModel,
@@ -232,6 +234,7 @@ export function HomeOsDetailDialog({
 }) {
   const { language, t } = useI18n();
   const { theme } = useTheme();
+  const presenceMotion = useHouseholdPresenceMotion();
   const homeAssistantConfig = useHomeAssistant((state) => state.config);
   const copy = getHomeOsCopy(language);
   const surface = getThemeSurfaceTokens(theme);
@@ -264,11 +267,23 @@ export function HomeOsDetailDialog({
   if (kind === 'household') {
     const members = buildFamilyMembers(visible, config.functionalDevices ?? []);
     content = members.length ? (
-      <div className="grid gap-2">
-        {members.map((member) => (
-          <div key={member.id} className="rounded-xl border border-current/10 p-3">
+      <div
+        className="household-presence-detail grid gap-2"
+        data-presence-state={householdPresenceState(members)}
+        data-presence-motion={presenceMotion}
+      >
+        {members.map((member, index) => (
+          <div
+            key={member.id}
+            className="household-presence-detail-member rounded-xl border border-current/10 p-3"
+            data-member-presence={memberPresenceState(member.state)}
+            style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}
+          >
             <div className="flex justify-between gap-3">
-              <span className="font-medium">{member.name}</span>
+              <span className="flex items-center gap-2 font-medium">
+                <span className="household-presence-member-dot" aria-hidden="true" />
+                {member.name}
+              </span>
               <span className={surface.textSecondary}>
                 {formatHomeOsDisplayState(member.state, t)}
               </span>
