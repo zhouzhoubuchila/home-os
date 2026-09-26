@@ -1,5 +1,6 @@
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import { useI18n, useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
 
@@ -11,6 +12,7 @@ interface CompactRoomSelectorProps {
   contentClassName?: string;
   labelClassName?: string;
   iconClassName?: string;
+  themeOverride?: ThemeType;
 }
 
 export const CompactRoomSelector = memo(function CompactRoomSelector({
@@ -21,10 +23,11 @@ export const CompactRoomSelector = memo(function CompactRoomSelector({
   contentClassName,
   labelClassName,
   iconClassName,
+  themeOverride,
 }: CompactRoomSelectorProps) {
   const { theme } = useTheme();
   const { t } = useI18n();
-  const surface = getThemeSurfaceTokens(theme);
+  const surface = getThemeSurfaceTokens(themeOverride ?? theme);
 
   return (
     <div className="relative inline-flex items-center">

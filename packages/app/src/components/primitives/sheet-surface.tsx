@@ -9,6 +9,7 @@ import {
 } from '@navet/app/components/system/tokens/ui-kit-surfaces';
 import { cn } from '@navet/app/components/ui/utils';
 import { useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -25,6 +26,7 @@ export interface SheetSurfaceProps {
   closeLabel?: string;
   contentStyle?: CSSProperties;
   contentGlowClassName?: string;
+  themeOverride?: ThemeType;
 }
 
 export interface SheetSurfaceHeaderProps {
@@ -36,6 +38,7 @@ export interface SheetSurfaceHeaderProps {
   eyebrow?: string;
   titleAccessory?: ReactNode;
   endAccessory?: ReactNode;
+  themeOverride?: ThemeType;
 }
 
 export function SheetSurfaceHeader({
@@ -47,9 +50,10 @@ export function SheetSurfaceHeader({
   eyebrow,
   titleAccessory,
   endAccessory,
+  themeOverride,
 }: SheetSurfaceHeaderProps) {
   const { theme } = useTheme();
-  const surface = getThemeSurfaceTokens(theme);
+  const surface = getThemeSurfaceTokens(themeOverride ?? theme);
 
   return (
     <div
@@ -111,8 +115,10 @@ export function SheetSurface({
   closeLabel,
   contentStyle,
   contentGlowClassName,
+  themeOverride,
 }: SheetSurfaceProps) {
-  const { theme } = useTheme();
+  const { theme: globalTheme } = useTheme();
+  const theme = themeOverride ?? globalTheme;
   return (
     <BaseCardDialog
       variant="sheet"

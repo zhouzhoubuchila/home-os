@@ -1,6 +1,7 @@
 import type { MediaPlayerCapabilities } from '@navet/app/constants/media-player-features';
 import type { TvRemoteAction } from '@navet/app/features/media/tv-remote-commands';
 import type { ResolvedPlatformResource } from '@navet/app/platform/resources';
+import type { ThemeMode } from '@navet/app/stores/theme-store';
 
 export interface MediaDialogGroupingPlayer {
   id: string;
@@ -35,6 +36,7 @@ export interface MediaDialogMediaStackSettings {
 }
 
 export interface MediaDialogProps {
+  themeOverride?: ThemeMode;
   entityId: string;
   room?: string;
   deviceClass?: string;

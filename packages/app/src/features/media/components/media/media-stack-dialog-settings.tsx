@@ -5,6 +5,7 @@ import {
 } from '@navet/app/components/patterns';
 import { CompactRoomSelector } from '@navet/app/components/shared/device-editor/compact-room-selector';
 import { useI18n } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import type { CSSProperties, MouseEvent } from 'react';
 import { useMemo } from 'react';
@@ -34,6 +35,7 @@ function getIdleBehaviorLabel(
 
 interface MediaStackDialogSettingsProps {
   controller: {
+    theme: ThemeType;
     isGlass: boolean;
     readableForeground: {
       titleStyle?: CSSProperties;
@@ -117,6 +119,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
       {settings.roomValue && settings.roomOptions && settings.onRoomChange ? (
         <div className="flex justify-start">
           <CompactRoomSelector
+            themeOverride={controller.theme}
             value={settings.roomValue}
             label={settings.roomLabel ?? t('dashboard.roomNav.all')}
             options={settings.roomOptions}
@@ -126,6 +129,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
       ) : null}
 
       <CardDialogSection
+        themeOverride={controller.theme}
         label={t('widgets.mediaStack.settings.players')}
         helperText={t('widgets.mediaStack.settings.help')}
       >
@@ -148,6 +152,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
                     onCheckedChange={() => handleToggle(player.id)}
                     label={<span className="block truncate">{player.name}</span>}
                     description={`${player.room} · ${player.subtitle}`}
+                    checkboxThemeOverride={controller.theme}
                     trailing={
                       isChecked ? (
                         <div className="flex items-center gap-1">
@@ -188,6 +193,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
       </CardDialogSection>
 
       <CardDialogSection
+        themeOverride={controller.theme}
         label={t('widgets.mediaStack.settings.priority')}
         helperText={t('widgets.mediaStack.settings.priorityHelp')}
       >
@@ -219,6 +225,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
       </CardDialogSection>
 
       <CardDialogSection
+        themeOverride={controller.theme}
         label={t('widgets.mediaStack.settings.idleBehavior')}
         helperText={t('widgets.mediaStack.settings.idleBehaviorHelp')}
       >
@@ -227,6 +234,7 @@ export function MediaStackDialogSettings({ controller, settings }: MediaStackDia
             const active = settings.idleBehavior === idleBehavior;
             return (
               <CardDialogChoicePill
+                themeOverride={controller.theme}
                 key={idleBehavior}
                 active={active}
                 onClick={() =>

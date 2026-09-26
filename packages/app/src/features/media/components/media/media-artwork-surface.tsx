@@ -14,6 +14,7 @@ interface MediaArtworkSurfaceProps {
   imageClassName?: string;
   artRegionClassName?: string;
   subduedFallback?: boolean;
+  hideBrokenArtwork?: boolean;
 }
 
 function getColorLuminance(color: string): number {
@@ -50,6 +51,7 @@ export function MediaArtworkSurface({
   imageClassName = '',
   artRegionClassName = 'w-[44%]',
   subduedFallback = false,
+  hideBrokenArtwork = false,
 }: MediaArtworkSurfaceProps) {
   const effectsQuality = useEffectiveEffectsQuality();
   const isLowEffects = effectsQuality === 'low';
@@ -154,7 +156,13 @@ export function MediaArtworkSurface({
               src={artwork}
               alt=""
               aria-hidden="true"
-              onError={() => onArtworkError?.(artwork)}
+              onError={(event) => {
+                if (hideBrokenArtwork) event.currentTarget.style.visibility = 'hidden';
+                onArtworkError?.(artwork);
+              }}
+              onLoad={(event) => {
+                if (hideBrokenArtwork) event.currentTarget.style.visibility = 'visible';
+              }}
               className={`h-full w-full object-contain object-left ${imageClassName}`}
               decoding="async"
               style={

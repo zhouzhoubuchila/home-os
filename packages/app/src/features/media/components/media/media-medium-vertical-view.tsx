@@ -31,8 +31,10 @@ interface MediaMediumVerticalViewProps {
   artwork?: string | null;
   artworkResource?: ResolvedPlatformResource | null;
   onArtworkError?: (imageUrl?: string | null) => void;
+  hideBrokenArtwork?: boolean;
   entityName: string;
   entityTypeKey: MediaEntityTypeKey;
+  entityTypeLabel?: string;
   title: string;
   artist: string;
   isActive: boolean;
@@ -63,8 +65,10 @@ export function MediaMediumVerticalView({
   artwork,
   artworkResource,
   onArtworkError,
+  hideBrokenArtwork = false,
   entityName,
   entityTypeKey,
+  entityTypeLabel,
   title,
   artist,
   isActive,
@@ -187,6 +191,7 @@ export function MediaMediumVerticalView({
       <MediaArtworkSurface
         artwork={stableArtwork}
         onArtworkError={onArtworkError}
+        hideBrokenArtwork={hideBrokenArtwork}
         palette={palette}
         theme={theme}
         layout="stacked"
@@ -204,7 +209,7 @@ export function MediaMediumVerticalView({
           <div className="flex items-start justify-between gap-3">
             <MediaEntityHeader
               entityName={entityName}
-              entityType={t(entityTypeKey)}
+              entityType={entityTypeLabel ?? t(entityTypeKey)}
               size="medium-vertical"
               isActive={isActive}
               accentColor={palette.highlight}

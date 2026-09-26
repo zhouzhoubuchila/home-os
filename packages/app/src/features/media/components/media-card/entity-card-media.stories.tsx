@@ -1,4 +1,6 @@
 import artworksOriginal from '@assets/reference/media/artworks-original.jpg';
+import { HOME_WIDGET_ROOM } from '@navet/app/constants/rooms';
+import { MediaStackWidget } from '@navet/app/features/dashboard/components/widgets/media-stack-widget';
 import { MediaCard } from '@navet/app/features/media';
 import { getStoryDocsDescription } from '@navet/app/storybook/story-docs';
 import { EntityCardStoryFrame, noopCardSizeChange } from '@navet/app/storybook/story-frames';
@@ -66,6 +68,69 @@ export const Speaker: Story = {
   args: {
     size: 'medium',
   },
+};
+
+const lunarMediaArgs = {
+  mediaStackAppearance: true,
+  mediaStackVisualVariant: 'lunar' as const,
+  name: 'Living Room Speaker',
+  title: 'Midnight City',
+  artist: 'M83',
+  entityPicture: artworksOriginal,
+  deviceClass: 'speaker',
+  state: 'playing' as const,
+  elapsedSeconds: 86,
+  durationSeconds: 243,
+};
+
+export const LunarMediaStackPlaying: Story = { args: { ...lunarMediaArgs, size: 'medium' } };
+export const LunarMediaStackSmall: Story = { args: { ...lunarMediaArgs, size: 'small' } };
+export const LunarMediaStackLarge: Story = { args: { ...lunarMediaArgs, size: 'large' } };
+export const LunarMediaStackPaused: Story = {
+  args: { ...lunarMediaArgs, state: 'paused', size: 'medium' },
+};
+export const LunarMediaStackIdle: Story = {
+  args: { ...lunarMediaArgs, state: 'idle', elapsedSeconds: 0, durationSeconds: 0, size: 'medium' },
+};
+export const LunarMediaStackOff: Story = {
+  args: { ...lunarMediaArgs, state: 'off', elapsedSeconds: 0, durationSeconds: 0, size: 'medium' },
+};
+export const LunarMediaStackNoArtwork: Story = {
+  args: { ...lunarMediaArgs, entityPicture: undefined, size: 'medium' },
+};
+export const LunarMediaStackTv: Story = {
+  args: {
+    ...lunarMediaArgs,
+    id: 'media_player.living_room_tv',
+    name: 'Apple TV',
+    deviceClass: 'tv',
+    entityType: 'TV',
+    title: 'Apple TV',
+    artist: '',
+    source: 'HDMI 1',
+    entityPicture: undefined,
+    size: 'medium',
+  },
+};
+export const LunarMediaStackCriticalLongTitle: Story = {
+  args: {
+    ...lunarMediaArgs,
+    title: 'A Very Long Midnight City Live Performance With An Extended Title',
+    size: 'medium',
+  },
+};
+export const LunarMediaStackEmpty: Story = {
+  render: () => (
+    <EntityCardStoryFrame size="medium">
+      <MediaStackWidget
+        room={HOME_WIDGET_ROOM}
+        size="medium"
+        data={{ entityIds: [] }}
+        onUpdate={() => {}}
+      />
+    </EntityCardStoryFrame>
+  ),
+  args: { size: 'medium' },
 };
 
 export const SpeakerDialog: Story = {

@@ -6,6 +6,7 @@ export interface MediaStackWidgetData extends Record<string, unknown> {
   entityIds?: string[];
   priorityOrder?: string[];
   idleBehavior?: MediaStackIdleBehavior;
+  visualVariant?: 'default' | 'lunar';
 }
 
 export interface MediaStackSelectionResult {
@@ -41,12 +42,14 @@ export function normalizeMediaStackWidgetData(
     ...entityIds.filter((entityId) => !priorityOrderInput.includes(entityId)),
   ];
   const idleBehavior = isMediaStackIdleBehavior(data.idleBehavior) ? data.idleBehavior : 'compact';
+  const { visualVariant, ...restData } = data;
 
   return {
-    ...data,
+    ...restData,
     entityIds,
     priorityOrder,
     idleBehavior,
+    ...(visualVariant === 'lunar' || visualVariant === 'default' ? { visualVariant } : {}),
   };
 }
 

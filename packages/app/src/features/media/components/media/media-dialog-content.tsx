@@ -136,6 +136,7 @@ export function MediaDialogContent({
   sourceList,
   supportsGrouping,
   title,
+  themeOverride,
   upNextTitle,
   volume,
 }: MediaDialogContentProps) {
@@ -331,6 +332,7 @@ export function MediaDialogContent({
             </Popover.Root>
             {groupingPanel && isPhone ? (
               <SheetSurface
+                themeOverride={themeOverride}
                 isOpen={isGroupingPickerOpen}
                 onOpenChange={setIsGroupingPickerOpen}
                 title={t('media.group.title')}
@@ -340,6 +342,7 @@ export function MediaDialogContent({
               >
                 <div className="space-y-4">
                   <SheetSurfaceHeader
+                    themeOverride={themeOverride}
                     title={t('media.group.title')}
                     description={entityName}
                     closeLabel={t('common.closeDialog')}
@@ -419,6 +422,7 @@ export function MediaDialogContent({
 
   return (
     <ModalSurface
+      themeOverride={themeOverride}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       title={entityName}
@@ -458,6 +462,7 @@ export function MediaDialogContent({
                 <CardDialogTabList>
                   {isTvDevice ? (
                     <CardDialogTabTrigger
+                      themeOverride={themeOverride}
                       active={activeTab === 'tv'}
                       className="min-w-[4.75rem] justify-center rounded-full"
                       icon={Tv2}
@@ -468,6 +473,7 @@ export function MediaDialogContent({
                     </CardDialogTabTrigger>
                   ) : null}
                   <CardDialogTabTrigger
+                    themeOverride={themeOverride}
                     active={activeTab === 'playback'}
                     className="min-w-[5.5rem] justify-center rounded-full"
                     icon={Sliders}
@@ -478,6 +484,7 @@ export function MediaDialogContent({
                   </CardDialogTabTrigger>
                   {stackSettingsPanel ? (
                     <CardDialogTabTrigger
+                      themeOverride={themeOverride}
                       active={activeTab === 'stack'}
                       className="min-w-[5.5rem] justify-center rounded-full"
                       icon={Layers3}

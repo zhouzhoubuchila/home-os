@@ -44,8 +44,11 @@ interface MediaMediumViewProps {
   artwork?: string | null;
   artworkResource?: ResolvedPlatformResource | null;
   onArtworkError?: (imageUrl?: string | null) => void;
+  hideBrokenArtwork?: boolean;
   entityName: string;
   entityTypeKey: MediaEntityTypeKey;
+  entityTypeLabel?: string;
+  trackIdentity?: string;
   title: string;
   artist: string;
   isActive: boolean;
@@ -82,8 +85,11 @@ export function MediaMediumView({
   artwork,
   artworkResource,
   onArtworkError,
+  hideBrokenArtwork = false,
   entityName,
   entityTypeKey,
+  entityTypeLabel,
+  trackIdentity,
   title,
   artist,
   isActive,
@@ -221,6 +227,7 @@ export function MediaMediumView({
       <MediaArtworkSurface
         artwork={stableArtwork}
         onArtworkError={onArtworkError}
+        hideBrokenArtwork={hideBrokenArtwork}
         palette={palette}
         theme={theme}
         layout="split"
@@ -237,7 +244,7 @@ export function MediaMediumView({
           <div className="flex items-start justify-between gap-3">
             <MediaEntityHeader
               entityName={entityName}
-              entityType={t(entityTypeKey)}
+              entityType={entityTypeLabel ?? t(entityTypeKey)}
               size="medium"
               isActive={isActive}
               accentColor={palette.highlight}
@@ -259,7 +266,10 @@ export function MediaMediumView({
 
           <div className="mt-auto flex flex-col gap-2">
             <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
+              <div
+                key={trackIdentity}
+                className={`min-w-0 ${trackIdentity ? 'media-orbit-track' : ''}`}
+              >
                 <MediaMarqueeText
                   text={title}
                   className={`text-sm font-semibold ${iconTone}`}
@@ -301,7 +311,10 @@ export function MediaMediumView({
             </div>
 
             {!hideTransportControls ? (
-              <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2"
+                data-media-progress-valid={hasSeekDuration && Number.isFinite(elapsedSeconds)}
+              >
                 <span
                   className={`shrink-0 text-[10px] tabular-nums ${subtitleTone}`}
                   style={readableForeground.subtitleStyle}
@@ -336,7 +349,7 @@ export function MediaMediumView({
                   }}
                   disabled={!hasSeekDuration || !canSeek}
                   rootClassName="relative flex h-4 min-w-0 flex-1 items-center touch-none select-none"
-                  trackClassName="relative h-[3px] grow rounded-full"
+                  trackClassName="media-orbit-progress-track relative h-[3px] grow rounded-full"
                   rangeClassName="absolute h-full rounded-full"
                   thumbClassName="block h-3 w-3 rounded-full outline-none"
                   touchThumbClassName="block h-6 w-6 rounded-full outline-none"

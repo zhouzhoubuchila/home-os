@@ -63,6 +63,75 @@ vi.mock('../use-media-artwork-colors', async () => {
 });
 
 describe('MediaDialog', () => {
+  it('isolates Lunar stack dialog surfaces from the global light theme', () => {
+    useThemeMock.mockReturnValue({ theme: 'light' });
+    useMediaArtworkColorsMock.mockReturnValue({
+      dominant: 'rgb(32, 32, 35)',
+      vibrant: 'rgb(80, 80, 86)',
+      darkMuted: 'rgb(18, 18, 20)',
+      highlight: 'rgb(242, 242, 245)',
+      gradientEnd: 'rgb(10, 10, 12)',
+    });
+    const baseProps = {
+      entityId: 'media_player.speaker',
+      entityName: 'Speaker',
+      entityType: 'Speaker',
+      title: 'Midnight City',
+      artist: 'M83',
+      isOpen: true,
+      onOpenChange: vi.fn(),
+      isPlaying: true,
+      volume: 30,
+      isMuted: false,
+      elapsedSeconds: 45,
+      durationSeconds: 240,
+      supportsGrouping: false,
+      groupMembers: [],
+      availableGroupingPlayers: [],
+      onPrevious: vi.fn(),
+      canPreviousTrack: true,
+      onTogglePlay: vi.fn(),
+      onNext: vi.fn(),
+      canNextTrack: true,
+      shuffleEnabled: false,
+      repeatMode: 'off' as const,
+      onToggleShuffle: vi.fn(),
+      onCycleRepeat: vi.fn(),
+      capabilities: getMediaPlayerCapabilities(4 | 8 | 16 | 32 | 2),
+      sourceList: [],
+      onSelectSource: vi.fn(),
+      soundModeList: [],
+      onSelectSoundMode: vi.fn(),
+      onSeek: vi.fn(),
+      onClearPlaylist: vi.fn(),
+      onToggleMute: vi.fn(),
+      onVolumeChange: vi.fn(),
+      onVolumeInteractionStart: vi.fn(),
+      onVolumeInteractionEnd: vi.fn(),
+      onAttachGroupMember: vi.fn(),
+      onDetachGroupMember: vi.fn(),
+      mediaStackSettings: {
+        entityIds: ['media_player.speaker'],
+        priorityOrder: ['media_player.speaker'],
+        idleBehavior: 'compact' as const,
+        playerOptions: [
+          { id: 'media_player.speaker', name: 'Speaker', room: 'Living Room', subtitle: 'Speaker' },
+        ],
+        onUpdate: vi.fn(),
+      },
+      initialTab: 'stack',
+    };
+
+    const lunar = renderWithProviders(<MediaDialog {...baseProps} themeOverride="dark" />);
+    expect(screen.getByRole('dialog', { name: 'Speaker' })).toHaveClass('bg-[rgba(24,24,27,0.97)]');
+    expect(screen.getByText('Media players', { selector: 'div.mb-1' })).toHaveClass('text-white');
+    expect(screen.getByRole('checkbox')).toHaveClass('bg-zinc-900');
+    lunar.unmount();
+
+    renderWithProviders(<MediaDialog {...baseProps} />);
+    expect(screen.getByRole('dialog', { name: 'Speaker' })).toHaveClass('bg-white');
+    expect(screen.getByRole('checkbox')).toHaveClass('bg-white');
+  });
   it('keeps the header identity and browses media through the opened player', async () => {
     entityRoomSelectorMock.mockClear();
     useThemeMock.mockReturnValue({ theme: 'dark' });

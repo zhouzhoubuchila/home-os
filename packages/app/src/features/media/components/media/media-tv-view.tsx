@@ -19,6 +19,8 @@ import { TvChannelControls, TvVolumeControls } from './tv-volume-controls';
 interface MediaTvViewProps {
   size: CardSize;
   playerName: string;
+  eyebrowLabel?: string;
+  lunarStack?: boolean;
   source?: string;
   sourceList: string[];
   isOn: boolean;
@@ -43,6 +45,8 @@ interface MediaTvViewProps {
 export function MediaTvView({
   size,
   playerName,
+  eyebrowLabel,
+  lunarStack = false,
   source,
   sourceList,
   isOn,
@@ -289,11 +293,14 @@ export function MediaTvView({
   const header = (
     <EntityCardHeader
       title={playerName}
-      subtitle={t('media.type.tv')}
+      subtitle={eyebrowLabel ?? t('media.type.tv')}
+      titleStyle={lunarStack ? { color: 'rgba(245, 248, 255, 0.94)' } : undefined}
+      subtitleStyle={lunarStack ? { color: 'rgba(210, 220, 242, 0.58)' } : undefined}
+      backgroundColor={lunarStack ? '#050816' : undefined}
       layout="eyebrow-first"
       size={size}
-      tone={isOn ? 'pink' : 'neutral'}
-      accentColor={isOn ? '#d946ef' : null}
+      tone={lunarStack ? 'primary' : isOn ? 'pink' : 'neutral'}
+      accentColor={lunarStack ? '#8fd8f5' : isOn ? '#d946ef' : null}
       titleClassName="text-left"
       subtitleClassName="text-left"
       leading={
@@ -301,7 +308,8 @@ export function MediaTvView({
           IconComponent={Tv2}
           isActive={isOn}
           size={size}
-          tone={isOn ? 'pink' : 'neutral'}
+          themeOverride={lunarStack ? 'dark' : undefined}
+          tone={lunarStack ? 'primary' : isOn ? 'pink' : 'neutral'}
         />
       }
     />

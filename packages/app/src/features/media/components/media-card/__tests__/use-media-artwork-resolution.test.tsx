@@ -65,6 +65,19 @@ describe('useMediaArtworkResolution', () => {
     );
   });
 
+  it('falls back after an artwork error without exposing a broken image URL', () => {
+    const { result } = renderHook(() =>
+      useMediaArtworkResolution({
+        entityId: 'media_player.speaker',
+        liveEntityPicture: 'https://example.test/album.png',
+      })
+    );
+    const failedUrl = result.current.albumArt;
+    expect(failedUrl).toBeTruthy();
+    act(() => result.current.handleArtworkError(failedUrl));
+    expect(result.current.albumArt).toBeNull();
+  });
+
   it('uses authenticated websocket thumbnail data for Home Assistant media proxy artwork', async () => {
     fetchMediaThumbnailDataUrlMock.mockResolvedValue('data:image/jpeg;base64,album-art');
 

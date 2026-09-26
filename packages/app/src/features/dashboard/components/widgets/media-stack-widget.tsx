@@ -1,6 +1,7 @@
 import { CardEmptyState } from '@navet/app/components/patterns';
 import { BaseCard } from '@navet/app/components/primitives';
 import type { CardSize } from '@navet/app/components/shared/card-size-selector';
+import { HOME_WIDGET_ROOM } from '@navet/app/constants/rooms';
 import { EMPTY_NAVET_MEDIA_CAPABILITIES } from '@navet/app/core/navet-device-state';
 import { MediaCard } from '@navet/app/features/media';
 import type { MediaStackIdleBehavior } from '@navet/app/features/media/components/media/media-dialog.types';
@@ -48,12 +49,16 @@ const MediaDialog = lazy(async () => {
   return { default: module.MediaDialog };
 });
 
-function createWidgetUpdatePayload(next: {
-  entityIds: string[];
-  priorityOrder: string[];
-  idleBehavior: MediaStackIdleBehavior;
-}): MediaStackWidgetData {
+function createWidgetUpdatePayload(
+  next: {
+    entityIds: string[];
+    priorityOrder: string[];
+    idleBehavior: MediaStackIdleBehavior;
+  },
+  current: MediaStackWidgetData | undefined
+): MediaStackWidgetData {
   return {
+    ...current,
     entityIds: next.entityIds,
     priorityOrder: next.priorityOrder,
     idleBehavior: next.idleBehavior,
@@ -76,6 +81,9 @@ export const MediaStackWidget = memo(function MediaStackWidget({
     () => normalizeMediaStackWidgetData(data as Record<string, unknown> | undefined),
     [data]
   );
+  const visualVariant =
+    normalizedData?.visualVariant ?? (room === HOME_WIDGET_ROOM ? 'lunar' : 'default');
+  const isLunar = visualVariant === 'lunar';
   const mediaDevices = useMemo(() => [...devices.media].sort(sortPlayers), [devices.media]);
   const playerOptions = useMemo<MediaStackPlayerOption[]>(
     () =>
@@ -112,7 +120,7 @@ export const MediaStackWidget = memo(function MediaStackWidget({
         entityIds: string[];
         priorityOrder: string[];
         idleBehavior: MediaStackIdleBehavior;
-      }) => onUpdate?.(createWidgetUpdatePayload(next)),
+      }) => onUpdate?.(createWidgetUpdatePayload(next, normalizedData)),
     }),
     [normalizedData, onRoomChange, onUpdate, playerOptions, roomLabel, roomOptions, roomValue]
   );
@@ -165,22 +173,59 @@ export const MediaStackWidget = memo(function MediaStackWidget({
         onOpenChange={setIsDialogOpen}
         mediaStackSettings={mediaStackSettings}
         initialTab="stack"
+        themeOverride={isLunar ? 'dark' : undefined}
       />
     </Suspense>
+  );
+
+  const renderEmptyCard = (title: string, description: string, showAction: boolean) => (
+    <BaseCard
+      size={size}
+      fullBleed
+      contentClassName="h-full"
+      className={isLunar ? 'media-orbit-empty' : undefined}
+      themeOverride={isLunar ? 'dark' : undefined}
+      data-media-visual-variant={visualVariant}
+    >
+      <div className="h-full p-4">
+        {isLunar ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-blue-50">
+            <Radio className="h-7 w-7 text-sky-200/60" aria-hidden="true" />
+            <div className="text-sm font-semibold">{title}</div>
+            <div className="text-xs text-blue-100/55">{description}</div>
+            {showAction && onUpdate ? (
+              <button
+                type="button"
+                className="mt-1 rounded-lg border border-white/12 bg-white/[0.05] px-3 py-1.5 text-xs text-blue-50/80"
+                onClick={() => setIsDialogOpen(true)}
+              >
+                {t('widgets.mediaStack.settings.players')}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <CardEmptyState
+            title={title}
+            description={description}
+            icon={Radio}
+            actionLabel={
+              showAction && onUpdate ? t('widgets.mediaStack.settings.players') : undefined
+            }
+            onAction={showAction && onUpdate ? () => setIsDialogOpen(true) : undefined}
+          />
+        )}
+      </div>
+    </BaseCard>
   );
 
   if (mediaDevices.length === 0) {
     return (
       <>
-        <BaseCard size={size} fullBleed contentClassName="h-full">
-          <div className="h-full p-4">
-            <CardEmptyState
-              title={t('dashboard.addCard.templates.mediaStack.name')}
-              description={t('widgets.mediaStack.settings.noneAvailable')}
-              icon={Radio}
-            />
-          </div>
-        </BaseCard>
+        {renderEmptyCard(
+          t('dashboard.addCard.templates.mediaStack.name'),
+          t('widgets.mediaStack.settings.noneAvailable'),
+          false
+        )}
         {emptyDialog}
       </>
     );
@@ -189,17 +234,11 @@ export const MediaStackWidget = memo(function MediaStackWidget({
   if (configuredEntityIds.length === 0) {
     return (
       <>
-        <BaseCard size={size} fullBleed contentClassName="h-full">
-          <div className="h-full p-4">
-            <CardEmptyState
-              title={t('widgets.mediaStack.empty.title')}
-              description={t('widgets.mediaStack.empty.description')}
-              icon={Radio}
-              actionLabel={onUpdate ? t('widgets.mediaStack.settings.players') : undefined}
-              onAction={onUpdate ? () => setIsDialogOpen(true) : undefined}
-            />
-          </div>
-        </BaseCard>
+        {renderEmptyCard(
+          t('widgets.mediaStack.empty.title'),
+          t('widgets.mediaStack.empty.description'),
+          true
+        )}
         {emptyDialog}
       </>
     );
@@ -208,17 +247,11 @@ export const MediaStackWidget = memo(function MediaStackWidget({
   if (!selection) {
     return (
       <>
-        <BaseCard size={size} fullBleed contentClassName="h-full">
-          <div className="h-full p-4">
-            <CardEmptyState
-              title={t('widgets.mediaStack.empty.unavailableTitle')}
-              description={t('widgets.mediaStack.empty.unavailableDescription')}
-              icon={Radio}
-              actionLabel={onUpdate ? t('widgets.mediaStack.settings.players') : undefined}
-              onAction={onUpdate ? () => setIsDialogOpen(true) : undefined}
-            />
-          </div>
-        </BaseCard>
+        {renderEmptyCard(
+          t('widgets.mediaStack.empty.unavailableTitle'),
+          t('widgets.mediaStack.empty.unavailableDescription'),
+          true
+        )}
         {emptyDialog}
       </>
     );
@@ -251,6 +284,7 @@ export const MediaStackWidget = memo(function MediaStackWidget({
       onSizeChange={noopCardSizeChange}
       isEditMode={false}
       mediaStackAppearance
+      mediaStackVisualVariant={visualVariant}
       mediaStackSettings={mediaStackSettings}
       openSettingsRequestKey={openSettingsRequestKey}
     />

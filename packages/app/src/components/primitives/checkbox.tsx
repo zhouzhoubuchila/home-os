@@ -6,6 +6,7 @@ import {
 } from '@navet/app/components/system/tokens';
 import { cn } from '@navet/app/components/ui/utils';
 import { useTheme } from '@navet/app/hooks';
+import type { ThemeType } from '@navet/app/hooks/use-theme';
 import type { PrimaryColor } from '@navet/app/stores/theme-store';
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
 import { Check } from 'lucide-react';
@@ -16,6 +17,7 @@ export interface CheckboxProps
   appearance?: 'default' | 'secondary';
   palette?: 'accent' | PrimaryColor;
   paletteColor?: string | null;
+  themeOverride?: ThemeType;
 }
 
 // Status: proposed. Canonical checkbox primitive for compact form rows and list selection.
@@ -27,12 +29,14 @@ export const Checkbox = forwardRef<ComponentRef<typeof CheckboxPrimitive.Root>, 
       disabled,
       palette = 'accent',
       paletteColor = null,
+      themeOverride,
       style,
       ...props
     },
     ref
   ) {
-    const { theme, accentColor } = useTheme();
+    const { theme: globalTheme, accentColor } = useTheme();
+    const theme = themeOverride ?? globalTheme;
     const checkedColor =
       palette === 'accent' ? accentColor : resolvePrimaryColorValue(palette, paletteColor);
     const pickerTokens = getThemeAppearancePickerTokens(theme, checkedColor);

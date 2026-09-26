@@ -8,6 +8,8 @@ import { useEffectiveEffectsQuality } from '@navet/app/components/shared/theme/e
 import { getThemeSurfaceTokens } from '@navet/app/components/shared/theme/theme-surface-tokens';
 import type { NavetMediaCapabilities } from '@navet/app/core/navet-device-state';
 import { useI18n, useTheme } from '@navet/app/hooks';
+import { settingsSelectors } from '@navet/app/stores/selectors';
+import { useSettingsStore } from '@navet/app/stores/settings-store';
 import type { ThemeMode } from '@navet/app/stores/theme-store';
 import type { CSSProperties, ReactNode } from 'react';
 import { lazy, memo, Suspense, useEffect, useState } from 'react';
@@ -24,8 +26,10 @@ import {
 } from '../media/use-media-artwork-colors';
 import { useStableMediaArtwork } from '../media/use-stable-media-artwork';
 import { getMediaEntityTypeKey } from './get-media-entity-type-key';
+import { MediaOrbitLayer } from './media-orbit-layer';
 import { resolveMediaPlayerName } from './resolve-media-player-name';
 import { useMediaCardController } from './use-media-card-controller';
+import './media-orbit-card.css';
 
 const MediaDialog = lazy(async () => {
   const module = await import('../media/media-dialog');
@@ -117,6 +121,7 @@ interface MediaCardProps {
   onSizeChange: (id: string, size: CardSize) => void;
   isEditMode: boolean;
   mediaStackAppearance?: boolean;
+  mediaStackVisualVariant?: 'default' | 'lunar';
   mediaStackCount?: number;
   mediaStackSettings?: MediaDialogMediaStackSettings;
   openSettingsRequestKey?: number;
@@ -157,6 +162,7 @@ export const MediaCard = memo(function MediaCard({
   onSizeChange: _onSizeChange,
   isEditMode,
   mediaStackAppearance = false,
+  mediaStackVisualVariant = 'default',
   mediaStackCount,
   mediaStackSettings,
   openSettingsRequestKey = 0,
@@ -165,9 +171,14 @@ export const MediaCard = memo(function MediaCard({
   onTogglePlayback,
   simulateTvRemote = false,
 }: MediaCardProps) {
-  const { theme } = useTheme();
+  const { theme: globalTheme } = useTheme();
+  const isLunarStack = mediaStackAppearance && mediaStackVisualVariant === 'lunar';
+  const theme = isLunarStack ? 'dark' : globalTheme;
   const { t } = useI18n();
   const effectsQuality = useEffectiveEffectsQuality();
+  const disableAnimations = useSettingsStore(settingsSelectors.disableAnimations);
+  const lowPowerMode = useSettingsStore(settingsSelectors.lowPowerMode);
+  const mediaMotion = disableAnimations ? 'off' : lowPowerMode ? 'low' : effectsQuality;
   const isLowEffects = effectsQuality === 'low';
   const mediaEntityTypeKey = getMediaEntityTypeKey(entityType, deviceClass);
   const mediaEntityTypeLabel = t(mediaEntityTypeKey);
@@ -201,6 +212,7 @@ export const MediaCard = memo(function MediaCard({
     isMuted,
     isOpen,
     mediaCapabilities,
+    mediaState,
     openDialog,
     remoteAvailable,
     repeatMode,
@@ -266,6 +278,17 @@ export const MediaCard = memo(function MediaCard({
   const isMediumVertical = mediaSize === 'medium-vertical';
   const isLarge = mediaSize === 'large';
   const isTv = deviceClass?.toLowerCase() === 'tv';
+  const orbitState = isOff
+    ? 'off'
+    : isPlaying
+      ? 'playing'
+      : (mediaState ?? state) === 'paused'
+        ? 'paused'
+        : 'idle';
+  const invalidLunarProgress =
+    isLunarStack && (!Number.isFinite(elapsedSeconds) || !Number.isFinite(durationSeconds));
+  const displayElapsedSeconds = invalidLunarProgress ? 0 : elapsedSeconds;
+  const displayDurationSeconds = invalidLunarProgress ? 0 : durationSeconds;
   const isSpotifyAccountCard =
     !isTv &&
     [id, name, resolvedPlayerName]
@@ -307,15 +330,19 @@ export const MediaCard = memo(function MediaCard({
   const shellBorder = isOff ? inactiveShellBorder : isActiveTv ? activeTvShellBorder : cardBorder;
   const shellBlur = hasArtwork && !isOff ? '' : cardShell.backdropClassName;
   const shellOverlayClassName = isOff ? null : stateSurface.overlayClassName;
-  const tvOnGlowClassName = isActiveTv && !isLowEffects ? getActiveTvGlowClassName(theme) : null;
+  const tvOnGlowClassName =
+    isActiveTv && !isLowEffects && !isLunarStack ? getActiveTvGlowClassName(theme) : null;
   const activeTvShellStyle = isActiveTv ? getActiveTvShellStyle(theme) : undefined;
   const mediaIdentityProps = {
     entityId: id,
     artwork: resolvedAlbumArt,
     artworkResource,
+    hideBrokenArtwork: isLunarStack,
     onArtworkError: handleArtworkError,
     entityName: mediaStackCount ? `${resolvedPlayerName} +${mediaStackCount}` : resolvedPlayerName,
     entityTypeKey: mediaEntityTypeKey,
+    entityTypeLabel: isLunarStack ? 'MEDIA / ORBIT' : undefined,
+    trackIdentity: isLunarStack ? `${displayTitle}::${displayArtist}` : undefined,
     title: displayTitle,
     artist: displayArtist,
     isActive: !isOff,
@@ -368,8 +395,9 @@ export const MediaCard = memo(function MediaCard({
     }
   }, [mediaStackSettings, openDialog, openSettingsRequestKey]);
 
-  const stackLayerColors =
-    theme === 'light'
+  const stackLayerColors = isLunarStack
+    ? ['rgba(13, 22, 48, 0.98)', 'rgba(8, 13, 33, 0.96)']
+    : theme === 'light'
       ? ['rgba(226, 232, 240, 0.96)', 'rgba(241, 245, 249, 0.9)']
       : theme === 'black'
         ? ['rgba(63, 63, 70, 0.98)', 'rgba(39, 39, 42, 0.94)']
@@ -385,6 +413,9 @@ export const MediaCard = memo(function MediaCard({
   const stackShellStyle: CSSProperties = mediaStackAppearance
     ? {
         ...activeTvShellStyle,
+        ...(isLunarStack
+          ? { ['--media-orbit-accent' as string]: withAlpha(stackPalette.highlight, 0.1) }
+          : {}),
         boxShadow: [...stackLayerShadows, activeTvShellStyle?.boxShadow].filter(Boolean).join(', '),
       }
     : (activeTvShellStyle ?? {});
@@ -394,7 +425,11 @@ export const MediaCard = memo(function MediaCard({
         <span
           className={`inline-flex items-center rounded-full border px-2 py-1 text-[0.65rem] font-medium uppercase tracking-[0.14em] ${surface.textPrimary}`}
           style={{
-            backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.84)' : 'rgba(24,24,27,0.58)',
+            backgroundColor: isLunarStack
+              ? 'rgba(8, 17, 38, 0.78)'
+              : theme === 'light'
+                ? 'rgba(255,255,255,0.84)'
+                : 'rgba(24,24,27,0.58)',
             borderColor: theme === 'light' ? 'rgba(24,24,27,0.08)' : 'rgba(255,255,255,0.14)',
           }}
         >
@@ -417,6 +452,9 @@ export const MediaCard = memo(function MediaCard({
         stackPalette.gradientEnd,
         0.68
       )} 100%)`;
+  const resolvedStackLayerBackground = isLunarStack
+    ? `radial-gradient(circle at 18% 14%, ${withAlpha(stackPalette.highlight, 0.08)}, transparent 42%), linear-gradient(160deg, #0d1630, #050816)`
+    : stackLayerBackground;
 
   return (
     <>
@@ -427,7 +465,7 @@ export const MediaCard = memo(function MediaCard({
             className={`pointer-events-none absolute inset-x-5 -top-3.5 bottom-4 rounded-[24px] border ${stackLayerSurfaceClassName}`}
             style={{
               zIndex: 0,
-              background: stackLayerBackground,
+              background: resolvedStackLayerBackground,
               borderColor: theme === 'light' ? 'rgba(148,163,184,0.26)' : 'rgba(255,255,255,0.09)',
               boxShadow: isLowEffects ? 'none' : '0 14px 30px -16px rgba(0,0,0,0.72)',
             }}
@@ -439,7 +477,7 @@ export const MediaCard = memo(function MediaCard({
             className={`pointer-events-none absolute inset-x-2.5 -top-1.5 bottom-2 rounded-[24px] border ${stackLayerSurfaceClassName}`}
             style={{
               zIndex: 0,
-              background: stackLayerBackground,
+              background: resolvedStackLayerBackground,
               borderColor: theme === 'light' ? 'rgba(148,163,184,0.34)' : 'rgba(255,255,255,0.12)',
               boxShadow: isLowEffects ? 'none' : '0 9px 22px -13px rgba(0,0,0,0.62)',
             }}
@@ -447,9 +485,16 @@ export const MediaCard = memo(function MediaCard({
         ) : null}
         <BaseCard
           size={size}
+          themeOverride={isLunarStack ? 'dark' : undefined}
+          data-media-visual-variant={isLunarStack ? 'lunar' : 'default'}
+          data-media-orbit-state={isLunarStack ? orbitState : undefined}
+          data-media-orbit-type={isLunarStack ? (isTv ? 'tv' : 'music') : undefined}
+          data-media-has-artwork={isLunarStack ? String(hasArtwork) : undefined}
+          data-media-motion={isLunarStack ? mediaMotion : undefined}
+          data-media-orbit-size={isLunarStack ? mediaSize : undefined}
           {...cardInteraction.cardProps}
           interactive={!isEditMode}
-          className={`relative z-[1] ${isEditMode ? '' : 'cursor-pointer'}`}
+          className={`relative z-[1] ${isEditMode ? '' : 'cursor-pointer'} ${isLunarStack ? 'media-orbit-card' : ''}`}
           backgroundClassName={backgroundClassName}
           frameClassName={`${cardShell.rootFrameClassName} ${shellBorder} ${cardShadow} ${shellBlur} ${stateSurface.containerClassName}`}
           style={stackShellStyle}
@@ -467,11 +512,16 @@ export const MediaCard = memo(function MediaCard({
           contentClassName="h-full"
         >
           <div className="relative h-full flex flex-col">
+            {isLunarStack ? (
+              <MediaOrbitLayer showWaveform={!isTv && orbitState === 'playing'} />
+            ) : null}
             {stackBadge}
             {isTv ? (
               <MediaTvView
                 size={mediaSize}
                 playerName={resolvedPlayerName}
+                eyebrowLabel={isLunarStack ? 'MEDIA / ORBIT' : undefined}
+                lunarStack={isLunarStack}
                 source={source}
                 sourceList={sourceList}
                 isOn={!isOff}
@@ -496,31 +546,32 @@ export const MediaCard = memo(function MediaCard({
               <MediaSmallView
                 {...mediaIdentityProps}
                 {...mediaControlProps}
-                elapsedSeconds={elapsedSeconds}
-                durationSeconds={durationSeconds}
+                lunarCompact={isLunarStack}
+                elapsedSeconds={displayElapsedSeconds}
+                durationSeconds={displayDurationSeconds}
               />
             ) : isMedium ? (
               <MediaMediumView
                 {...mediaIdentityProps}
                 {...mediaControlProps}
-                elapsedSeconds={elapsedSeconds}
-                durationSeconds={durationSeconds}
+                elapsedSeconds={displayElapsedSeconds}
+                durationSeconds={displayDurationSeconds}
               />
             ) : isMediumVertical ? (
               <MediaMediumVerticalView
                 {...mediaIdentityProps}
                 {...mediaControlProps}
-                elapsedSeconds={elapsedSeconds}
-                durationSeconds={durationSeconds}
+                elapsedSeconds={displayElapsedSeconds}
+                durationSeconds={displayDurationSeconds}
               />
             ) : isLarge ? (
               <MediaLargeView
                 {...mediaIdentityProps}
                 {...mediaControlProps}
-                hideHeader={useSpotifyConnectPresentation}
+                hideHeader={useSpotifyConnectPresentation && !isLunarStack}
                 fallbackArtworkIcon={useSpotifyConnectPresentation ? 'spotify' : 'disc'}
-                elapsedSeconds={elapsedSeconds}
-                durationSeconds={durationSeconds}
+                elapsedSeconds={displayElapsedSeconds}
+                durationSeconds={displayDurationSeconds}
               />
             ) : null}
           </div>
@@ -530,6 +581,7 @@ export const MediaCard = memo(function MediaCard({
       {isOpen && (
         <Suspense fallback={null}>
           <MediaDialog
+            themeOverride={isLunarStack ? 'dark' : undefined}
             entityId={id}
             room={_room}
             deviceClass={deviceClass}
@@ -553,8 +605,8 @@ export const MediaCard = memo(function MediaCard({
             isPlaying={isPlaying}
             volume={volume}
             isMuted={isMuted}
-            elapsedSeconds={elapsedSeconds}
-            durationSeconds={durationSeconds}
+            elapsedSeconds={displayElapsedSeconds}
+            durationSeconds={displayDurationSeconds}
             supportsGrouping={supportsGrouping}
             groupMembers={groupMembers}
             availableGroupingPlayers={availableGroupingPlayers}

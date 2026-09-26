@@ -107,6 +107,25 @@ describe('MediaStackWidget', () => {
     expect(await screen.findByText('Media stack')).toBeInTheDocument();
   });
 
+  it('keeps Home empty and unavailable states on the Lunar surface with a settings action', () => {
+    const noSelection = renderWithProviders(
+      <MediaStackWidget room="__home__" onUpdate={vi.fn()} />
+    );
+    expect(noSelection.container.querySelector('.media-orbit-empty')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Media players' })).toBeInTheDocument();
+    noSelection.unmount();
+
+    const unavailable = renderWithProviders(
+      <MediaStackWidget
+        room="__home__"
+        data={{ entityIds: ['media_player.missing'] }}
+        onUpdate={vi.fn()}
+      />
+    );
+    expect(unavailable.container.querySelector('.media-orbit-empty')).toBeInTheDocument();
+    expect(screen.getByText('Selected media players unavailable')).toBeInTheDocument();
+  });
+
   it('saves player selection from settings', async () => {
     const onUpdate = vi.fn();
 
@@ -162,6 +181,94 @@ describe('MediaStackWidget', () => {
         mediaStackAppearance: true,
       })
     );
+  });
+
+  it('uses Lunar only for Home by default and respects explicit overrides', () => {
+    const home = renderWithProviders(
+      <MediaStackWidget
+        room="__home__"
+        data={{ entityIds: ['media_player.living_room_speaker'] }}
+      />
+    );
+    expect(mediaCardMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mediaStackVisualVariant: 'lunar' })
+    );
+    home.unmount();
+    mediaCardMock.mockReset();
+
+    const ordinary = renderWithProviders(
+      <MediaStackWidget
+        room="Living Room"
+        data={{ entityIds: ['media_player.living_room_speaker'] }}
+      />
+    );
+    expect(mediaCardMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mediaStackVisualVariant: 'default' })
+    );
+    ordinary.unmount();
+    mediaCardMock.mockReset();
+
+    const explicitDefault = renderWithProviders(
+      <MediaStackWidget
+        room="__home__"
+        data={{ visualVariant: 'default', entityIds: ['media_player.living_room_speaker'] }}
+      />
+    );
+    expect(mediaCardMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mediaStackVisualVariant: 'default' })
+    );
+    explicitDefault.unmount();
+    mediaCardMock.mockReset();
+
+    renderWithProviders(
+      <MediaStackWidget
+        room="Living Room"
+        data={{ visualVariant: 'lunar', entityIds: ['media_player.living_room_speaker'] }}
+      />
+    );
+    expect(mediaCardMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mediaStackVisualVariant: 'lunar' })
+    );
+  });
+
+  it('keeps visualVariant when priority settings change', () => {
+    const onUpdate = vi.fn();
+    renderWithProviders(
+      <MediaStackWidget
+        room="__home__"
+        data={{
+          visualVariant: 'lunar',
+          entityIds: ['media_player.living_room_tv', 'media_player.living_room_speaker'],
+          priorityOrder: ['media_player.living_room_tv', 'media_player.living_room_speaker'],
+          idleBehavior: 'compact',
+        }}
+        onUpdate={onUpdate}
+      />
+    );
+    const settings = mediaCardMock.mock.lastCall?.[0]?.mediaStackSettings;
+    settings.onUpdate({
+      entityIds: ['media_player.living_room_tv', 'media_player.living_room_speaker'],
+      priorityOrder: ['media_player.living_room_speaker', 'media_player.living_room_tv'],
+      idleBehavior: 'compact',
+    });
+    settings.onUpdate({
+      entityIds: ['media_player.living_room_speaker'],
+      priorityOrder: ['media_player.living_room_speaker'],
+      idleBehavior: 'compact',
+    });
+    settings.onUpdate({
+      entityIds: ['media_player.living_room_tv', 'media_player.living_room_speaker'],
+      priorityOrder: ['media_player.living_room_tv', 'media_player.living_room_speaker'],
+      idleBehavior: 'hidden',
+    });
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visualVariant: 'lunar',
+        priorityOrder: ['media_player.living_room_speaker', 'media_player.living_room_tv'],
+      })
+    );
+    expect(onUpdate.mock.calls).toHaveLength(3);
+    expect(onUpdate.mock.calls.every(([payload]) => payload.visualVariant === 'lunar')).toBe(true);
   });
 
   it('hides the widget when idle behavior is hidden and nothing is active', () => {

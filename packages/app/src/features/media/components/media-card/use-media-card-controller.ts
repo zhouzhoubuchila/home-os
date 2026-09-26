@@ -435,6 +435,7 @@ export function useMediaCardController({
     handlePrevious,
     handleVolumeChange,
     mediaCapabilities: effectiveMediaCapabilities,
+    mediaState: state,
     isOff: state === 'off',
     isMuted,
     isOpen,

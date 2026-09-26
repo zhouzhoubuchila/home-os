@@ -19,6 +19,7 @@ type MediaDialogControllerInput = Pick<
   | 'elapsedSeconds'
   | 'entityId'
   | 'title'
+  | 'themeOverride'
 >;
 
 export function useMediaDialogController({
@@ -29,8 +30,10 @@ export function useMediaDialogController({
   elapsedSeconds,
   entityId,
   title,
+  themeOverride,
 }: MediaDialogControllerInput) {
-  const { theme } = useTheme();
+  const { theme: globalTheme } = useTheme();
+  const theme = themeOverride ?? globalTheme;
   const surface = getThemeSurfaceTokens(theme);
   const isGlass = theme === 'glass';
   const paletteArtwork = getMediaArtworkPaletteSource(artwork, artworkResource);

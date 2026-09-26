@@ -34,6 +34,17 @@ describe('media-stack-widget-data', () => {
     });
   });
 
+  it('preserves a valid visual variant without changing selection semantics', () => {
+    expect(
+      normalizeMediaStackWidgetData({
+        visualVariant: 'lunar',
+        entityIds: ['media_player.speaker'],
+        priorityOrder: ['media_player.speaker'],
+        idleBehavior: 'compact',
+      })?.visualVariant
+    ).toBe('lunar');
+  });
+
   it('prefers active playback states over idle and off', () => {
     const result = selectMediaStackDevice(
       [

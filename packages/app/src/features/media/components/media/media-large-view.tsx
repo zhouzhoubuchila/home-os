@@ -40,10 +40,13 @@ interface MediaLargeViewProps {
   artwork?: string | null;
   artworkResource?: ResolvedPlatformResource | null;
   onArtworkError?: (imageUrl?: string | null) => void;
+  hideBrokenArtwork?: boolean;
   title: string;
   artist: string;
   entityName: string;
   entityTypeKey: MediaEntityTypeKey;
+  entityTypeLabel?: string;
+  trackIdentity?: string;
   isActive: boolean;
   isPlaying: boolean;
   volume: number;
@@ -80,10 +83,13 @@ export function MediaLargeView({
   artwork,
   artworkResource,
   onArtworkError,
+  hideBrokenArtwork = false,
   title,
   artist,
   entityName,
   entityTypeKey,
+  entityTypeLabel,
+  trackIdentity,
   isActive,
   isPlaying,
   volume,
@@ -293,7 +299,13 @@ export function MediaLargeView({
           src={stableArtwork}
           alt=""
           aria-hidden="true"
-          onError={() => onArtworkError?.(stableArtwork)}
+          onError={(event) => {
+            if (hideBrokenArtwork) event.currentTarget.style.visibility = 'hidden';
+            onArtworkError?.(stableArtwork);
+          }}
+          onLoad={(event) => {
+            if (hideBrokenArtwork) event.currentTarget.style.visibility = 'visible';
+          }}
           className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
             isLowEffects ? 'opacity-94' : 'scale-[1.03] opacity-92 saturate-[1.08] contrast-[1.04]'
           }`}
@@ -333,7 +345,7 @@ export function MediaLargeView({
           <div className="flex items-center justify-between gap-3">
             <MediaEntityHeader
               entityName={entityName}
-              entityType={t(entityTypeKey)}
+              entityType={entityTypeLabel ?? t(entityTypeKey)}
               size="large"
               isActive={isActive}
               accentColor={palette.highlight}
@@ -355,7 +367,10 @@ export function MediaLargeView({
         ) : null}
 
         <div className="flex min-h-0 flex-1 flex-col justify-end">
-          <div className="mt-2.5 min-w-0">
+          <div
+            key={trackIdentity}
+            className={`mt-2.5 min-w-0 ${trackIdentity ? 'media-orbit-track' : ''}`}
+          >
             <div className="flex min-w-0 items-center gap-2">
               <div
                 className={`min-w-0 flex-1 truncate text-sm font-semibold ${iconTone}`}
@@ -370,7 +385,10 @@ export function MediaLargeView({
           </div>
 
           {!hideTransportControls ? (
-            <div className="mt-1.5 flex items-center gap-2">
+            <div
+              className="mt-1.5 flex items-center gap-2"
+              data-media-progress-valid={hasSeekDuration && Number.isFinite(elapsedSeconds)}
+            >
               <span
                 className={`shrink-0 text-[10px] tabular-nums ${subtitleTone}`}
                 style={foreground.subtitleStyle}
@@ -405,7 +423,7 @@ export function MediaLargeView({
                 }}
                 disabled={!hasSeekDuration || !canSeek}
                 rootClassName="relative flex h-4.5 min-w-0 flex-1 items-center touch-none select-none"
-                trackClassName="relative h-[3px] grow rounded-full"
+                trackClassName="media-orbit-progress-track relative h-[3px] grow rounded-full"
                 rangeClassName="absolute h-full rounded-full"
                 thumbClassName="block h-3.5 w-3.5 rounded-full outline-none"
                 touchThumbClassName="block h-6 w-6 rounded-full outline-none"

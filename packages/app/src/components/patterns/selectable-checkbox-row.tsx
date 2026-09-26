@@ -21,6 +21,7 @@ export interface SelectableCheckboxRowProps {
   checkboxAppearance?: CheckboxProps['appearance'];
   checkboxPalette?: CheckboxProps['palette'];
   checkboxPaletteColor?: string | null;
+  checkboxThemeOverride?: CheckboxProps['themeOverride'];
   style?: CSSProperties;
   selectedStyle?: CSSProperties;
   unselectedStyle?: CSSProperties;
@@ -46,6 +47,7 @@ export function SelectableCheckboxRow({
   checkboxAppearance = 'default',
   checkboxPalette = 'accent',
   checkboxPaletteColor = null,
+  checkboxThemeOverride,
   style,
   selectedStyle,
   unselectedStyle,
@@ -82,6 +84,7 @@ export function SelectableCheckboxRow({
           appearance={checkboxAppearance}
           palette={checkboxPalette}
           paletteColor={checkboxPaletteColor}
+          themeOverride={checkboxThemeOverride}
           className={cn('mt-0.5 shrink-0', checkboxClassName)}
         />
 

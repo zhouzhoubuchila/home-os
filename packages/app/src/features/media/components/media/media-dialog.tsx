@@ -18,6 +18,7 @@ export function MediaDialog({
   repeatMode,
   shuffleEnabled,
   title,
+  themeOverride,
   ...props
 }: MediaDialogProps) {
   const controller = useMediaDialogController({
@@ -28,6 +29,7 @@ export function MediaDialog({
     elapsedSeconds,
     entityId,
     title,
+    themeOverride,
   });
 
   return (
@@ -49,6 +51,7 @@ export function MediaDialog({
       repeatMode={repeatMode}
       shuffleEnabled={shuffleEnabled}
       title={title}
+      themeOverride={themeOverride}
     />
   );
 }

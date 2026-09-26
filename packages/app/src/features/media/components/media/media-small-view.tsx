@@ -30,8 +30,11 @@ interface MediaSmallViewProps {
   artwork?: string | null;
   artworkResource?: ResolvedPlatformResource | null;
   onArtworkError?: (imageUrl?: string | null) => void;
+  hideBrokenArtwork?: boolean;
   entityName: string;
   entityTypeKey: MediaEntityTypeKey;
+  entityTypeLabel?: string;
+  trackIdentity?: string;
   title: string;
   artist: string;
   isActive: boolean;
@@ -41,6 +44,7 @@ interface MediaSmallViewProps {
   elapsedSeconds: number;
   durationSeconds: number;
   theme: ThemeType;
+  lunarCompact?: boolean;
   hideTransportControls?: boolean;
   onToggleMute: () => void;
   onPrevious: () => void;
@@ -62,8 +66,11 @@ export function MediaSmallView({
   artwork,
   artworkResource,
   onArtworkError,
+  hideBrokenArtwork = false,
   entityName,
   entityTypeKey,
+  entityTypeLabel,
+  trackIdentity,
   title,
   artist,
   isActive,
@@ -73,6 +80,7 @@ export function MediaSmallView({
   elapsedSeconds,
   durationSeconds,
   theme,
+  lunarCompact = false,
   hideTransportControls = false,
   onToggleMute,
   onPrevious,
@@ -273,7 +281,13 @@ export function MediaSmallView({
           src={stableArtwork}
           alt=""
           aria-hidden="true"
-          onError={() => onArtworkError?.(stableArtwork)}
+          onError={(event) => {
+            if (hideBrokenArtwork) event.currentTarget.style.visibility = 'hidden';
+            onArtworkError?.(stableArtwork);
+          }}
+          onLoad={(event) => {
+            if (hideBrokenArtwork) event.currentTarget.style.visibility = 'visible';
+          }}
           className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
             isLowEffects ? 'opacity-94' : 'scale-[1.03] opacity-92 saturate-[1.08] contrast-[1.04]'
           }`}
@@ -312,7 +326,7 @@ export function MediaSmallView({
         <div className="flex items-start justify-between gap-3">
           <MediaEntityHeader
             entityName={entityName}
-            entityType={t(entityTypeKey)}
+            entityType={entityTypeLabel ?? t(entityTypeKey)}
             size="small"
             isActive={isActive}
             accentColor={palette.highlight}
@@ -334,7 +348,10 @@ export function MediaSmallView({
 
         <div className="mt-auto flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
+            <div
+              key={trackIdentity}
+              className={`min-w-0 ${trackIdentity ? 'media-orbit-track' : ''}`}
+            >
               <MediaMarqueeText
                 text={title}
                 className={`text-xs font-semibold ${iconTone}`}
@@ -376,7 +393,10 @@ export function MediaSmallView({
           </div>
 
           {!hideTransportControls ? (
-            <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-2"
+              data-media-progress-valid={hasSeekDuration && Number.isFinite(elapsedSeconds)}
+            >
               <span
                 className={`shrink-0 text-[10px] tabular-nums ${subtitleTone}`}
                 style={foreground.subtitleStyle}
@@ -411,7 +431,7 @@ export function MediaSmallView({
                 }}
                 disabled={!hasSeekDuration || !canSeek}
                 rootClassName="relative flex h-4 min-w-0 flex-1 items-center touch-none select-none"
-                trackClassName="relative h-[3px] grow rounded-full"
+                trackClassName="media-orbit-progress-track relative h-[3px] grow rounded-full"
                 rangeClassName="absolute h-full rounded-full"
                 thumbClassName="block h-3 w-3 rounded-full outline-none"
                 touchThumbClassName="block h-6 w-6 rounded-full outline-none"
@@ -429,7 +449,7 @@ export function MediaSmallView({
           ) : null}
         </div>
 
-        {!hideTransportControls ? (
+        {!hideTransportControls && !lunarCompact ? (
           <div className="mt-2 flex items-center justify-between gap-1.5">
             <RoundControlButton
               theme={theme}
