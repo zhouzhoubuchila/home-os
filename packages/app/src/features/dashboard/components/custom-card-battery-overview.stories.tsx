@@ -10,7 +10,9 @@ import { getStoryDocsDescription } from '@navet/app/storybook/story-docs';
 import { EntityCardStoryFrame } from '@navet/app/storybook/story-frames';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Battery, Settings2 } from 'lucide-react';
-import { BatteryList, getLevelColor } from './widgets/battery-list';
+import { BatteryList, getLevelColor, getLunarLevelColor } from './widgets/battery-list';
+import { buildBatteryOverviewModel } from './widgets/battery-overview-model';
+import './widgets/battery-lunar-card.css';
 
 type BatteryOverviewStoryArgs = {
   size: CardSize;
@@ -90,6 +92,109 @@ function BatteryOverviewEmptyStateStory({ size }: BatteryOverviewStoryArgs) {
   );
 }
 
+const LUNAR_STORY_BATTERIES = [
+  { id: 'door', name: 'Front Door Sensor', level: 5 },
+  { id: 'remote', name: 'Kitchen Remote', level: 23 },
+  { id: 'motion', name: 'Workshop Motion Sensor', level: 90 },
+  { id: 'ups', name: 'Backup UPS', level: 100 },
+  { id: 'desk', name: 'Desk Sensor', level: 100 },
+];
+
+function BatteryLunarStoryFrame({
+  size,
+  batteries,
+}: BatteryOverviewStoryArgs & { batteries: typeof LUNAR_STORY_BATTERIES }) {
+  const model = buildBatteryOverviewModel(batteries);
+  const chromeSize = size === 'large' ? 'medium' : size;
+  const lowCount = model.criticalCount + model.lowCount;
+
+  return (
+    <EntityCardStoryFrame size={size}>
+      <BaseCard
+        size={size}
+        fullBleed
+        className="battery-lunar-card"
+        style={{ background: 'linear-gradient(145deg, #050816 0%, #081126 58%, #0d1832 100%)' }}
+        readableBackgroundColor="#050816"
+        themeOverride="dark"
+        frameClassName="overflow-hidden"
+        innerClassName="z-[1]"
+        disableDefaultSheen
+        data-battery-size={size}
+        data-battery-motion="high"
+        overlay={<div className="battery-lunar-atmosphere" />}
+        contentClassName="h-full"
+      >
+        <div className="relative flex h-full min-w-0 flex-col p-3">
+          {model.totalCount === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <EntityCardHeaderIcon
+                IconComponent={Battery}
+                isActive={false}
+                size={size}
+                themeOverride="dark"
+                baseColor="#83d8d0"
+              />
+              <div className="text-xs text-white/90">No battery sensors found</div>
+            </div>
+          ) : (
+            <>
+              <EntityCardHeader
+                title="Battery Overview"
+                subtitle="POWER / CELLS"
+                layout="eyebrow-first"
+                size={chromeSize}
+                titleStyle={{ color: 'rgba(245, 248, 255, 0.92)' }}
+                subtitleStyle={{ color: 'rgba(210, 220, 242, 0.52)' }}
+                backgroundColor="#050816"
+                leading={
+                  <EntityCardHeaderIcon
+                    IconComponent={Battery}
+                    isActive
+                    size={chromeSize}
+                    themeOverride="dark"
+                    baseColor="#83d8d0"
+                  />
+                }
+              />
+              <div className="battery-lunar-summary">
+                <div>
+                  <div className="battery-lunar-summary-count">
+                    {model.totalCount}
+                    <span>cells</span>
+                  </div>
+                  <div className="battery-lunar-summary-status" data-has-low={lowCount > 0}>
+                    {lowCount} low
+                  </div>
+                </div>
+                <div
+                  className="battery-lunar-core"
+                  role="img"
+                  aria-label={`Average battery ${model.averageLevel}%`}
+                  style={{ '--battery-average': `${model.averageLevel}%` } as React.CSSProperties}
+                >
+                  <span className="battery-lunar-core-value">{model.averageLevel}%</span>
+                  <span className="battery-lunar-core-label">AVG</span>
+                </div>
+              </div>
+              <BatteryList
+                devices={size === 'medium' ? model.rows.slice(0, 5) : model.rows}
+                isCompact={isCompactCardSize(size)}
+                subtleFill="rgba(255,255,255,0.08)"
+                textSecondary="text-blue-100/68"
+                emptyStateLabel="No battery sensors"
+                getLevelColor={getLunarLevelColor}
+                variant="lunar"
+                highlightId={model.rows.find((row) => row.level >= 80)?.id}
+              />
+            </>
+          )}
+        </div>
+      </BaseCard>
+    </EntityCardStoryFrame>
+  );
+}
+
 const meta = {
   title: 'Cards/Custom/Battery Overview',
   component: BatteryOverviewStoryFrame,
@@ -148,4 +253,36 @@ export const EmptyState: Story = {
   args: {
     size: 'medium',
   },
+};
+
+export const LunarMedium: Story = {
+  render: (args) => <BatteryLunarStoryFrame {...args} batteries={LUNAR_STORY_BATTERIES} />,
+  args: { size: 'medium' },
+};
+
+export const LunarLowBattery: Story = {
+  render: (args) => (
+    <BatteryLunarStoryFrame
+      {...args}
+      batteries={LUNAR_STORY_BATTERIES.map((row) =>
+        row.id === 'door' ? { ...row, level: 23 } : row
+      )}
+    />
+  ),
+  args: { size: 'medium' },
+};
+
+export const LunarCritical: Story = {
+  render: (args) => <BatteryLunarStoryFrame {...args} batteries={LUNAR_STORY_BATTERIES} />,
+  args: { size: 'medium' },
+};
+
+export const LunarLarge: Story = {
+  render: (args) => <BatteryLunarStoryFrame {...args} batteries={LUNAR_STORY_BATTERIES} />,
+  args: { size: 'large' },
+};
+
+export const LunarEmpty: Story = {
+  render: (args) => <BatteryLunarStoryFrame {...args} batteries={[]} />,
+  args: { size: 'medium' },
 };

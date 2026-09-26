@@ -1,0 +1,279 @@
+.battery-lunar-card {
+  --battery-lunar-bg: #050816;
+  --battery-lunar-text: rgba(245, 248, 255, 0.96);
+  --battery-lunar-muted: rgba(210, 220, 242, 0.58);
+  --battery-lunar-border: rgba(190, 211, 255, 0.14);
+  position: relative;
+  isolation: isolate;
+  color: var(--battery-lunar-text);
+  background: linear-gradient(145deg, #050816 0%, #081126 58%, #0d1832 100%);
+  border-color: var(--battery-lunar-border);
+  box-shadow: 0 24px 60px -42px rgba(5, 8, 22, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.battery-lunar-atmosphere {
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 88% 18%, rgba(143, 216, 245, 0.11), transparent 42%),
+    radial-gradient(ellipse at 18% 92%, rgba(117, 103, 201, 0.1), transparent 48%);
+  opacity: 0.8;
+}
+
+.battery-lunar-atmosphere::after {
+  position: absolute;
+  inset: 12% 0 0;
+  content: '';
+  background: linear-gradient(116deg, transparent 16%, rgba(143, 216, 245, 0.06) 48%, transparent 78%);
+  mask-image: linear-gradient(180deg, transparent, black 24%, black 76%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, black 24%, black 76%, transparent);
+}
+
+.battery-lunar-card[data-battery-motion='high'] .battery-lunar-atmosphere {
+  animation: battery-lunar-atmosphere-drift 28s ease-in-out infinite alternate;
+}
+
+.battery-lunar-card[data-battery-motion='high'] .battery-lunar-atmosphere::after {
+  animation: battery-lunar-atmosphere-sheen 18s ease-in-out infinite;
+}
+
+.battery-lunar-summary {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.battery-lunar-summary-count {
+  color: var(--battery-lunar-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.battery-lunar-summary-count span {
+  margin-left: 0.35rem;
+  color: var(--battery-lunar-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.battery-lunar-summary-status {
+  margin-top: 0.28rem;
+  color: var(--battery-lunar-muted);
+  font-size: 0.68rem;
+}
+
+.battery-lunar-summary-status[data-has-low='true'] { color: rgba(242, 190, 127, 0.9); }
+
+.battery-lunar-core {
+  position: relative;
+  display: grid;
+  width: 3.15rem;
+  height: 3.15rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(143, 216, 245, 0.18);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(143, 216, 245, 0.12), rgba(255, 255, 255, 0.02) 64%, transparent 66%);
+}
+
+.battery-lunar-core::before {
+  position: absolute;
+  inset: 0.22rem;
+  border-radius: inherit;
+  content: '';
+  background: conic-gradient(from -90deg, #83d8d0 0 var(--battery-average), rgba(255, 255, 255, 0.08) var(--battery-average) 100%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+}
+
+.battery-lunar-core-value {
+  position: relative;
+  z-index: 1;
+  color: rgba(230, 245, 255, 0.92);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.battery-lunar-core-label {
+  position: absolute;
+  bottom: 0.5rem;
+  color: rgba(210, 220, 242, 0.44);
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.battery-lunar-list {
+  position: relative;
+  z-index: 1;
+}
+
+.battery-lunar-row {
+  min-width: 0;
+  padding: 0.28rem 0;
+}
+
+.battery-lunar-row-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.battery-lunar-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.battery-lunar-icon-wrap::after {
+  position: absolute;
+  inset: -0.2rem;
+  z-index: 0;
+  border-radius: 999px;
+  background: currentColor;
+  content: '';
+  opacity: 0;
+  filter: blur(6px);
+}
+
+.battery-lunar-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.battery-lunar-row-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: rgba(226, 234, 250, 0.72);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battery-lunar-row-value {
+  flex: none;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.battery-lunar-row-track {
+  height: 0.22rem;
+  margin: 0.28rem 0 0 1.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.battery-lunar-row-fill {
+  position: relative;
+  height: 100%;
+  min-width: 0.08rem;
+  overflow: hidden;
+  border-radius: inherit;
+  transition: width 450ms ease, background-color 450ms ease;
+}
+
+.battery-lunar-row-fill::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  content: '';
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.battery-lunar-row[data-battery-level='critical'] .battery-lunar-row-value,
+.battery-lunar-row[data-battery-level='critical'] .battery-lunar-icon-wrap { color: #ef9a9a; }
+.battery-lunar-row[data-battery-level='low'] .battery-lunar-row-value,
+.battery-lunar-row[data-battery-level='low'] .battery-lunar-icon-wrap { color: #e8b477; }
+.battery-lunar-row[data-battery-level='medium'] .battery-lunar-row-value,
+.battery-lunar-row[data-battery-level='medium'] .battery-lunar-icon-wrap { color: #ddc482; }
+.battery-lunar-row[data-battery-level='high'] .battery-lunar-row-value,
+.battery-lunar-row[data-battery-level='high'] .battery-lunar-icon-wrap { color: #77b3dc; }
+.battery-lunar-row[data-battery-level='full'] .battery-lunar-row-value,
+.battery-lunar-row[data-battery-level='full'] .battery-lunar-icon-wrap { color: #83d8d0; }
+
+.battery-lunar-card:is([data-battery-size='small'], [data-battery-size='medium']) .battery-lunar-summary {
+  margin-bottom: 0.25rem;
+}
+
+.battery-lunar-card:is([data-battery-size='small'], [data-battery-size='medium']) .battery-lunar-row {
+  padding: 0.16rem 0;
+}
+
+.battery-lunar-card:is([data-battery-size='small'], [data-battery-size='medium']) .battery-lunar-row-track {
+  margin-top: 0.18rem;
+}
+
+.battery-lunar-card[data-battery-size='small'] .battery-lunar-core {
+  display: none;
+}
+
+.battery-lunar-card:is([data-battery-motion='high'], [data-battery-motion='medium']) .battery-lunar-row[data-battery-level='critical'] .battery-lunar-icon-wrap::after,
+.battery-lunar-card[data-battery-motion='low'] .battery-lunar-row[data-battery-level='critical'] .battery-lunar-icon-wrap::after {
+  animation: battery-lunar-critical-breathe 4.8s ease-in-out infinite;
+}
+
+.battery-lunar-card:is([data-battery-motion='high'], [data-battery-motion='medium'], [data-battery-motion='low']) .battery-lunar-row[data-battery-level='low'] .battery-lunar-icon-wrap::after {
+  animation: battery-lunar-low-breathe 6.5s ease-in-out infinite;
+}
+
+.battery-lunar-card[data-battery-motion='high'] .battery-lunar-row:is([data-battery-level='high'], [data-battery-level='full'])[data-battery-highlight='true'] .battery-lunar-icon-wrap::after {
+  animation: battery-lunar-high-breathe 10s ease-in-out infinite;
+}
+
+.battery-lunar-card:is([data-battery-motion='high'], [data-battery-motion='medium']) .battery-lunar-row:is([data-battery-level='medium'], [data-battery-level='high'], [data-battery-level='full']) .battery-lunar-row-fill::after {
+  animation: battery-lunar-meter-drift 14s ease-in-out infinite;
+}
+
+@keyframes battery-lunar-atmosphere-drift {
+  from { transform: translate3d(-1%, 0, 0) scale(1); }
+  to { transform: translate3d(2%, -1%, 0) scale(1.04); }
+}
+
+@keyframes battery-lunar-atmosphere-sheen {
+  0%, 100% { opacity: 0.18; transform: translateX(-3%); }
+  50% { opacity: 0.42; transform: translateX(3%); }
+}
+
+@keyframes battery-lunar-critical-breathe {
+  0%, 100% { opacity: 0.02; }
+  50% { opacity: 0.13; }
+}
+
+@keyframes battery-lunar-low-breathe {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.09; }
+}
+
+@keyframes battery-lunar-high-breathe {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.08; }
+}
+
+@keyframes battery-lunar-meter-drift {
+  0%, 15% { opacity: 0; transform: translateX(-100%); }
+  55% { opacity: 0.4; }
+  85%, 100% { opacity: 0; transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battery-lunar-card *,
+  .battery-lunar-card::before,
+  .battery-lunar-card::after { animation: none !important; transition: none !important; }
+}

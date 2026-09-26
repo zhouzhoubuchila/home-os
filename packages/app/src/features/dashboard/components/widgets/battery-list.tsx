@@ -6,10 +6,11 @@ import { BATTERY_LEVEL_COLORS, BATTERY_LEVEL_THRESHOLDS } from './battery-consta
 
 const BATTERY_ROW_HEIGHT = 24;
 const BATTERY_ROW_GAP = 6;
-const BATTERY_ROW_STRIDE = BATTERY_ROW_HEIGHT + BATTERY_ROW_GAP;
 const BATTERY_LIST_MAX_VISIBLE_ROWS = 10;
 const BATTERY_LIST_OVERSCAN = 4;
 const BATTERY_LIST_VIRTUALIZATION_THRESHOLD = 18;
+const LUNAR_BATTERY_ROW_HEIGHT = 40;
+const LUNAR_BATTERY_ROW_GAP = 4;
 
 interface BatteryLevelIconProps {
   level: number;
@@ -70,6 +71,8 @@ interface BatteryListItemProps {
   textSecondary: string;
   textSecondaryStyle?: CSSProperties;
   getLevelColor: (level: number) => string;
+  variant?: 'default' | 'lunar';
+  highlight?: boolean;
 }
 
 export const BatteryListItem = memo(function BatteryListItem({
@@ -79,8 +82,42 @@ export const BatteryListItem = memo(function BatteryListItem({
   textSecondary,
   textSecondaryStyle,
   getLevelColor,
+  variant = 'default',
+  highlight = false,
 }: BatteryListItemProps) {
   const color = getLevelColor(device.level);
+
+  if (variant === 'lunar') {
+    return (
+      <div
+        className="battery-lunar-row"
+        data-battery-level={getBatteryLevelTier(device.level)}
+        data-battery-highlight={highlight ? 'true' : 'false'}
+      >
+        <div className="battery-lunar-row-main">
+          <span className="battery-lunar-icon-wrap">
+            <BatteryLevelIcon
+              level={device.level}
+              color={color}
+              className="battery-lunar-icon h-4 w-4 shrink-0"
+            />
+          </span>
+          <span className="battery-lunar-row-name" title={device.name}>
+            {device.name}
+          </span>
+          <span className="battery-lunar-row-value" style={{ color }}>
+            {device.level}%
+          </span>
+        </div>
+        <div className="battery-lunar-row-track" aria-hidden="true">
+          <div
+            className="battery-lunar-row-fill"
+            style={{ width: `${device.level}%`, backgroundColor: color }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <CompactMeterListItem
@@ -106,24 +143,26 @@ function VirtualizedBatteryList({
   textSecondary,
   textSecondaryStyle,
   getLevelColor,
+  variant,
+  highlightId,
 }: Omit<BatteryListProps, 'emptyStateLabel'>) {
   const [scrollTop, setScrollTop] = useState(0);
+  const rowHeight = variant === 'lunar' ? LUNAR_BATTERY_ROW_HEIGHT : BATTERY_ROW_HEIGHT;
+  const rowGap = variant === 'lunar' ? LUNAR_BATTERY_ROW_GAP : BATTERY_ROW_GAP;
+  const rowStride = rowHeight + rowGap;
   const viewportHeight =
-    Math.min(devices.length, BATTERY_LIST_MAX_VISIBLE_ROWS) * BATTERY_ROW_STRIDE - BATTERY_ROW_GAP;
-  const totalHeight = devices.length * BATTERY_ROW_STRIDE - BATTERY_ROW_GAP;
-  const startIndex = Math.max(
-    0,
-    Math.floor(scrollTop / BATTERY_ROW_STRIDE) - BATTERY_LIST_OVERSCAN
-  );
+    Math.min(devices.length, BATTERY_LIST_MAX_VISIBLE_ROWS) * rowStride - rowGap;
+  const totalHeight = devices.length * rowStride - rowGap;
+  const startIndex = Math.max(0, Math.floor(scrollTop / rowStride) - BATTERY_LIST_OVERSCAN);
   const endIndex = Math.min(
     devices.length,
-    Math.ceil((scrollTop + viewportHeight) / BATTERY_ROW_STRIDE) + BATTERY_LIST_OVERSCAN
+    Math.ceil((scrollTop + viewportHeight) / rowStride) + BATTERY_LIST_OVERSCAN
   );
   const visibleDevices = devices.slice(startIndex, endIndex);
 
   return (
     <OverlayScrollArea
-      className="flex flex-1 flex-col"
+      className={`flex min-h-0 flex-1 flex-col ${variant === 'lunar' ? 'battery-lunar-list' : ''}`}
       contentClassName="flex min-h-full flex-col pr-3"
       viewportProps={{
         'data-testid': 'battery-list-virtualized',
@@ -140,8 +179,8 @@ function VirtualizedBatteryList({
               key={device.id}
               className="absolute left-0 right-0"
               style={{
-                top: `${index * BATTERY_ROW_STRIDE}px`,
-                height: `${BATTERY_ROW_HEIGHT}px`,
+                top: `${index * rowStride}px`,
+                height: `${rowHeight}px`,
               }}
             >
               <BatteryListItem
@@ -151,6 +190,8 @@ function VirtualizedBatteryList({
                 textSecondary={textSecondary}
                 textSecondaryStyle={textSecondaryStyle}
                 getLevelColor={getLevelColor}
+                variant={variant}
+                highlight={variant === 'lunar' && device.id === highlightId}
               />
             </div>
           );
@@ -172,6 +213,8 @@ interface BatteryListProps {
   textSecondaryStyle?: CSSProperties;
   emptyStateLabel: string;
   getLevelColor: (level: number) => string;
+  variant?: 'default' | 'lunar';
+  highlightId?: string;
 }
 
 export function BatteryList({
@@ -182,6 +225,8 @@ export function BatteryList({
   textSecondaryStyle,
   emptyStateLabel,
   getLevelColor,
+  variant = 'default',
+  highlightId,
 }: BatteryListProps) {
   if (devices.length === 0) {
     return (
@@ -203,16 +248,18 @@ export function BatteryList({
         textSecondary={textSecondary}
         textSecondaryStyle={textSecondaryStyle}
         getLevelColor={getLevelColor}
+        variant={variant}
+        highlightId={highlightId}
       />
     );
   }
 
   return (
     <OverlayScrollArea
-      className="flex flex-1 flex-col"
+      className={`flex min-h-0 flex-1 flex-col ${variant === 'lunar' ? 'battery-lunar-list' : ''}`}
       contentClassName="flex min-h-full flex-col pr-3"
     >
-      <div className="mt-auto min-w-0 space-y-1.5">
+      <div className={`${variant === 'lunar' ? 'space-y-1' : 'mt-auto space-y-1.5'} min-w-0`}>
         {devices.map((device) => (
           <BatteryListItem
             key={device.id}
@@ -222,6 +269,8 @@ export function BatteryList({
             textSecondary={textSecondary}
             textSecondaryStyle={textSecondaryStyle}
             getLevelColor={getLevelColor}
+            variant={variant}
+            highlight={variant === 'lunar' && device.id === highlightId}
           />
         ))}
       </div>
@@ -233,4 +282,29 @@ export function getLevelColor(level: number, accentHex: string) {
   if (level <= BATTERY_LEVEL_THRESHOLDS.CRITICAL) return BATTERY_LEVEL_COLORS.critical;
   if (level <= BATTERY_LEVEL_THRESHOLDS.LOW) return BATTERY_LEVEL_COLORS.low;
   return accentHex;
+}
+
+export type BatteryLevelTier = 'critical' | 'low' | 'medium' | 'high' | 'full';
+
+export function getBatteryLevelTier(level: number): BatteryLevelTier {
+  if (level <= BATTERY_LEVEL_THRESHOLDS.CRITICAL) return 'critical';
+  if (level <= BATTERY_LEVEL_THRESHOLDS.LOW) return 'low';
+  if (level <= BATTERY_LEVEL_THRESHOLDS.MEDIUM) return 'medium';
+  if (level <= BATTERY_LEVEL_THRESHOLDS.HIGH) return 'high';
+  return 'full';
+}
+
+export function getLunarLevelColor(level: number): string {
+  switch (getBatteryLevelTier(level)) {
+    case 'critical':
+      return '#ef9a9a';
+    case 'low':
+      return '#e8b477';
+    case 'medium':
+      return '#ddc482';
+    case 'high':
+      return '#77b3dc';
+    case 'full':
+      return '#83d8d0';
+  }
 }
